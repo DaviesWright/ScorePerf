@@ -138,6 +138,10 @@ Tenant isolation in this code base rests on a convenience filter, not a hard bou
 | F-8 | API: 2 of 343 routes declare no explicit `permission_classes` (default `IsAuthenticated` still applies). | route snapshot | Low |
 | F-9 | `pdfkit` advisory (unpatched). Mitigated by the XSS guard in `generate_pdf`; BUILD §14.2 wants a planned replacement. | `CUSTOMIZATIONS.md` | Medium |
 | F-10 | Web container runs `migrate` at start-up. | `docker/entrypoint.sh` | Medium (BUILD §12.6) |
+| F-11 | **CONFIRMED by P1-00:** any signed-in user can read another employee's objective or employee-objective by id through the API detail endpoints (no permission or ownership check; the list endpoints do restrict). Pinned in `KnownQuirkTests`. | `horilla_api/api_views/pms/views.py`, `pms/tests/test_okr_api_contract.py` | Medium to high |
+| F-12 | **CONFIRMED by P1-00:** records created through the API get no company (`company_id` null), which makes them visible to every company (F-1). `POST employee-key-result` with a start date and no key result is a 500; without a start date it creates an orphan row. Writes without permission answer 401 not 403, and a failed delete returns the raw database error text. | same | Medium |
+| F-13 | The `unique_together` on `EmployeeKeyResult` is declared in a lowercase `class meta:` and is never applied. Forms check duplicates in `clean()`; the API and the database do not. | `pms/models.py` | Low to medium |
+| F-14 | The owner of an `EmployeeKeyResult` cannot list it through the API (the model has no `employee_id`, so the restricted list is empty). | `horilla_api/api_methods/base/methods.py` | Low |
 
 ---
 
@@ -150,8 +154,9 @@ Tenant isolation in this code base rests on a convenience filter, not a hard bou
 | Unapplied migrations | 0 |
 | Ruff (`ruff check .`, repo config, ruff 0.17.3) | **All checks passed** |
 | Targeted tests (`report`, PDF XSS guard, health version) | 99 run, 98 pass, **1 error**: `report.tests.test_report_execution.PdfFontEmbeddingTests.test_pdf_embeds_a_truetype_font`, a Windows `PermissionError` opening a temporary `.ttf` inside the PDF library. **Pre-existing: it fails identically on commit `148cbfd34`, before the rebrand (confirmed 2026-11-03).** Classified as an environment issue (Windows temp files). |
-| Full test suite | **PENDING** (running). Failures will be classified here as pre-existing or new. |
+| Full test suite | **PENDING.** A baseline run of the pre-change code is still in progress. Per the owner, the full suite will also be run after the changes are made. Failures will be classified here as pre-existing or new. |
 | `pms` tests | 18 test functions in 3 files (`test_progress_calculation` 10, `test_dashboard_kpi` 7, `test_check_duplication` 1). Result is part of the full run. |
+| OKR API contract tests (P1-00) | 29 tests in `pms/tests/test_okr_api_contract.py`, **all pass** on the unmodified application. They run with `force_authenticate`, so the company context is unscoped (see F-11, F-12). |
 | API schema snapshot | `generate_swagger` cannot run (drf-yasg `DEFAULT_INFO` missing). Substituted a route snapshot from the URL resolver: 343 routes. |
 | Web smoke test (local) | Login 200; a 61-page admin crawl had no server errors. Hidden-module URLs return 404. |
 | OKR critical-path screenshots | **Not captured.** Requires a signed-in session and OKR data; the dev database has none. |
@@ -228,7 +233,7 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 | Order | Ticket | Scope | Depends on |
 |---|---|---|---|
-| 1 | P1-00 | OKR contract tests: pin API responses for `/api/v1/pms/*` and key web flows | none |
+| 1 | P1-00 | OKR contract tests: pin API responses for `/api/v1/pms/*` and key web flows. **API part DONE 2026-11-03:** `pms/tests/test_okr_api_contract.py`, 29 tests, all pass on unmodified code (field sets, pagination envelope, permissions, create/update/delete, progress chain, and 6 pinned quirks). **Web-flow tests still to do.** | none |
 | 2 | P1-01 | ADR set 1 to 5 and 10 (monolith, framework per cycle, KPI catalogue, scoring contract, tenancy, PDF) | approval |
 | 3 | P1-02 | `performance_core`: `PerformanceCycle`, `FrameworkType`, configuration, versions, state machine, feature flag | P1-01 |
 | 4 | P1-03 | `PerformanceAssignment` and OKR link mapping, no data moved | P1-02 |
@@ -243,14 +248,15 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 ## 10. Decisions and questions needed before structural work
 
-1. **APPROVED 2026-11-03 (paa.barnes), §7 proposals 1 and 2, recorded as `adr/0001-okr-mapping-table.md`:** OKR stays in the `pms` app and is linked to new performance cycles through a mapping table. No OKR data is moved or renamed, and original identifiers are preserved (BUILD §22.2). Proposals 3 to 5 (first-slice scope, tenant rule, Decimal fields) are **not yet approved** and depend on decisions 4 and 7 below and on D-2 (app naming).2. **Production-like OKR data:** can a protected copy be provided for migration testing (R-3)?
-3. **Product questions on OKR semantics:** should `start_value` ever affect progress? Should progress remain uncapped per key result? Both are pinned today and will stay unless you decide otherwise.
+1. **APPROVED 2026-11-03 (paa.barnes), §7 proposals 1 and 2, recorded as `adr/0001-okr-mapping-table.md`:** OKR stays in the `pms` app and is linked to new performance cycles through a mapping table. No OKR data is moved or renamed, and original identifiers are preserved (BUILD §22.2). Proposals 3 to 5 (first-slice scope, tenant rule, Decimal fields) are **not yet approved** and depend on decisions 4 and 7 below and on D-2 (app naming).2. **DECIDED 2026-11-03 (paa.barnes):** synthetic, clearly labelled sample data will be generated for migration testing (R-3). A real production copy is still preferred when one exists, because synthetic data cannot reproduce genuine legacy inconsistencies.
+3. **DECIDED 2026-11-03 (paa.barnes), `adr/0012-okr-progress-semantics.md`:** `start_value` will affect progress and progress stays uncapped per key result. **Formula details and the treatment of existing records are awaiting confirmation** (floor at 0, recalculate or not). This changes protected OKR behaviour, so it is a separate ticket.
 4. **DECIDED 2026-11-03 (paa.barnes), `adr/0005-tenant-isolation-per-client-deployment.md`:** one deployment per client for now. The isolation boundary between clients is the deployment, not row-level scoping. **Still open inside that ADR:** confirm the addendum that new tables carry a required company reference (§7.4), and that superuser unscoped access is acceptable.
 5. **DECIDED 2026-11-03 (paa.barnes):** PostgreSQL is the production target (recorded in ADR-0005). SQLite is local development only.
 6. **DECIDED 2026-11-03 (paa.barnes), `adr/0007-background-task-queue-celery-redis.md`:** Celery with Redis, APScheduler kept for triggers.
-7. **Deployment target:** the Cloudflare question is still open and feeds ADR 6.
-8. **Audit model:** reuse `HorillaAuditLog` and `horilla_audit`, or add a dedicated business audit event table (BUILD §18)?
-9. **Hidden modules:** confirm `payroll`, `recruitment`, `onboarding`, `offboarding` stay hidden (BUILD §28 excludes them).
+7. **DECIDED 2026-11-03 (paa.barnes), `adr/0006-deployment-profiles-client-premises-and-demo.md`:** Cloudflare in front for demonstrations only; client premises or the client's own servers for real use.
+8. **DECIDED 2026-11-03 (paa.barnes), `adr/0013-audit-reuse-existing-history.md`:** reuse the existing change history; no new general audit table.
+9. **CONFIRMED 2026-11-03 (paa.barnes):** `payroll`, `recruitment`, `onboarding` and `offboarding` stay hidden (BUILD §28).
+10. **App naming and tenancy addendum, DECIDED 2026-11-03:** new apps use the `scoreview_*` prefix (`adr/0011-app-naming-scoreview-prefix.md`); new tenant-owned tables carry a required company reference (ADR-0005 item 4).
 
 ---
 
@@ -259,7 +265,7 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 | # | Finding | Proposed resolution |
 |---|---|---|
 | D-1 | **`README.md` is still the upstream HRMS README** with only the word replaced ("ScoReview HRMS"). Its Quick Start tells readers to `docker pull horilla/horilla-hr:2.2.1` and `git clone https://github.com/horilla/horilla-hr.git`, so following it installs **stock Horilla, not ScoReview**. It also advertises Payroll, Recruitment and Onboarding (hidden here), upstream badges, upstream branch advice and Discussion #1127. | **Resolved 2026-11-03:** README rewritten for ScoReview Performance (honest status table, our setup and Docker notes, attribution to Horilla under LGPL-2.1). Security contact uses the public Senrab address; confirm it. |
-| D-2 | **App naming.** `CUSTOMIZATIONS.md` fixes the app name `scoreview_performance` and the slug `scoreview-performance`. `BUILD.md` §4.1 proposes `performance_core`, `performance_catalog`, `mbo`, `bsc`, `performance_evaluation` and so on. | Decide in an ADR: either prefix the new apps (for example `scoreview_core`, `scoreview_mbo`, `scoreview_bsc`) or amend the naming rule. Add the choice to the Phase 1 ADR set. |
+| D-2 | **App naming.** `CUSTOMIZATIONS.md` fixes the app name `scoreview_performance` and the slug `scoreview-performance`. `BUILD.md` §4.1 proposes `performance_core`, `performance_catalog`, `mbo`, `bsc`, `performance_evaluation` and so on. | **Resolved 2026-11-03:** new apps use the `scoreview_*` prefix (ADR-0011). |
 | D-3 | **`okr/` does not exist.** `BUILD.md` §4.1 lists `okr/` as "existing". The existing OKR code is the `pms` app (§2.1). | Keep `pms` as the OKR domain for now (§7 proposal 1). |
 | D-4 | **Frontend rules vs reality.** `BUILD.md` §15.4 requires compiled Tailwind and pinned local Chart.js. Today Tailwind runs in the browser and Chart.js comes from a CDN, and our `colors.js` wraps the global `Chart`. | Follow `BUILD.md`. `colors.js` keeps working once Chart.js is vendored, because it hooks `window.Chart`. Add the frontend build as a Phase 1 or 5 ticket. |
 | D-5 | **Theme compatibility.** `BUILD.md` §15.4 wants branding compatible with `HorillaColorTheme` and its migrations. | Already satisfied: the ScoReview theme is a data migration on that model. |

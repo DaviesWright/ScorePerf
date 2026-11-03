@@ -40,7 +40,7 @@ doubt, check here first.
 | Short brand reference | **ScoReview** | After first mention, or where space is tight |
 | Company / legal entity | **Senrab Technologies** | Contracts, license headers, footers |
 | Repo / package slug | `scoreview-performance` | Lowercase, hyphenated. The GitHub repo is currently `DaviesWright/ScorePerf`; rename pending |
-| Django app name | `scoreview_performance` | Lowercase, underscore |
+| Django app names | `scoreview_*`, for example `scoreview_performance`, `scoreview_core` | Lowercase, underscore, always prefixed (ADR-0011). OKR stays in the upstream `pms` app (ADR-0001) |
 | Environment prefix | `SCOREVIEW_` | For env vars, where applicable |
 
 > Note: the brand is spelled "ScoReview" (one 'c'), but the slug and app
@@ -211,7 +211,7 @@ Our features live here. This is where most new work should go.
 
 | App | Purpose | Depends on / references |
 |---|---|---|
-| `scoreview_performance/` | ScoReview Performance custom features; template and static overrides; custom biometric integration if needed. Currently an empty scaffold (no models, views or urls yet) | `<models via FK/OneToOne>` |
+| `scoreview_performance/` | Management commands `generate_sample_okr_data` (synthetic, labelled sample data; `--reset` removes it) and `report_okr_progress_impact` (read-only ADR-0012 impact report); ScoReview Performance custom features; template and static overrides; custom biometric integration if needed. Currently an empty scaffold (no models, views or urls yet) | `<models via FK/OneToOne>` |
 
 ## Core file edits
 

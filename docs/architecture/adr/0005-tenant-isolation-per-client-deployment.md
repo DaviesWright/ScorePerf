@@ -17,7 +17,7 @@
 1. **The isolation boundary between clients is the deployment.** Each client gets its own database, Redis, media or object storage, secrets, containers, hostname and backups. No two clients share a database or storage namespace.
 2. **PostgreSQL is the production database.** SQLite is for single-user local development only. New models may rely on PostgreSQL constraints. Multi-process deployments assume PostgreSQL.
 3. **Within a deployment**, several companies (for example the subsidiaries of one client) remain supported through the existing `Company` model and its permissions.
-4. **Proposed addendum, needs confirmation:** new tenant-owned tables carry a required (non-null) company reference or a validated parent relationship, are scoped in the service layer, and never copy the "NULL means visible to all" behaviour (F-1). This keeps parity with Horilla's company model and preserves a path to a shared profile later.
+4. **Confirmed 2026-11-03 (paa.barnes):** new tenant-owned tables carry a required (non-null) company reference or a validated parent relationship, are scoped in the service layer, and never copy the "NULL means visible to all" behaviour (F-1). This keeps parity with Horilla's company model and preserves a path to a shared profile later.
 5. The shared-database multi-tenant profile of `BUILD.md` §12.2 is **deferred, not abandoned**. Code must not hard-code single-company assumptions.
 
 ## Alternatives considered
