@@ -5,6 +5,7 @@ horilla_api/api_views/pms/views.py
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -68,6 +69,16 @@ from ...api_decorators.base.decorators import (
     permission_required,
 )
 from ...api_methods.base.methods import groupby_queryset, permission_based_queryset
+from .access import (
+    can_view_comment,
+    can_view_employee_key_result,
+    can_view_employee_objective,
+    can_view_key_result,
+    can_view_objective,
+    company_for_create,
+    restrict_employee_key_results,
+    safe_delete,
+)
 
 
 def object_check(cls, pk):
@@ -188,7 +199,7 @@ class KeyResultGetCreateAPIView(APIView):
     def post(self, request, **kwargs):
         serializer = KeyResultSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(**company_for_create(request, serializer))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -200,6 +211,8 @@ class KeyResultGetUpdateDeleteAPIView(APIView):
         key_result = object_check(KeyResult, pk)
         if key_result is None:
             return Response({"error": _("KeyResult not found")}, status=404)
+        if not can_view_key_result(request.user, key_result):
+            raise PermissionDenied()
         serializer = KeyResultSerializer(key_result)
         return Response(serializer.data, status=200)
 
@@ -219,11 +232,7 @@ class KeyResultGetUpdateDeleteAPIView(APIView):
         key_result = object_check(KeyResult, pk)
         if key_result is None:
             return Response({"error": _("KeyResult not found")}, status=404)
-        try:
-            key_result.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        return safe_delete(key_result)
 
 
 # Objective Views
@@ -262,7 +271,7 @@ class ObjectiveGetCreateAPIView(APIView):
     def post(self, request, **kwargs):
         serializer = ObjectiveSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(**company_for_create(request, serializer))
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -274,6 +283,8 @@ class ObjectiveGetUpdateDeleteAPIView(APIView):
         objective = object_check(Objective, pk)
         if objective is None:
             return Response({"error": _("Objective not found")}, status=404)
+        if not can_view_objective(request.user, objective):
+            raise PermissionDenied()
         serializer = ObjectiveSerializer(objective)
         return Response(serializer.data, status=200)
 
@@ -293,11 +304,7 @@ class ObjectiveGetUpdateDeleteAPIView(APIView):
         objective = object_check(Objective, pk)
         if objective is None:
             return Response({"error": _("Objective not found")}, status=404)
-        try:
-            objective.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        return safe_delete(objective)
 
 
 # EmployeeObjective Views
@@ -370,6 +377,8 @@ class EmployeeObjectiveGetUpdateDeleteAPIView(APIView):
         employee_objective = object_check(EmployeeObjective, pk)
         if employee_objective is None:
             return Response({"error": _("EmployeeObjective not found")}, status=404)
+        if not can_view_employee_objective(request.user, employee_objective):
+            raise PermissionDenied()
         serializer = EmployeeObjectiveSerializer(employee_objective)
         return Response(serializer.data, status=200)
 
@@ -391,11 +400,7 @@ class EmployeeObjectiveGetUpdateDeleteAPIView(APIView):
         employee_objective = object_check(EmployeeObjective, pk)
         if employee_objective is None:
             return Response({"error": _("EmployeeObjective not found")}, status=404)
-        try:
-            employee_objective.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        return safe_delete(employee_objective)
 
 
 # EmployeeKeyResult Views
@@ -416,9 +421,7 @@ class EmployeeKeyResultGetCreateAPIView(APIView):
         if key_result_id:
             queryset = queryset.filter(key_result_id=key_result_id)
         user = request.user
-        perm = "pms.view_employeekeyresult"
-        queryset = permission_based_queryset(user, perm, queryset, user_obj=True)
-        return queryset
+        return restrict_employee_key_results(user, queryset)
 
     def get(self, request, pk=None, employee_objective_id=None, key_result_id=None):
         if pk:
@@ -467,6 +470,8 @@ class EmployeeKeyResultGetUpdateDeleteAPIView(APIView):
         employee_key_result = object_check(EmployeeKeyResult, pk)
         if employee_key_result is None:
             return Response({"error": _("EmployeeKeyResult not found")}, status=404)
+        if not can_view_employee_key_result(request.user, employee_key_result):
+            raise PermissionDenied()
         serializer = EmployeeKeyResultSerializer(employee_key_result)
         return Response(serializer.data, status=200)
 
@@ -488,11 +493,7 @@ class EmployeeKeyResultGetUpdateDeleteAPIView(APIView):
         employee_key_result = object_check(EmployeeKeyResult, pk)
         if employee_key_result is None:
             return Response({"error": _("EmployeeKeyResult not found")}, status=404)
-        try:
-            employee_key_result.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        return safe_delete(employee_key_result)
 
 
 # Comment Views
@@ -548,6 +549,8 @@ class CommentGetUpdateDeleteAPIView(APIView):
         comment = object_check(Comment, pk)
         if comment is None:
             return Response({"error": _("Comment not found")}, status=404)
+        if not can_view_comment(request.user, comment):
+            raise PermissionDenied()
         serializer = CommentSerializer(comment)
         return Response(serializer.data, status=200)
 
@@ -567,11 +570,7 @@ class CommentGetUpdateDeleteAPIView(APIView):
         comment = object_check(Comment, pk)
         if comment is None:
             return Response({"error": _("Comment not found")}, status=404)
-        try:
-            comment.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        return safe_delete(comment)
 
 
 # QuestionTemplate Views

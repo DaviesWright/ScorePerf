@@ -7,22 +7,24 @@ a report depends on without a test failing.
 Scope: key-result, objective, employee-objective, employee-key-result, comment.
 360 feedback, meetings and ``period`` are out of scope (ADR-0001).
 
-These are CHARACTERISATION tests: they record current behaviour, including
-behaviour that looks wrong. Wrong-looking behaviour is isolated in
-``KnownQuirkTests`` with a docstring saying so. Fixing a quirk is a product and
-security decision: change the assertion in the same commit as the fix, and say
-why in the commit message.
+These are CHARACTERISATION tests: they record behaviour so a change shows up as
+a failing assertion. Changing behaviour is a product and security decision:
+change the assertion in the same commit as the change, and say why in the
+commit message.
 
-Quirks pinned (see docs/architecture/BASELINE_ASSESSMENT.md):
+The first version (commit d1532ab9b) pinned six quirks. ADR-0014 fixed five of
+them, and the tests below now assert the fixed behaviour (see
+``AccessRuleTests``, ``CreateDefaultsTests``, ``RelationValidationTests`` and
+``SafeDeleteTests``):
 
-* Detail ``GET`` has no permission or ownership check: any signed-in user can
-  read any objective or employee-objective by id.
-* Writes by a user without the permission answer 401, not 403.
-* Records created through the API get ``company_id = None`` (visible to every
-  company through HorillaCompanyManager).
-* ``POST employee-key-result`` with a start date but no key result is a 500,
-  and without a start date creates an orphan row with no key result.
-* The owner of an employee-key-result cannot list it through the API.
+* detail ``GET`` now follows the same access rule as the lists (403 otherwise);
+* records created through the API get the creator's company;
+* ``POST employee-key-result`` without its key result or objective is a 400;
+* the owner can list their own employee key results;
+* a failed delete no longer returns database error text.
+
+Still pinned (API-wide convention, out of scope): a write by a user without the
+permission answers 401 "No permission", not 403.
 
 ``force_authenticate`` bypasses the JWT class, so the company ContextVar is not
 set here and the managers are unscoped. Tenant scoping is tested elsewhere.
@@ -33,6 +35,7 @@ from datetime import date
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from employee.models import EmployeeWorkInformation
 from horilla.testkit import make_company, make_employee, make_user
 from horilla.testkit.company import clear_selected_company
 from pms.models import (
@@ -152,12 +155,40 @@ class OkrApiBase(TestCase):
             user=cls.other_user,
             phone="5000002",
         )
+        cls.boss_user = make_user("okr_api_boss")
+        cls.boss = make_employee(
+            company=cls.company,
+            email="okr_api_boss@test.horilla",
+            user=cls.boss_user,
+            phone="5000003",
+        )
+        cls.obj_manager_user = make_user("okr_api_objmgr")
+        cls.obj_manager = make_employee(
+            company=cls.company,
+            email="okr_api_objmgr@test.horilla",
+            user=cls.obj_manager_user,
+            phone="5000004",
+        )
+        cls.admin_employee = make_employee(
+            company=cls.company,
+            email="okr_api_admin@test.horilla",
+            user=cls.admin_user,
+            phone="5000005",
+        )
+        EmployeeWorkInformation.objects.filter(employee_id=cls.owner).update(
+            reporting_manager_id=cls.boss
+        )
+        # make_employee() sets the company with a queryset update(), which leaves
+        # the employee cached on the user stale (company still empty). In
+        # production request.user.employee_get is read fresh, so drop the cache.
+        cls.admin_user.refresh_from_db()
         cls.objective = Objective.objects.create(
             title="API objective",
             description="d",
             duration=30,
             company_id=cls.company,
         )
+        cls.objective.managers.add(cls.obj_manager)
         cls.key_result = KeyResult.objects.create(
             title="API key result",
             description="d",
@@ -165,6 +196,7 @@ class OkrApiBase(TestCase):
             duration=30,
             company_id=cls.company,
         )
+        cls.objective.key_result_id.add(cls.key_result)
         cls.emp_objective = EmployeeObjective.objects.create(
             objective_id=cls.objective,
             employee_id=cls.owner,
@@ -192,6 +224,10 @@ class OkrApiBase(TestCase):
         self.owner_client.force_authenticate(user=self.owner_user)
         self.other_client = APIClient(raise_request_exception=False)
         self.other_client.force_authenticate(user=self.other_user)
+        self.boss_client = APIClient(raise_request_exception=False)
+        self.boss_client.force_authenticate(user=self.boss_user)
+        self.objmgr_client = APIClient(raise_request_exception=False)
+        self.objmgr_client.force_authenticate(user=self.obj_manager_user)
         self.anon = APIClient(raise_request_exception=False)
 
     def tearDown(self):
@@ -493,73 +529,180 @@ class WriteContractTests(OkrApiBase):
         self.assertFalse(EmployeeKeyResult.objects.filter(pk=self.emp_kr.pk).exists())
 
 
-class KnownQuirkTests(OkrApiBase):
-    """Behaviour that looks wrong, pinned so any change is deliberate.
+class AccessRuleTests(OkrApiBase):
+    """ADR-0014: a detail GET follows the same rule as the lists.
 
-    Do not 'fix' these assertions to make a build pass. Each is a product or
-    security decision (see BASELINE_ASSESSMENT.md F-1, F-6 and the P1 backlog).
+    Allowed: holds the view permission, owns the record, is the owner's
+    reporting manager, or manages the objective. Anyone else gets 403.
     """
 
-    def test_any_signed_in_user_can_read_another_employees_objective_by_id(self):
-        """Detail GET has no permission or ownership check (list views do)."""
-        self.assertEqual(
-            self.results(self.other_client.get(BASE + "employee-objective/")), []
-        )
-        response = self.other_client.get(
-            f"{BASE}employee-objective/{self.emp_objective.pk}/"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["id"], self.emp_objective.pk)
-        response = self.other_client.get(f"{BASE}objective/{self.objective.pk}/")
-        self.assertEqual(response.status_code, 200)
+    def detail_urls(self):
+        return {
+            "key-result": f"{BASE}key-result/{self.key_result.pk}/",
+            "objective": f"{BASE}objective/{self.objective.pk}/",
+            "employee-objective": f"{BASE}employee-objective/{self.emp_objective.pk}/",
+            "employee-key-result": f"{BASE}employee-key-result/{self.emp_kr.pk}/",
+            "comment": f"{BASE}comment/{self.comment.pk}/",
+        }
 
-    def test_records_created_through_the_api_have_no_company(self):
-        """company_id is not set by the serializer, so the row is visible to every company."""
+    def test_an_unrelated_employee_is_refused_everywhere_with_403(self):
+        for name, url in self.detail_urls().items():
+            with self.subTest(resource=name):
+                response = self.other_client.get(url)
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(set(response.json()), {"detail"})
+
+    def test_the_owner_can_read_their_own_records(self):
+        for name, url in self.detail_urls().items():
+            with self.subTest(resource=name):
+                self.assertEqual(self.owner_client.get(url).status_code, 200)
+
+    def test_the_reporting_manager_reads_the_assignment_but_not_the_definitions(self):
+        urls = self.detail_urls()
+        for name in ("employee-objective", "employee-key-result", "comment"):
+            with self.subTest(resource=name):
+                self.assertEqual(self.boss_client.get(urls[name]).status_code, 200)
+        for name in ("objective", "key-result"):
+            with self.subTest(resource=name):
+                self.assertEqual(self.boss_client.get(urls[name]).status_code, 403)
+
+    def test_an_objective_manager_reads_the_objective_and_its_assignments(self):
+        for name, url in self.detail_urls().items():
+            with self.subTest(resource=name):
+                self.assertEqual(self.objmgr_client.get(url).status_code, 200)
+
+    def test_a_superuser_can_read_everything(self):
+        for name, url in self.detail_urls().items():
+            with self.subTest(resource=name):
+                self.assertEqual(self.admin.get(url).status_code, 200)
+
+    def test_the_owner_can_list_their_own_employee_key_results(self):
+        rows = self.results(self.owner_client.get(BASE + "employee-key-result/"))
+        self.assertEqual([r["id"] for r in rows], [self.emp_kr.pk])
+
+    def test_the_reporting_manager_lists_the_reports_employee_key_results(self):
+        rows = self.results(self.boss_client.get(BASE + "employee-key-result/"))
+        self.assertEqual([r["id"] for r in rows], [self.emp_kr.pk])
+
+    def test_an_unrelated_employee_lists_no_employee_key_results(self):
+        self.assertEqual(
+            self.results(self.other_client.get(BASE + "employee-key-result/")), []
+        )
+
+
+class CreateDefaultsTests(OkrApiBase):
+    """ADR-0014: records created through the API get the creator's company."""
+
+    def test_a_new_key_result_gets_the_creators_company(self):
         response = self.admin.post(
             BASE + "key-result/",
-            {"title": "No company", "description": "d"},
+            {"title": "Defaulted", "description": "d"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["company_id"],
+            {"id": self.company.pk, "company": "OKR API Test Co"},
+        )
+
+    def test_a_new_objective_gets_the_creators_company(self):
+        response = self.admin.post(
+            BASE + "objective/",
+            {"title": "Defaulted", "description": "d", "duration": 5},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["company_id"]["id"], self.company.pk)
+
+    def test_an_explicit_company_is_respected(self):
+        elsewhere = make_company("OKR API Other Co", hq=False)
+        response = self.admin.post(
+            BASE + "key-result/",
+            {"title": "Explicit", "description": "d", "company_id_write": elsewhere.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["company_id"]["id"], elsewhere.pk)
+
+    def test_a_creator_with_no_employee_record_leaves_the_company_empty(self):
+        loner = APIClient(raise_request_exception=False)
+        loner.force_authenticate(user=make_user("okr_api_loner", is_superuser=True))
+        response = loner.post(
+            BASE + "key-result/",
+            {"title": "No employee", "description": "d"},
             format="json",
         )
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(response.json()["company_id"])
 
-    def test_the_owner_cannot_list_their_own_employee_key_results(self):
-        """EmployeeKeyResult has no employee_id field, so the restricted list is empty."""
-        self.assertEqual(
-            self.results(self.owner_client.get(BASE + "employee-key-result/")), []
-        )
 
-    def test_employee_key_result_without_a_key_result_and_with_a_start_date_is_a_500(
-        self,
-    ):
-        response = self.admin.post(
-            BASE + "employee-key-result/",
+class RelationValidationTests(OkrApiBase):
+    """ADR-0014: an employee key result needs its objective and key result."""
+
+    REQUIRED = ["This field is required."]
+
+    def post(self, body):
+        return self.admin.post(BASE + "employee-key-result/", body, format="json")
+
+    def test_a_key_result_is_required_even_with_a_start_date(self):
+        response = self.post(
             {
                 "employee_objective_id_write": self.emp_objective.pk,
                 "current_value": 1,
                 "target_value": 2,
                 "start_date": "2026-01-01",
-            },
-            format="json",
+            }
         )
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"key_result_id_write": self.REQUIRED})
 
-    def test_employee_key_result_without_a_key_result_or_start_date_creates_an_orphan(
-        self,
-    ):
-        response = self.admin.post(
-            BASE + "employee-key-result/",
+    def test_a_key_result_is_required_without_a_start_date_too(self):
+        response = self.post(
             {
                 "employee_objective_id_write": self.emp_objective.pk,
                 "current_value": 1,
                 "target_value": 2,
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"key_result_id_write": self.REQUIRED})
+
+    def test_an_employee_objective_is_required(self):
+        response = self.post(
+            {"key_result_id_write": self.key_result.pk, "current_value": 1}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(), {"employee_objective_id_write": self.REQUIRED}
+        )
+
+    def test_both_missing_are_reported_together(self):
+        response = self.post({"current_value": 1})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "employee_objective_id_write": self.REQUIRED,
+                "key_result_id_write": self.REQUIRED,
             },
+        )
+
+    def test_updating_does_not_require_the_relations(self):
+        response = self.admin.put(
+            f"{BASE}employee-key-result/{self.emp_kr.pk}/",
+            {"current_value": 60},
             format="json",
         )
-        self.assertEqual(response.status_code, 201)
-        self.assertIsNone(response.json()["key_result_id"])
+        self.assertEqual(response.status_code, 200)
 
-    def test_failed_delete_leaks_the_database_error_text(self):
+
+class SafeDeleteTests(OkrApiBase):
+    """ADR-0014: a failed delete answers with a generic message, not database text."""
+
+    def test_deleting_a_record_in_use_gives_a_generic_message(self):
         response = self.admin.delete(f"{BASE}objective/{self.objective.pk}/")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("protected foreign keys", response.json()["error"])
+        self.assertEqual(
+            response.json(), {"error": "This record is in use and cannot be deleted."}
+        )
+        self.assertNotIn("protected", response.content.decode().lower())

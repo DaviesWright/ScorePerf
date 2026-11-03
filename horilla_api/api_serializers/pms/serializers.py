@@ -247,6 +247,19 @@ class EmployeeKeyResultSerializer(serializers.ModelSerializer):
         model = EmployeeKeyResult
         fields = "__all__"
 
+    def validate(self, attrs):
+        """On create both relations are required; without them save() crashes (500)."""
+        if self.instance is None:
+            required = serializers.Field.default_error_messages["required"]
+            missing = {
+                f"{name}_write": [required]
+                for name in ("employee_objective_id", "key_result_id")
+                if attrs.get(name) is None
+            }
+            if missing:
+                raise serializers.ValidationError(missing)
+        return attrs
+
     def get_employee_objective_id(self, obj):
         if obj.employee_objective_id:
             return {
