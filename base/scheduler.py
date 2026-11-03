@@ -481,7 +481,7 @@ def clear_expired_sessions():
 
 def trim_scheduler_history():
     """
-    Delete scheduler job-run history older than HORILLA_SCHEDULER_HISTORY_DAYS.
+    Delete scheduler job-run history older than SCOREVIEW_SCHEDULER_HISTORY_DAYS.
     django_apscheduler records a row for every run of every job and never
     removes them, so with jobs that run every minute the table grows by
     thousands of rows a day.
@@ -492,7 +492,7 @@ def trim_scheduler_history():
 
     # At least a day: 0 or a negative value would delete the whole history
     # at every run (the cutoff would be now or later).
-    days = max(getattr(settings, "HORILLA_SCHEDULER_HISTORY_DAYS", 7), 1)
+    days = max(getattr(settings, "SCOREVIEW_SCHEDULER_HISTORY_DAYS", 7), 1)
     cutoff = timezone.now() - timedelta(days=days)
     deleted, _ = DjangoJobExecution.objects.filter(run_time__lte=cutoff).delete()
     logger.info("Deleted %s scheduler job runs older than %s days", deleted, days)

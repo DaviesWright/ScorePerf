@@ -330,7 +330,7 @@ def scheduler_metrics():
             counts[status] = counts.get(status, 0) + 1
         lines += [
             # A gauge, not a counter: trim_scheduler_history deletes runs older
-            # than HORILLA_SCHEDULER_HISTORY_DAYS, so the totals can go down.
+            # than SCOREVIEW_SCHEDULER_HISTORY_DAYS, so the totals can go down.
             "# HELP horilla_scheduler_executions_total Job executions by status, "
             "over the retained history.",
             "# TYPE horilla_scheduler_executions_total gauge",

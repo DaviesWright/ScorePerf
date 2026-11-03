@@ -82,8 +82,31 @@ or falsify provenance):
 - Code identifiers: the `horilla/` package and `from horilla…` imports, the
   `horilla_*` apps, `Horilla*` classes, the `createhorillauser` command, the
   `horillafilters` template-tag library, URL and template names.
-- `HORILLA_*` environment variables and the `horilla_db` / `horilla_user`
-  Docker database defaults (Layer 2, not done yet).
+- The `horilla_db` / `horilla_user` Docker database defaults and the
+  `horilla/horilla-hr` image names in upstream-facing docs (Layer 2, not done
+  yet). The `HORILLA_*` names themselves **were renamed on 2026-11-03**, see
+  the next section.
+
+**Renamed 2026-11-03: `HORILLA_*` to `SCOREVIEW_*`** (environment variables,
+Django settings and one JavaScript global). Update any `.env`, Compose file or
+deployment script that sets the old names. There is no fallback to the old
+names.
+
+| Old | New | Kind |
+|---|---|---|
+| `HORILLA_ENV` | `SCOREVIEW_ENV` | environment |
+| `HORILLA_SKIP_RELEASE_TASKS` | `SCOREVIEW_SKIP_RELEASE_TASKS` | environment |
+| `HORILLA_REQUIRE_SCHEDULER` | `SCOREVIEW_REQUIRE_SCHEDULER` | environment |
+| `HORILLA_SCHEDULER_HISTORY_DAYS` | `SCOREVIEW_SCHEDULER_HISTORY_DAYS` | environment |
+| `HORILLA_FIRST_DAY_OF_WEEK` | `SCOREVIEW_FIRST_DAY_OF_WEEK` | environment |
+| `HORILLA_GOLDEN_WRITE` | `SCOREVIEW_GOLDEN_WRITE` | test environment |
+| `HORILLA_DATE_FORMATS`, `HORILLA_TIME_FORMATS` | `SCOREVIEW_DATE_FORMATS`, `SCOREVIEW_TIME_FORMATS` | Django settings |
+| `HORILLA_DBTEMPLATE_*` | `SCOREVIEW_DBTEMPLATE_*` | Django settings |
+| `window.HORILLA_TOUR` | `window.SCOREVIEW_TOUR` | JavaScript global |
+
+Not changed: `CHANGELOG.md`, `docker/dockerhub/` (upstream image docs) and
+`LICENSE`. The file `horilla_tour/HORILLA_TOUR.md` is now
+`horilla_tour/SCOREVIEW_TOUR.md`.
 - The health check's `"product": "horilla"` (mobile and API clients may rely on
   it), the cache `KEY_PREFIX`, and the LDAP default DNs.
 - URLs and domains: `docs.horilla.com` and `www.horilla.com` (in-app help links;

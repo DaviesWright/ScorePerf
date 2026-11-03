@@ -75,7 +75,7 @@ def readiness_check(request):
     ``/health/`` stays a cheap liveness check (Docker HEALTHCHECK).
 
     The scheduler status is reported but does not fail the probe unless
-    HORILLA_REQUIRE_SCHEDULER=1, which is off by default: a stopped scheduler
+    SCOREVIEW_REQUIRE_SCHEDULER=1, which is off by default: a stopped scheduler
     delays background jobs, while a 503 here can remove web from the load
     balancer and stop the app serving requests entirely. Monitor the field;
     opt in to failing only where that trade-off is right.
@@ -105,7 +105,7 @@ def readiness_check(request):
 
     checks["scheduler"] = _scheduler_status()
     if (
-        getattr(django_settings, "HORILLA_REQUIRE_SCHEDULER", False)
+        getattr(django_settings, "SCOREVIEW_REQUIRE_SCHEDULER", False)
         and checks["scheduler"] != "ok"
     ):
         return JsonResponse(

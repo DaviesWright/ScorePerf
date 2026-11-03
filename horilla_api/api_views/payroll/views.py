@@ -546,10 +546,10 @@ class PayslipPDFAPIView(APIView):
 
         # formatted date for chosen company format (safe default if not found)
         formatted_start_date = start_date.strftime(
-            settings.HORILLA_DATE_FORMATS.get(date_format, "%b. %d, %Y")
+            settings.SCOREVIEW_DATE_FORMATS.get(date_format, "%b. %d, %Y")
         )
         formatted_end_date = end_date.strftime(
-            settings.HORILLA_DATE_FORMATS.get(date_format, "%b. %d, %Y")
+            settings.SCOREVIEW_DATE_FORMATS.get(date_format, "%b. %d, %Y")
         )
 
         # fill template context like original view

@@ -35,7 +35,7 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
-HORILLA_ENV = env("HORILLA_ENV", default="")
+SCOREVIEW_ENV = env("SCOREVIEW_ENV", default="")
 REDIS_URL = env("REDIS_URL", default=None)
 
 # Default site ID for django.contrib.sites framework.
@@ -372,7 +372,7 @@ TIME_ZONE = env("TIME_ZONE", default="Asia/Kolkata")
 # "This Week" / "Last Week": 0 = Sunday, 1 = Monday ... 6 = Saturday.
 # Monday matches the attendance dashboard and the other week filters.
 # Read as text: an empty or invalid value falls back to Monday (see week_start).
-HORILLA_FIRST_DAY_OF_WEEK = env("HORILLA_FIRST_DAY_OF_WEEK", default="1")
+SCOREVIEW_FIRST_DAY_OF_WEEK = env("SCOREVIEW_FIRST_DAY_OF_WEEK", default="1")
 USE_I18N = True
 USE_TZ = True
 
@@ -416,7 +416,7 @@ from horilla.observability import init_sentry  # noqa: E402
 SENTRY_DSN = env("SENTRY_DSN", default="")
 init_sentry(
     dsn=SENTRY_DSN,
-    environment=HORILLA_ENV or ("development" if DEBUG else "production"),
+    environment=SCOREVIEW_ENV or ("development" if DEBUG else "production"),
     release=_horilla_version,
     traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0),
 )
@@ -450,10 +450,10 @@ NESTED_SUBORDINATE_VISIBILITY = False
 TWO_FACTORS_AUTHENTICATION = False
 # When True, /ready/ returns 503 until run_scheduler has registered jobs.
 # Off by default so Docker CI (web without the scheduler service) still passes.
-HORILLA_REQUIRE_SCHEDULER = env.bool("HORILLA_REQUIRE_SCHEDULER", default=False)
+SCOREVIEW_REQUIRE_SCHEDULER = env.bool("SCOREVIEW_REQUIRE_SCHEDULER", default=False)
 # Days of scheduler job-run history (django_apscheduler's DjangoJobExecution)
 # kept by the daily trim_scheduler_history job; older rows are deleted.
-HORILLA_SCHEDULER_HISTORY_DAYS = env.int("HORILLA_SCHEDULER_HISTORY_DAYS", default=7)
+SCOREVIEW_SCHEDULER_HISTORY_DAYS = env.int("SCOREVIEW_SCHEDULER_HISTORY_DAYS", default=7)
 
 SIDEBARS = [
     "employee",
@@ -555,7 +555,7 @@ NO_PERMISSION_MODALS = [
 
 FILE_STORAGE = FileSystemStorage(location="csv_tmp/")
 
-HORILLA_DATE_FORMATS = {
+SCOREVIEW_DATE_FORMATS = {
     "DD/MM/YY": "%d/%m/%y",
     "DD-MM-YYYY": "%d-%m-%Y",
     "DD.MM.YYYY": "%d.%m.%Y",
@@ -570,7 +570,7 @@ HORILLA_DATE_FORMATS = {
     "dddd, MMMM D, YYYY": "%A, %B %d, %Y",
 }
 
-HORILLA_TIME_FORMATS = {
+SCOREVIEW_TIME_FORMATS = {
     "hh:mm A": "%I:%M %p",  # 12-hour format
     "HH:mm": "%H:%M",  # 24-hour format
     "HH:mm:ss.SSSSSS": "%H:%M:%S.%f",  # 24-hour format with seconds and microseconds
@@ -660,7 +660,7 @@ AXES_IPWARE_META_PRECEDENCE_ORDER = (
 # ========================================
 # PRODUCTION SECURITY GATES
 # ========================================
-# Fail closed when DEBUG=False or HORILLA_ENV=production. Local DEBUG=True
+# Fail closed when DEBUG=False or SCOREVIEW_ENV=production. Local DEBUG=True
 # tutorials keep insecure-but-documented defaults for open-source onboarding.
 from horilla.settings.security import (  # noqa: E402
     apply_secure_defaults,
@@ -668,13 +668,13 @@ from horilla.settings.security import (  # noqa: E402
     validate_production_secrets,
 )
 
-IS_PRODUCTION = is_production_mode(DEBUG, HORILLA_ENV)
+IS_PRODUCTION = is_production_mode(DEBUG, SCOREVIEW_ENV)
 
 if IS_PRODUCTION:
     validate_production_secrets(SECRET_KEY, ALLOWED_HOSTS, DB_INIT_PASSWORD)
 
 if IS_PRODUCTION:
-    # Same switch as the secrets gate above: HORILLA_ENV=production must not
+    # Same switch as the secrets gate above: SCOREVIEW_ENV=production must not
     # pass secret validation and then ship insecure cookies because DEBUG was
     # left on.
     globals().update(apply_secure_defaults(env, DEBUG))

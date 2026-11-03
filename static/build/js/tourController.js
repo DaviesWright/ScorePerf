@@ -7,12 +7,12 @@
  *
  * Depends on:
  *   - driver.js  (already on window.driver.js.driver)
- *   - window.HORILLA_TOUR  set by footer_scripts.html
+ *   - window.SCOREVIEW_TOUR  set by footer_scripts.html
  */
 (function () {
   'use strict';
 
-  var CFG = window.HORILLA_TOUR || {};
+  var CFG = window.SCOREVIEW_TOUR || {};
   if (!CFG.activeUrl) return;
 
   var driverFactory = window.driver && window.driver.js && window.driver.js.driver;

@@ -1,7 +1,7 @@
 """
 Production security gates and Django secure defaults.
 
-Applied from base settings when DEBUG is False or HORILLA_ENV=production.
+Applied from base settings when DEBUG is False or SCOREVIEW_ENV=production.
 Local/tutorial defaults (DEBUG=True) remain permissive for open-source onboarding.
 """
 

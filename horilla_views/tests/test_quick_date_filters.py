@@ -32,14 +32,14 @@ def ranges_on(today):
 
 
 # Monday unless a test says otherwise, whatever a local .env sets.
-@override_settings(HORILLA_FIRST_DAY_OF_WEEK=1)
+@override_settings(SCOREVIEW_FIRST_DAY_OF_WEEK=1)
 class QuickDateFilterTests(SimpleTestCase):
     def test_weeks_start_on_monday_by_default(self):
         self.assertEqual(week_start(WEDNESDAY), date(2026, 10, 19))
         self.assertEqual(week_start(date(2026, 10, 19)), date(2026, 10, 19))  # Monday
         self.assertEqual(week_start(date(2026, 10, 25)), date(2026, 10, 19))  # Sunday
 
-    @override_settings(HORILLA_FIRST_DAY_OF_WEEK=0)
+    @override_settings(SCOREVIEW_FIRST_DAY_OF_WEEK=0)
     def test_a_site_can_start_weeks_on_sunday(self):
         self.assertEqual(week_start(WEDNESDAY), date(2026, 10, 18))
         self.assertEqual(week_start(date(2026, 10, 18)), date(2026, 10, 18))  # Sunday
@@ -61,11 +61,11 @@ class QuickDateFilterTests(SimpleTestCase):
             (None, 1),
         ]:
             with self.subTest(value=value), override_settings(
-                HORILLA_FIRST_DAY_OF_WEEK=value
+                SCOREVIEW_FIRST_DAY_OF_WEEK=value
             ):
                 self.assertEqual(first_day_of_week(), expected)
 
-    @override_settings(HORILLA_FIRST_DAY_OF_WEEK="abc")
+    @override_settings(SCOREVIEW_FIRST_DAY_OF_WEEK="abc")
     def test_an_invalid_setting_means_monday(self):
         self.assertEqual(week_start(WEDNESDAY), date(2026, 10, 19))
 

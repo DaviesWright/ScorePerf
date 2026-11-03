@@ -25,7 +25,7 @@ class TrimSchedulerHistoryTests(TestCase):
             job=self.job, status=status, run_time=timezone.now() - age
         )
 
-    @override_settings(HORILLA_SCHEDULER_HISTORY_DAYS=7)
+    @override_settings(SCOREVIEW_SCHEDULER_HISTORY_DAYS=7)
     def test_runs_older_than_the_retention_go(self):
         from base.scheduler import trim_scheduler_history
 
@@ -44,7 +44,7 @@ class TrimSchedulerHistoryTests(TestCase):
         )
         self.assertIn("Deleted 2 scheduler job runs older than 7 days", logs.output[0])
 
-    @override_settings(HORILLA_SCHEDULER_HISTORY_DAYS=30)
+    @override_settings(SCOREVIEW_SCHEDULER_HISTORY_DAYS=30)
     def test_the_retention_is_a_setting(self):
         from base.scheduler import trim_scheduler_history
 
@@ -52,7 +52,7 @@ class TrimSchedulerHistoryTests(TestCase):
         trim_scheduler_history()
         self.assertEqual(DjangoJobExecution.objects.count(), 1)
 
-    @override_settings(HORILLA_SCHEDULER_HISTORY_DAYS=0)
+    @override_settings(SCOREVIEW_SCHEDULER_HISTORY_DAYS=0)
     def test_at_least_a_day_is_kept(self):
         from base.scheduler import trim_scheduler_history
 
