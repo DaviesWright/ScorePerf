@@ -89,11 +89,12 @@ or falsify provenance):
 - URLs and domains: `docs.horilla.com` and `www.horilla.com` (in-app help links;
   override with `DOC_BASE_URL` in `local_settings.py`) and every
   `github.com/horilla/…` link.
-- `LICENSE` and the upstream project documents `CHANGELOG.md`, `SECURITY.md`,
+- `LICENSE` and the upstream project documents `CHANGELOG.md`,
   `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`, plus `.github/` and
   `docker/dockerhub/`. These describe the upstream project and its channels.
-  `SECURITY.md` still sends reports to upstream, so replace it with Senrab's own
-  process before external release.
+  `SECURITY.md` was **rewritten for ScoReview on 2026-11-03** (reports go to
+  Senrab Technologies by email); it is no longer an upstream document. The
+  contact is the public Senrab address until a dedicated security mailbox exists.
 
 When writing new text that names the upstream project (provenance, licence),
 keep the word "Horilla". Do not re-run a blanket replacement over this file.

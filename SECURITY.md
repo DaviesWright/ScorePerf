@@ -1,128 +1,121 @@
 # Security Policy
 
-Horilla takes security seriously. This document explains how to report vulnerabilities, which versions we support, what is in or out of scope, and how we handle disclosure and CVE assignment.
+Senrab Technologies takes the security of ScoReview Performance seriously. This document explains how to report a vulnerability, what is in and out of scope, and how we handle it.
 
-This policy applies to Horilla HR ([`horilla/horilla-hr`](https://github.com/horilla/horilla-hr)).
+This policy applies to **ScoReview Performance**, maintained by Senrab Technologies. ScoReview is built on the open-source Horilla HR codebase (see [README.md](README.md) and [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)). Reports about this repository come to us first, not to the upstream project.
 
 ## Supported versions
 
-| Version | Branch(es) | Security support |
-|---------|------------|------------------|
-| v2 | `2.0` (default), `dev/v2.0` (active development) | **Yes** — actively maintained |
-| v1 | `1.0`, `master` | **Deprioritized** — fixes considered case-by-case at maintainer discretion; no guaranteed patch schedule. Prefer upgrading to v2. |
+ScoReview has not yet published tagged releases. Until it does:
 
-See [Discussion #1127](https://github.com/horilla/horilla-hr/discussions/1127) for background on this policy.
+| Line | Security support |
+|------|------------------|
+| `main-custom` (current development line) | **Yes.** Fixes land here. |
+| Any other branch or fork | No |
 
-After v2 GA, we intend to treat v1 as **EOL for security** except for extraordinary cases (e.g. critical issues affecting customers we still host on v1). Reports that only affect unsupported lines will normally be closed with guidance to upgrade.
+Each client runs its own deployment. A fix reaches a client only when that deployment is upgraded, so we notify affected clients directly. The support policy for tagged releases will be published with the first release.
 
 ## Reporting a vulnerability
 
-**Do not** open a public GitHub issue or discussion for a security vulnerability.
+**Do not** open a public issue, discussion or pull request for a security vulnerability.
 **Do not** disclose exploit details publicly until we have published a fix or explicitly agreed otherwise.
 
 ### How to report
 
-Use **GitHub Private Vulnerability Reporting** only:
+Email **contactus@senrabconsultech.com** with the subject line **ScoReview security report**. A dedicated security address will replace this when one exists.
 
-1. Open a [private vulnerability report](https://github.com/horilla/horilla-hr/security/advisories/new) on this repository.
-2. Include enough detail for us to reproduce the issue (see below).
-
-We do **not** accept or triage security vulnerability reports by email. General support inboxes are for product help, not vulnerability disclosure.
-
-We aim to **acknowledge** valid reports within **72 hours**. Resolution time depends on severity and complexity; we will keep you informed via the private advisory thread.
+We will acknowledge valid reports and keep you informed as we triage and fix. A target acknowledgement time will be published once a dedicated security mailbox is in place.
 
 ### What to include
 
-- Affected Horilla HR **version** or commit / Docker tag
-- Environment notes (self-hosted Compose, reverse proxy, auth mode) — use variable *names* and redacted examples only
-- Step-by-step reproduction (minimal PoC preferred)
-- Impact (who can exploit it, and what they gain)
+- The affected **version**, commit or deployment (use a commit hash or release name, not a hostname)
+- Environment notes (Docker Compose or other, reverse proxy, authentication mode). Use variable *names* and redacted examples only
+- Step-by-step reproduction (a minimal proof of concept is preferred)
+- Impact: who can exploit it and what they gain
 - Whether a fix or workaround is already known
 
-**Never** paste live secrets, tokens, database dumps, or customer PII.
+**Never** send live secrets, tokens, database dumps, or personal data. If you have found real personal data, stop and tell us without copying it.
 
-Reporter-supplied CVSS scores are helpful input; maintainers decide the final severity.
+A reporter's severity estimate is useful input. We decide the final severity.
 
-Please avoid dumping large batches of unverified findings without waiting for triage feedback on earlier reports.
+Please wait for triage feedback before sending large batches of unverified findings.
 
 ## Scope
 
 ### In scope
 
-- Vulnerabilities in **Horilla application code** shipped in this repository
-- Unsafe **default configuration** that we ship (for example a publicly known default `SECRET_KEY` in production paths)
-- Issues that are **authentically exploitable** with realistic privileges on a **supported** version
+- Vulnerabilities in code shipped in this repository, including the `scoreview_*` apps, our customisations, and the Horilla code as shipped here
+- Unsafe **default configuration** we ship (for example a known default secret that works in production)
+- Deployment files in this repository (`Dockerfile`, Compose files, nginx configuration)
+- Spreadsheet export injection and similar issues in our export paths
+- Dependency vulnerabilities with a **reachable** path in ScoReview
 
 ### Out of scope
 
-We will normally **not** treat the following as Horilla product CVEs. We may still harden or document them when useful.
+We will normally not treat the following as ScoReview vulnerabilities. We may still harden or document them.
 
 | Class | Notes |
-|-------|--------|
-| CSV / Excel formula injection | Spreadsheet clients interpret cell content; not a Horilla application bug |
-| Privilege escalation by users who already administer users/roles | Trusted-admin capability by design |
-| Issues only on EOL Python or EOL Horilla versions | Upgrade to a supported line |
-| Pure deployment misconfiguration | Operator responsibility (`DEBUG=True`, open admin, weak secrets you set yourself). **Exception:** shipping an insecure default that works out of the box |
-| Media / static XSS when files are served outside documented secure paths | Follow Docker / deployment docs; do not bypass Django `protected_media` with a raw `/media/` alias |
-| Dependency CVEs with **no reachable path** in Horilla | Tracked via Dependabot when applicable |
-| Third-party plugins or custom code not shipped by Horilla | Report to that project’s maintainers |
-| Compromise of marketing sites, email, or social accounts | Operational incident response — not a product advisory |
-| Demands for cash payment (“beg bounties”) | Credit only (see Rewards) |
+|-------|-------|
+| Privilege escalation by users who already administer users and roles | Trusted-administrator capability by design |
+| Issues only on end-of-life Python or Django versions | Upgrade to a supported version |
+| Pure deployment misconfiguration by the operator | For example `DEBUG=True`, weak secrets set by the operator, an exposed admin site. **Exception:** an insecure default that works out of the box |
+| Files served outside the documented secure media path | Follow the deployment documentation |
+| Dependency advisories with no reachable path | Tracked through Dependabot |
+| Third-party software or custom code we did not ship | Report to that project |
+| Social engineering, physical attacks, or compromise of our email, website or social accounts | Handled as operational incidents |
+| Demands for payment | See Rewards |
 
 ### Grey areas
 
-- Dynamic code paths used for payroll / exports: treated as **high priority** if a non-superuser can inject or trigger execution; if strictly limited to trusted admins, we still harden for v2 quality and may document the trust boundary
-- Default secrets in images or quickstart docs: **in-scope product defects**
+- Code that evaluates dynamic input for exports or calculations is treated as **high priority** if a non-administrator can trigger it.
+- Default secrets in images or quick-start documentation are **in scope** as product defects.
 
 ## Severity (guidance)
 
-Final severity is decided by maintainers:
-
 | Level | Examples |
 |-------|----------|
-| Critical | Unauthenticated RCE, unauthenticated auth bypass, mass data exposure without auth |
-| High | Authenticated RCE, large-scale IDOR on PII/payroll, authenticated auth bypass |
-| Medium | XSS requiring user interaction, limited IDOR, open redirect |
-| Low | Low-impact issues, verbose errors without clear exploit path |
+| Critical | Unauthenticated remote code execution, unauthenticated authentication bypass, mass data exposure without authentication |
+| High | Authenticated remote code execution, broad access to other employees' personal or performance records, authenticated authentication bypass |
+| Medium | Cross-site scripting needing user interaction, limited access to another user's record, open redirect |
+| Low | Low-impact issues, verbose errors without a clear exploit path |
 
-## Disclosure and CVE process
+Performance records, appraisal ratings and personal data are treated as confidential. Exposure of another employee's records is rated at least Medium.
 
-1. Private intake via GitHub Private Vulnerability Reporting (private advisory draft)
-2. Triage: in scope? valid? duplicate? supported version?
-3. Fix on a supported branch; coordinate disclosure with the reporter when practical
-4. Publish a GitHub Security Advisory and **request a CVE ID via GitHub** when the issue meets our publish criteria
-5. Credit the reporter in the advisory (unless anonymity is requested)
+## Our process
 
-We use **GitHub as the CVE Numbering Authority** for Horilla HR advisories. We do not require reporters to self-request CVEs from MITRE; unsupported self-requests may be disputed.
+1. **Intake:** a report arrives privately by email.
+2. **Triage:** is it in scope, valid, a duplicate, and on a supported line?
+3. **Fix:** on `main-custom`, with a test that fails before the fix and passes after.
+4. **Notify:** tell the reporter, and tell affected clients so they can upgrade their deployments.
+5. **Disclose:** coordinate the timing of any public disclosure with the reporter.
+6. **Credit:** acknowledge the reporter unless they ask for anonymity.
 
-**We publish a CVE when all of the following are true:**
+If a vulnerability also affects the unmodified upstream Horilla HR project, we may report it to that project through its own process (https://github.com/horilla/horilla-hr/security/advisories/new) after we have a fix, with the reporter's agreement.
 
-- Affects a **supported** release
-- Is **authentically exploitable** with realistic privileges
-- Is in **Horilla code** or an unsafe default we ship
-- Is **not** a duplicate of an already-published advisory for the same root cause
+## Known issues
 
-Historical issues that only affected v1 and are fixed (or EOL) in v2 are generally **closed without a new CVE**, with a short disposition note.
+Security findings from our own reviews are tracked internally in `docs/architecture/BASELINE_ASSESSMENT.md`, with their status. That document is not a substitute for reporting a new finding.
 
 ## Rewards
 
-There is **no cash bug bounty** at this time. We offer public credit in advisories and release notes. A paid program may be considered later when triage capacity is stable.
+There is no cash bug bounty at this time. We offer credit.
 
 ## Security tooling
 
 On this repository:
 
-- **Private vulnerability reporting** — enabled (required intake path above)
-- **Dependabot** — config lives in `.github/dependabot.yml` (PRs target `dev/v2.0`); alert/update features are enabled when available on the org/plan
-- **Secret scanning / push protection** — enabled when available on the org/plan
+- **Dependabot alerts** are enabled, and alerts are triaged. An alert with no fix available is dismissed only with a recorded reason and a mitigation.
+- **Secret scanning** runs in `pre-commit` (gitleaks), and `ruff` runs on every commit.
+- CI workflow files for static analysis and tests are present under `.github/workflows`.
 
-These are operational controls for maintainers; they do not replace private reporting of product vulnerabilities.
+These are internal controls. They do not replace reporting a vulnerability.
 
 ## Contact
 
-- Security reports: [GitHub Private Vulnerability Reporting](https://github.com/horilla/horilla-hr/security/advisories/new) only — see [Reporting a vulnerability](#reporting-a-vulnerability)
-- Non-security questions about this policy: open a GitHub Discussion, or contact the maintainers through the project’s normal channels
+Security reports and questions about this policy: **contactus@senrabconsultech.com** (subject: ScoReview security report).
+
+Senrab Technologies, a subsidiary of Senrab ConsulTech Group. Website: https://senrabconsultech.com/
 
 ## Disclaimer
 
-The Horilla project and its maintainers assume no liability for security vulnerabilities reported or discovered. We greatly appreciate responsible disclosure that helps keep users safe.
+We appreciate responsible disclosure that helps keep our clients and their employees safe. This policy is not a contract and does not create any warranty or obligation beyond those in the project licence and any agreement with a client.

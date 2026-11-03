@@ -113,7 +113,7 @@ make test-smoke                                  # CI smoke set across first-par
 
 Built-in controls include permission-based access with per-company scoping, optional two-factor sign-in by email, brute-force lockout and API rate limiting, change history on records, and XSS checks on saved text. Always run behind HTTPS in production and keep dependencies current.
 
-**Reporting a vulnerability.** Do not open a public issue. Contact Senrab Technologies privately at contactus@senrabconsultech.com. (`SECURITY.md` still describes the upstream project's process and is being replaced.)
+**Reporting a vulnerability.** Do not open a public issue. Follow [SECURITY.md](SECURITY.md): contact Senrab Technologies privately at contactus@senrabconsultech.com.
 
 ## Contact
 
