@@ -1,0 +1,22 @@
+/*
+ * ScoReview colourful dashboard tiles. --sco-accent is set per tile by colors.js;
+ * the fallback is the brand blue. Tints use color-mix so dark mode still works.
+ */
+.oh-card-dashboard:not(.oh-card-dashboard--transparent) {
+    --sco-accent: #5b97f5;
+    border-top: 4px solid var(--sco-accent);
+    background-image: linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--sco-accent) 16%, transparent) 0%,
+        transparent 60%
+    );
+}
+
+.oh-card-dashboard:not(.oh-card-dashboard--transparent) .oh-card-dashboard__count {
+    color: var(--sco-accent);
+    font-weight: 700;
+}
+
+.oh-card-dashboard:not(.oh-card-dashboard--transparent) .oh-card-dashboard__title {
+    color: color-mix(in srgb, var(--sco-accent) 55%, currentColor);
+}

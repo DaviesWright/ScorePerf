@@ -185,6 +185,7 @@ confirm the overrides still apply.
 |---|---|---|
 | `scoreview_performance/templates/<same path as upstream>` | The upstream template at that path | `_TEMPLATE_LOADERS` slot 1 in `horilla/settings/local_settings.py` |
 | `scoreview_performance/static_overrides/<same path as upstream>` | The upstream static file at that path | `STATICFILES_DIRS[0]` in `horilla/settings/local_settings.py` |
+| `scoreview_performance/templates/index.html` | `horilla_theme/templates/index.html` (base layout) | Template loader slot above. A full copy with 3 lines added at the end of `<head>` (tagged `CUSTOM:`) that load `colors.css` and `colors.js`. Re-apply those lines if you ever refresh this copy from upstream |
 
 Template lookup order: DB templates (`horilla_dbtemplate`), then
 `scoreview_performance/templates`, then `horilla_theme/templates`, then
@@ -197,13 +198,25 @@ image. Note that `login.html` and `common_form.html` also exist in
 Dir names are deliberately not `static/`: a `static/` folder inside the app
 would also be picked up by the app-directories finder and collide.
 
+## Colours and charts
+
+| Piece | Where | What it does |
+|---|---|---|
+| Brand theme | `scoreview_performance/migrations/0001_scoreview_theme.py` | Creates "ScoReview Theme" (`HorillaColorTheme`) and makes it the default for all companies. Brand tokens: logo blue `#5B97F5` (`primary_500`), button blue `#2157D4` (`primary_600`, the primary on senrabconsultech.com, white text 6.3:1), charcoal `#383838`. Applied by `migrate`, so every environment gets it. On a fresh database it also stops upstream's 13 sample themes from being created, because it runs before them |
+| Vivid charts | `scoreview_performance/static/scoreview_performance/colors.js` | Wraps the global `Chart` so every chart's dataset colours come out vivid (pastels lifted, greys replaced from a 10-colour palette that includes brand emerald `#16C57F` and cyan `#00B8CC`). Upstream chart scripts are untouched, so new charts are covered automatically. Also sets `--sco-accent` per dashboard tile |
+| Colourful tiles | `scoreview_performance/static/scoreview_performance/colors.css` | Coloured top border, tint and count colour on `.oh-card-dashboard` tiles |
+
+Branding source: https://senrabconsultech.com/ (parent group "Senrab ConsulTech Group", subsidiaries Senrab Technologies and PeopleOptix; font Outfit, foreground `#151B28`, accent cyan `#00B8CC`). That site's favicon is a stock placeholder, so there is no favicon to reuse.
+
+Notes: Chart.js is loaded from `cdn.jsdelivr.net` by upstream, so charts need internet access. After adding files under a `static/` folder, run `collectstatic` and restart the server, because WhiteNoise indexes files at startup.
+
 ## Config-only changes
 
 No code impact, but useful context for anyone standing up a new environment.
 
 | Setting | Location | Value / note |
 |---|---|---|
-| `WHITE_LABELLING` | `horilla/settings/local_settings.py` | Planned: `True` — replaces user-visible Horilla branding with HQ company identity. **Not applied yet** |
+| `WHITE_LABELLING` | `horilla/settings/local_settings.py` | `True` (applied 2026-11-03) — replaces user-visible Horilla branding with the HQ company's name and logo. The HQ company record is data, not code: set its name and logo in `Settings → Base → Company` |
 | `TIME_ZONE` | `.env` | `Africa/Accra` (local dev; confirm for production) |
 | `DB_ENGINE`, `DB_NAME` | `.env` | Local dev: SQLite, `TestDB.sqlite3`. Production: Postgres |
 | `POSTGRES_DB` | Docker Compose / `.env` | `scoreview_db` (if infrastructure rename performed) |
@@ -253,4 +266,5 @@ change.
 
 | Date | Summary | Author |
 |---|---|---|
+| 2026-11-03 | Colour pass: ScoReview theme migration, vivid chart palette and colourful tiles (`colors.js`/`colors.css`), base layout override `index.html`; logo uploaded to the HQ company; White Labelling on | paa.barnes |
 | 2026-11-03 | Forked Horilla `2.0` at `c49300c8f`; local setup; added `scoreview_performance` scaffold with template and static override wiring | paa.barnes |

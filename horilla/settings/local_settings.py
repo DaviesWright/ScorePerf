@@ -26,6 +26,9 @@ from .base import _TEMPLATE_LOADERS, BASE_DIR, INSTALLED_APPS, STATICFILES_DIRS
 
 INSTALLED_APPS += ["scoreview_performance"]
 
+# Show the HQ company's name and logo instead of "Horilla" (base/context_processors.py).
+WHITE_LABELLING = True
+
 # Slot 1, right after the DB template loader and ahead of horilla_theme's dir
 # and every app dir: scoreview_performance/templates/<same path> overrides upstream.
 _TEMPLATE_LOADERS.insert(
