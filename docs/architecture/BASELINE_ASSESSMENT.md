@@ -124,6 +124,8 @@ Reuse these. Do not create parallel master records.
 
 Tenant isolation in this code base rests on a convenience filter, not a hard boundary. BUILD §11.1 requires it to be a security boundary.
 
+**Update 2026-11-03 (ADR-0005):** the boundary between clients is now the deployment, because each client gets its own deployment. F-1 to F-3 therefore no longer risk leakage **between clients**. They still apply **between companies inside one client** (for example the subsidiaries of one group) and to superusers, so the findings below stay open for that narrower scope.
+
 | ID | Finding | Evidence | Severity |
 |---|---|---|---|
 | F-1 | `HorillaCompanyManager` **includes rows whose company is NULL for every company** (`Q(path=company) \| Q(path__isnull=True)`). `Objective.company_id`, `KeyResult.company_id` and `Period.company_id` are nullable, so such rows are visible to all tenants. | `base/horilla_company_manager.py` | High for any new tenant-owned model that copies this pattern |
@@ -209,7 +211,7 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| R-1 | Cross-tenant leakage through the company manager (F-1 to F-3) | Medium | High | New-model rules in §7.4; tenant tests for every endpoint; evaluate Postgres RLS later as defence in depth (BUILD §11.1) |
+| R-1 | Leakage between companies inside one client through the company manager (F-1 to F-3). Cross-client leakage is removed by ADR-0005 (one deployment per client). | Low to medium | Medium | New-model rules in §7.4; tenant tests for every endpoint; evaluate Postgres RLS later as defence in depth (BUILD §11.1) |
 | R-2 | Regression of OKR behaviour | Medium | High | Treat `test_progress_calculation.py` as protected; add API contract tests first |
 | R-3 | No production OKR data to test migrations against | High | Medium | Obtain a protected production-like copy before any schema work |
 | R-4 | Mobile clients depend on `/api/v1/pms/` | Medium | High | Contract tests; version any breaking change |
@@ -241,12 +243,11 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 ## 10. Decisions and questions needed before structural work
 
-1. **Approve §7** (keep OKR in `pms`, link by mapping, first slice scope), or direct an alternative.
-2. **Production-like OKR data:** can a protected copy be provided for migration testing (R-3)?
+1. **APPROVED 2026-11-03 (paa.barnes), §7 proposals 1 and 2, recorded as `adr/0001-okr-mapping-table.md`:** OKR stays in the `pms` app and is linked to new performance cycles through a mapping table. No OKR data is moved or renamed, and original identifiers are preserved (BUILD §22.2). Proposals 3 to 5 (first-slice scope, tenant rule, Decimal fields) are **not yet approved** and depend on decisions 4 and 7 below and on D-2 (app naming).2. **Production-like OKR data:** can a protected copy be provided for migration testing (R-3)?
 3. **Product questions on OKR semantics:** should `start_value` ever affect progress? Should progress remain uncapped per key result? Both are pinned today and will stay unless you decide otherwise.
-4. **Tenancy:** confirm the "non-nullable company on all new tables" rule (§7.4) and that superuser unscoped access is acceptable for the new modules.
-5. **Production database:** BUILD requires PostgreSQL for multi-process use. Confirm it is the production target so database constraints can be relied on.
-6. **Task queue:** approve introducing Celery with Redis (ADR 7).
+4. **DECIDED 2026-11-03 (paa.barnes), `adr/0005-tenant-isolation-per-client-deployment.md`:** one deployment per client for now. The isolation boundary between clients is the deployment, not row-level scoping. **Still open inside that ADR:** confirm the addendum that new tables carry a required company reference (§7.4), and that superuser unscoped access is acceptable.
+5. **DECIDED 2026-11-03 (paa.barnes):** PostgreSQL is the production target (recorded in ADR-0005). SQLite is local development only.
+6. **DECIDED 2026-11-03 (paa.barnes), `adr/0007-background-task-queue-celery-redis.md`:** Celery with Redis, APScheduler kept for triggers.
 7. **Deployment target:** the Cloudflare question is still open and feeds ADR 6.
 8. **Audit model:** reuse `HorillaAuditLog` and `horilla_audit`, or add a dedicated business audit event table (BUILD §18)?
 9. **Hidden modules:** confirm `payroll`, `recruitment`, `onboarding`, `offboarding` stay hidden (BUILD §28 excludes them).
@@ -257,7 +258,7 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 | # | Finding | Proposed resolution |
 |---|---|---|
-| D-1 | **`README.md` is still the upstream HRMS README** with only the word replaced ("ScoReview HRMS"). Its Quick Start tells readers to `docker pull horilla/horilla-hr:2.2.1` and `git clone https://github.com/horilla/horilla-hr.git`, so following it installs **stock Horilla, not ScoReview**. It also advertises Payroll, Recruitment and Onboarding (hidden here), upstream badges, upstream branch advice and Discussion #1127. | Rewrite the README for ScoReview Performance: product description per `BUILD.md`, our setup and deployment, attribution to Horilla (LGPL-2.1). Needs your go-ahead; not done yet. |
+| D-1 | **`README.md` is still the upstream HRMS README** with only the word replaced ("ScoReview HRMS"). Its Quick Start tells readers to `docker pull horilla/horilla-hr:2.2.1` and `git clone https://github.com/horilla/horilla-hr.git`, so following it installs **stock Horilla, not ScoReview**. It also advertises Payroll, Recruitment and Onboarding (hidden here), upstream badges, upstream branch advice and Discussion #1127. | **Resolved 2026-11-03:** README rewritten for ScoReview Performance (honest status table, our setup and Docker notes, attribution to Horilla under LGPL-2.1). Security contact uses the public Senrab address; confirm it. |
 | D-2 | **App naming.** `CUSTOMIZATIONS.md` fixes the app name `scoreview_performance` and the slug `scoreview-performance`. `BUILD.md` §4.1 proposes `performance_core`, `performance_catalog`, `mbo`, `bsc`, `performance_evaluation` and so on. | Decide in an ADR: either prefix the new apps (for example `scoreview_core`, `scoreview_mbo`, `scoreview_bsc`) or amend the naming rule. Add the choice to the Phase 1 ADR set. |
 | D-3 | **`okr/` does not exist.** `BUILD.md` §4.1 lists `okr/` as "existing". The existing OKR code is the `pms` app (§2.1). | Keep `pms` as the OKR domain for now (§7 proposal 1). |
 | D-4 | **Frontend rules vs reality.** `BUILD.md` §15.4 requires compiled Tailwind and pinned local Chart.js. Today Tailwind runs in the browser and Chart.js comes from a CDN, and our `colors.js` wraps the global `Chart`. | Follow `BUILD.md`. `colors.js` keeps working once Chart.js is vendored, because it hooks `window.Chart`. Add the frontend build as a Phase 1 or 5 ticket. |
