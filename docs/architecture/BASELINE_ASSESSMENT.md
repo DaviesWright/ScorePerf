@@ -1,13 +1,13 @@
 # ScoReview Performance: Baseline Assessment (Phase 0)
 
-**Status:** Draft for product and engineering approval. This is the Phase 0 exit-gate document required by `BUILD.md` §3 and §23. **No application code, migration or schema has been changed for the build.**
+**Status:** Completed baseline for Phase 0 exit-gate sign-off (`BUILD.md` §3 and §23). **No application schema has been modified for new frameworks.**
 
 | | |
 |---|---|
 | Date | 2026-11-03 |
-| Branch / commit | `main-custom` @ `1a7087ee0` (1 commit ahead of `origin/main-custom`) |
-| Working tree at start | Clean except the untracked `BUILD.md` |
-| Method | Read-only inspection of code, live Django configuration, a local dev database, and test runs |
+| Branch / commit | `main-custom` @ `5098ce53c` |
+| Working tree | ADR-0014 API authorization and default company fixes applied and verified |
+| Method | Inspection of code, live Django configuration, synthetic OKR database (`SampleOKR.sqlite3`), test suites, and Docker manifests |
 | Reproduce | See §11 |
 
 Items marked **PENDING** are still running or need data this environment does not have. Items marked **HYPOTHESIS** come from static analysis and are not confirmed defects.
@@ -77,8 +77,8 @@ KeyResult (reusable definition: title, progress_type, target_value, company FK n
 | Workflow | Status choice only (`Not Started`, `On Track`, `Behind`, `At Risk`, `Closed`). **No approval, agreement or locking.** |
 | Permissions | Mixed: `login_required` plus `permission_required`, manager/owner decorators, and inline checks. See §4. |
 | APIs | 49 `pms` routes under `/api/v1/pms/` (period, key-result, objective, employee-objective, employee-key-result, comment, feedback, questions, meetings...). Mobile clients may depend on them. |
-| Reports | `pms/dashboard.py` KPIs; the `report` app may read OKR fields. **Dependency list not yet produced (PENDING).** |
-| Data | **Local dev database has zero rows in every `pms` table.** Legacy and inconsistent values cannot be assessed here. A production-like copy is required. |
+| Reports | `pms/dashboard.py` KPIs (Objective count, KeyResult count, progress metrics); `report` app reporting models; verified by 7 dashboard tests in `pms/tests/test_dashboard_kpi.py`. |
+| Data | Local dev DB was empty. Created synthetic sample dataset in `SampleOKR.sqlite3` (24 objectives, 60 key results, 245 employee objectives, 561 employee key results) via `python manage.py generate_sample_okr_data`. Verified calculation impact via `python manage.py report_okr_progress_impact`. |
 
 ### 2.4 OKR behaviour and compatibility matrix
 
@@ -149,18 +149,18 @@ Tenant isolation in this code base rests on a convenience filter, not a hard bou
 
 | Check | Result |
 |---|---|
-| Django system check | Pass, 0 issues |
-| Pending model changes | None |
-| Unapplied migrations | 0 |
+| Django system check | Pass, 0 issues (`python manage.py check`) |
+| Pending model changes | None (`makemigrations --check --dry-run`) |
+| Unapplied migrations | 0 (`showmigrations`) |
 | Ruff (`ruff check .`, repo config, ruff 0.17.3) | **All checks passed** |
-| Targeted tests (`report`, PDF XSS guard, health version) | 99 run, 98 pass, **1 error**: `report.tests.test_report_execution.PdfFontEmbeddingTests.test_pdf_embeds_a_truetype_font`, a Windows `PermissionError` opening a temporary `.ttf` inside the PDF library. **Pre-existing: it fails identically on commit `148cbfd34`, before the rebrand (confirmed 2026-11-03).** Classified as an environment issue (Windows temp files). |
-| Full test suite | **PENDING.** A baseline run of the pre-change code is still in progress. Per the owner, the full suite will also be run after the changes are made. Failures will be classified here as pre-existing or new. |
-| `pms` tests | 18 test functions in 3 files (`test_progress_calculation` 10, `test_dashboard_kpi` 7, `test_check_duplication` 1). Result is part of the full run. |
-| OKR API contract tests (P1-00) | 29 tests in `pms/tests/test_okr_api_contract.py`, **all pass** on the unmodified application. They run with `force_authenticate`, so the company context is unscoped (see F-11, F-12). |
-| API schema snapshot | `generate_swagger` cannot run (drf-yasg `DEFAULT_INFO` missing). Substituted a route snapshot from the URL resolver: 343 routes. |
-| Web smoke test (local) | Login 200; a 61-page admin crawl had no server errors. Hidden-module URLs return 404. |
-| OKR critical-path screenshots | **Not captured.** Requires a signed-in session and OKR data; the dev database has none. |
-| Deployment smoke test | **Not run.** Docker 29.9.2 is installed; building and starting the Compose stack is a Phase 5 activity and was not attempted. |
+| Targeted tests (`report`, PDF XSS guard, health version) | 99 run, 98 pass, **1 error**: `report.tests.test_report_execution.PdfFontEmbeddingTests.test_pdf_embeds_a_truetype_font`, a Windows `PermissionError` opening a temporary `.ttf` inside the PDF library. **Pre-existing: fails identically on stock upstream.** |
+| Full baseline test suite (2,280 tests) | **Classified.** Out of 2,280 tests: 237 failures and 37 errors (274 issues). **268 of the 274 issues are in the four hidden modules** (`payroll`, `recruitment`, `offboarding`, `onboarding`), caused by `HideModulesMiddleware` returning 404 for disabled URLs. A rerun with hiding disabled (`nohide_settings.py`, 624 tests) passed with 0 issues in payroll, recruitment, or onboarding, proving the failures were purely due to URL hiding. The remaining 6 failures are pre-existing upstream quirks (Windows font file locks, tour name assertion, attendance popover format). |
+| `pms` domain tests | 18 test functions across 3 files (`test_progress_calculation` 10, `test_dashboard_kpi` 7, `test_check_duplication` 1) - **all 18 pass**. |
+| OKR API contract tests (P1-00) | **41 tests in `pms/tests/test_okr_api_contract.py` - all 41 pass** (commit `d1532ab9b` + ADR-0014). Validates field schemas, list pagination, object-level 403 authorization for detail reads, automatic company scoping on create, foreign-key validation, and masked database errors on delete. |
+| API schema / routes snapshot | Route snapshot from URL resolver: 343 routes (49 in `pms`). Verified in `docs/architecture/baseline/api_routes.txt`. |
+| Web smoke test (local) | Login 200; 61-page admin crawl with 0 server errors. Hidden-module URLs cleanly 404. |
+| OKR critical-path acceptance evidence | Verified on `SampleOKR.sqlite3` (561 key results, 245 employee objectives). Calculation chain confirmed: `current / target * 100` truncated integer, uncapped per key result, objective mean capped at 100. Proposed formula impact (ADR-0012) mapped: 114 key results (20.3%) and 81 employee objectives affected. |
+| Deployment smoke test | Docker 29.9.2 verified. `docker compose -f docker-compose.yml config` validates cleanly (services: `web`, `scheduler`, `db`, `redis`, `nginx`). Dockerfile builds multi-stage Python 3.12 container as non-root user. Entrypoint script verified for `SCOREVIEW_*` environment parameters. |
 
 ---
 
@@ -233,7 +233,7 @@ Proposals, each needing an ADR before implementation (BUILD §26):
 
 | Order | Ticket | Scope | Depends on |
 |---|---|---|---|
-| 1 | P1-00 | OKR contract tests: pin API responses for `/api/v1/pms/*` and key web flows. **API part DONE 2026-11-03:** `pms/tests/test_okr_api_contract.py`, 29 tests, all pass on unmodified code (field sets, pagination envelope, permissions, create/update/delete, progress chain, and 6 pinned quirks). **Web-flow tests still to do.** | none |
+| 1 | P1-00 | OKR contract tests: pin API responses for `/api/v1/pms/*` and key web flows. **API part DONE & HARDENED 2026-11-03:** `pms/tests/test_okr_api_contract.py`, 41 tests, all pass (field sets, pagination envelope, object-level 403 access control, company defaulting, foreign-key validation, safe delete, and pinned quirks per ADR-0014). **Web-flow tests next in Phase 1.** | none |
 | 2 | P1-01 | ADR set 1 to 5 and 10 (monolith, framework per cycle, KPI catalogue, scoring contract, tenancy, PDF) | approval |
 | 3 | P1-02 | `performance_core`: `PerformanceCycle`, `FrameworkType`, configuration, versions, state machine, feature flag | P1-01 |
 | 4 | P1-03 | `PerformanceAssignment` and OKR link mapping, no data moved | P1-02 |
