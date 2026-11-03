@@ -46,7 +46,7 @@ coverage.xml
 
 # Django stuff:
 *.log
-local_settings.py
+# CUSTOM: local_settings.py is tracked in this fork and must ship in the image
 media/
 staticfiles/
 static_root/

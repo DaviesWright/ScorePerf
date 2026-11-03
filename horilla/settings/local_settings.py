@@ -18,3 +18,24 @@ Examples:
     INSTALLED_APPS += ["client_portal"]
     MIDDLEWARE += ["client_portal.middleware.ClientTrackingMiddleware"]
 """
+
+# CUSTOM: ScoReview Performance. See CUSTOMIZATIONS.md.
+from pathlib import Path
+
+from .base import _TEMPLATE_LOADERS, BASE_DIR, INSTALLED_APPS, STATICFILES_DIRS
+
+INSTALLED_APPS += ["scoreview_performance"]
+
+# Slot 1, right after the DB template loader and ahead of horilla_theme's dir
+# and every app dir: scoreview_performance/templates/<same path> overrides upstream.
+_TEMPLATE_LOADERS.insert(
+    1,
+    (
+        "django.template.loaders.filesystem.Loader",
+        [Path(BASE_DIR) / "scoreview_performance" / "templates"],
+    ),
+)
+
+# FileSystemFinder runs before AppDirectoriesFinder and checks these in order,
+# so files here override same-path upstream static files (e.g. logo, css).
+STATICFILES_DIRS.insert(0, Path(BASE_DIR) / "scoreview_performance" / "static_overrides")
