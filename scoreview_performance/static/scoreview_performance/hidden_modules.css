@@ -1,0 +1,29 @@
+/*
+ * Hide leftover entry points to the hidden modules (payroll, recruitment,
+ * onboarding, offboarding). Their URLs already answer 404 and their sidebar
+ * entries are gone (see scoreview_performance/middleware.py and
+ * horilla/settings/local_settings.py); this removes quick-create buttons,
+ * dashboard cards, chart cards and Settings sections that still point at them.
+ * To bring a module back, delete its selectors here and remove it from
+ * HIDDEN_MODULES.
+ */
+
+/* Anything that links or loads into a hidden module */
+[href^="/payroll/"], [hx-get^="/payroll/"], [hx-post^="/payroll/"], [hx-delete^="/payroll/"], form[action^="/payroll/"],
+[href^="/recruitment/"], [hx-get^="/recruitment/"], [hx-post^="/recruitment/"], [hx-delete^="/recruitment/"], form[action^="/recruitment/"],
+[href^="/onboarding/"], [hx-get^="/onboarding/"], [hx-post^="/onboarding/"], [hx-delete^="/onboarding/"], form[action^="/onboarding/"],
+[href^="/offboarding/"], [hx-get^="/offboarding/"], [hx-post^="/offboarding/"], [hx-delete^="/offboarding/"], form[action^="/offboarding/"],
+
+/* Settings sidebar: the whole module section, not just its links */
+li:has(> .oh-accordion a[href^="/payroll/"]),
+li:has(> .oh-accordion a[href^="/recruitment/"]),
+li:has(> .oh-accordion a[href^="/onboarding/"]),
+li:has(> .oh-accordion a[href^="/offboarding/"]),
+
+/* Dashboard chart cards */
+[data-chart-section="payroll"],
+[data-chart-section="recruitment"],
+[data-chart-section="onboarding"],
+[data-chart-section="offboarding"] {
+    display: none !important;
+}

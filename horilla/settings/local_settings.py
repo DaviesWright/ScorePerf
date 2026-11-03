@@ -22,9 +22,23 @@ Examples:
 # CUSTOM: ScoReview Performance. See CUSTOMIZATIONS.md.
 from pathlib import Path
 
-from .base import _TEMPLATE_LOADERS, BASE_DIR, INSTALLED_APPS, STATICFILES_DIRS
+from .base import (
+    _TEMPLATE_LOADERS,
+    BASE_DIR,
+    INSTALLED_APPS,
+    MIDDLEWARE,
+    SIDEBARS,
+    STATICFILES_DIRS,
+)
 
 INSTALLED_APPS += ["scoreview_performance"]
+
+# Modules kept installed (tables and data intact) but hidden from everyone:
+# no sidebar entry, and their URLs answer 404 (scoreview_performance/middleware.py).
+# To bring one back, delete it from this list.
+HIDDEN_MODULES = ["payroll", "recruitment", "onboarding", "offboarding"]
+SIDEBARS[:] = [app for app in SIDEBARS if app not in HIDDEN_MODULES]
+MIDDLEWARE += ["scoreview_performance.middleware.HideModulesMiddleware"]
 
 # Show the HQ company's name and logo instead of "Horilla" (base/context_processors.py).
 WHITE_LABELLING = True

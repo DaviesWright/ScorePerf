@@ -89,16 +89,30 @@ be re-enabled at any time.
 **Suppressed modules** (Recruitment, Onboarding, Payroll, Assets, Help
 Desk, and others not listed above):
 
-- Suppression method: **Employee Permissions** in `Settings → Employee
-  Permissions`. Remove module view permissions per role.
-- Sidebar entries disappear for roles without permission; data and models
-  remain intact.
-- No code changes, no `INSTALLED_APPS` edits, no data deletion.
-- To re-enable: grant the relevant permissions to the target roles.
+**Hidden now (decided 2026-11-03): Payroll, Recruitment, Onboarding,
+Offboarding.** Hidden for everyone, superusers included. Permissions alone
+cannot do that, because superusers bypass them. How it works:
 
-This approach is preferred over uninstalling apps because it preserves
-database migrations, foreign key integrity, and the ability to bring
-modules back without a rebuild.
+- `HIDDEN_MODULES` in `horilla/settings/local_settings.py` lists the four
+  modules. They are removed from `SIDEBARS`, so no sidebar entries.
+- `scoreview_performance/middleware.py` answers 404 for their URLs:
+  `/<module>/`, `/api/v1/<module>/` and `/dashboard/api/<module>-…`.
+- `scoreview_performance/static/scoreview_performance/hidden_modules.css`
+  hides leftover entry points: quick-create buttons, dashboard cards and
+  chart cards, and the module sections in Settings.
+- The apps stay in `INSTALLED_APPS`. Tables, migrations, data and foreign keys
+  are untouched, because other apps (employee, attendance, base) reference
+  them. Nothing is deleted.
+- Known gap: the background scheduler still registers these modules' jobs
+  (for example automatic payslips and recruitment close). They have no data to
+  act on while the modules are unused.
+- To bring a module back: delete it from `HIDDEN_MODULES` and delete its
+  selectors from `hidden_modules.css`. Then grant roles the permissions they
+  need under `Settings → Employee Permissions`.
+
+Other modules not listed as active (Assets, Help Desk, Projects) are not
+hidden yet; use Employee Permissions per role, or add them to
+`HIDDEN_MODULES`, if they should be.
 
 ## Time & Attendance integration
 
@@ -171,8 +185,9 @@ behaves unexpectedly. `grep -rn "CUSTOM:" .` finds tagged lines.
 
 | File | What changed | Why | Date | Author |
 |---|---|---|---|---|
-| `horilla/settings/local_settings.py` | Registers `scoreview_performance` in `INSTALLED_APPS`, adds our templates dir to the template loaders, adds `static_overrides` to `STATICFILES_DIRS` | Upstream's official client-override hook; the only settings file we edit | 2026-11-03 | paa.barnes |
+| `horilla/settings/local_settings.py` | Registers `scoreview_performance` in `INSTALLED_APPS`, adds our templates dir to the template loaders, adds `static_overrides` to `STATICFILES_DIRS`, turns on `WHITE_LABELLING`, sets `HIDDEN_MODULES`, trims `SIDEBARS` and adds `HideModulesMiddleware` | Upstream's official client-override hook; the only settings file we edit | 2026-11-03 | paa.barnes |
 | `.dockerignore` | Removed the `local_settings.py` line | Otherwise the Docker image ships without our settings | 2026-11-03 | paa.barnes |
+| `static/images/ionicons/package.json` | `svgo` devDependency `1.3.2` to `2.8.4` | Closes Dependabot alerts GHSA-2p49-hgcm-8545, GHSA-4vpr-x523-8j87, GHSA-w27v-7q3p-w38r. Vendored icon-package metadata with no build scripts shipped, so nothing runs it | 2026-11-03 | paa.barnes |
 
 Gotcha: `horilla/settings/__init__.py` wraps the `local_settings` import in
 `try/except ImportError`. A bad import in that file silently disables it,
@@ -185,7 +200,7 @@ confirm the overrides still apply.
 |---|---|---|
 | `scoreview_performance/templates/<same path as upstream>` | The upstream template at that path | `_TEMPLATE_LOADERS` slot 1 in `horilla/settings/local_settings.py` |
 | `scoreview_performance/static_overrides/<same path as upstream>` | The upstream static file at that path | `STATICFILES_DIRS[0]` in `horilla/settings/local_settings.py` |
-| `scoreview_performance/templates/index.html` | `horilla_theme/templates/index.html` (base layout) | Template loader slot above. A full copy with 3 lines added at the end of `<head>` (tagged `CUSTOM:`) that load `colors.css` and `colors.js`. Re-apply those lines if you ever refresh this copy from upstream |
+| `scoreview_performance/templates/index.html` | `horilla_theme/templates/index.html` (base layout) | Template loader slot above. A full copy with 4 lines added at the end of `<head>` (tagged `CUSTOM:`) that load `colors.css`, `hidden_modules.css` and `colors.js`. Re-apply those lines if you ever refresh this copy from upstream |
 
 Template lookup order: DB templates (`horilla_dbtemplate`), then
 `scoreview_performance/templates`, then `horilla_theme/templates`, then
@@ -232,6 +247,7 @@ our responsibility.
 | Package | Version | Note |
 |---|---|---|
 | Python | 3.12.x | Upstream supports 3.12 to 3.14; 3.15 does not work yet (`spacy`) |
+| `pdfkit` | `1.0.0` | Open Dependabot alert GHSA-9g3x-6x24-vf9f (`from_string` script execution and local-file read). **No patched release exists** (1.0.0 is the latest). Mitigated in code: every PDF goes through `base/methods.py:generate_pdf`, which refuses HTML that fails the XSS check (test: `base/tests/test_pdf_xss_guard.py`). Never call `pdfkit` or `template_pdf` directly. Revisit when a fixed release appears |
 | `<package>` | `<version>` | `<e.g. pinned due to known bug in >=X>` |
 
 ## Environment setup
@@ -266,5 +282,7 @@ change.
 
 | Date | Summary | Author |
 |---|---|---|
+| 2026-11-03 | Hid Payroll, Recruitment, Onboarding and Offboarding for all users (sidebar, 404 middleware, CSS); modules stay installed with data intact | paa.barnes |
+| 2026-11-03 | Dependabot: bumped `svgo` in the vendored ionicons `package.json` to 2.8.4 (3 alerts); `pdfkit` alert has no patched release, mitigated in code and documented | paa.barnes |
 | 2026-11-03 | Colour pass: ScoReview theme migration, vivid chart palette and colourful tiles (`colors.js`/`colors.css`), base layout override `index.html`; logo uploaded to the HQ company; White Labelling on | paa.barnes |
 | 2026-11-03 | Forked Horilla `2.0` at `c49300c8f`; local setup; added `scoreview_performance` scaffold with template and static override wiring | paa.barnes |
