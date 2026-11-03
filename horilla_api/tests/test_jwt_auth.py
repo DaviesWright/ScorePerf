@@ -1,4 +1,4 @@
-"""Horilla API JWT login and auth-gate smoke tests."""
+"""ScoReview API JWT login and auth-gate smoke tests."""
 
 import base64
 

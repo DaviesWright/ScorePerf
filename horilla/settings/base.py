@@ -1,5 +1,5 @@
 """
-base.py — Main Django settings for Horilla
+base.py — Main Django settings for ScoReview
 """
 
 import os
@@ -69,7 +69,7 @@ INSTALLED_APPS = [
     # rotation silently leaves every superseded token usable.
     "rest_framework_simplejwt.token_blacklist",
     "drf_yasg",
-    # Core Horilla apps
+    # Core ScoReview apps
     "horilla_auth",
     THEME_APP,
     "base",
@@ -209,7 +209,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    # Horilla-specific middlewares
+    # ScoReview-specific middlewares
     "base.middleware.CompanyMiddleware",
     "base.middleware.ForcePasswordChangeMiddleware",
     "base.middleware.TwoFactorAuthMiddleware",
@@ -336,7 +336,7 @@ TEMPLATES = [
                 "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                # Horilla dynamic context processors
+                # ScoReview dynamic context processors
                 "horilla.config.get_MENUS",
                 "base.context_processors.horilla_version",
                 "base.context_processors.get_companies",
@@ -443,7 +443,7 @@ DJANGO_NOTIFICATIONS_CONFIG = {
 }
 
 # ========================================
-# HORILLA-SPECIFIC SETTINGS
+# SCOREVIEW-SPECIFIC SETTINGS
 # ========================================
 WHITE_LABELLING = False
 NESTED_SUBORDINATE_VISIBILITY = False

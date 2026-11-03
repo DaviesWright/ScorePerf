@@ -946,7 +946,7 @@ def reset_send_success(request):
 
 class HorillaPasswordResetView(PasswordResetView):
     """
-    Horilla View for Reset Password
+    ScoReview View for Reset Password
     """
 
     template_name = "forgot_password.html"
@@ -1010,7 +1010,7 @@ class HorillaPasswordResetView(PasswordResetView):
 @method_decorator(login_required, name="dispatch")
 class EmployeePasswordResetView(PasswordResetView):
     """
-    Horilla View for Employee Reset Password
+    ScoReview View for Employee Reset Password
     """
 
     template_name = "forgot_password.html"
@@ -1394,7 +1394,7 @@ class SettingsView(LoginRequiredMixin, RedirectView):
 def _permission_app_label(app_name):
     """
     Human label for permission UI module nav.
-    Uses AppConfig.verbose_name and drops a leading "Horilla" product prefix.
+    Uses AppConfig.verbose_name and drops a leading "ScoReview" product prefix.
     """
     import re
 
@@ -1405,7 +1405,7 @@ def _permission_app_label(app_name):
     except LookupError:
         label = app_name.replace("_", " ")
 
-    label = re.sub(r"(?i)^horilla[\s_\-]*", "", label).strip()
+    label = re.sub(r"(?i)^(?:horilla|scoreview)[\s_\-]*", "", label).strip()
     label = label.replace("_", " ").strip()
     if not label:
         label = app_name.replace("_", " ")

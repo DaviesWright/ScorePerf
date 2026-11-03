@@ -2,7 +2,7 @@
 models.py
 =========
 
-This module defines the abstract base model `HorillaModel` for the Horilla HRMS project.
+This module defines the abstract base model `HorillaModel` for the ScoReview HRMS project.
 The `HorillaModel` provides common fields and functionalities for other models within
 the application, such as tracking creation and modification timestamps and user
 information, audit logging, and active/inactive status management.
@@ -107,7 +107,7 @@ def upload_path(instance, filename):
 class HorillaModel(models.Model, metaclass=HorillaModelBase):
     """
     An abstract base model that includes common fields and functionalities
-    for models within the Horilla application.
+    for models within the ScoReview application.
     """
 
     created_at = models.DateTimeField(

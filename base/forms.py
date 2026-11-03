@@ -3278,7 +3278,7 @@ class PassWordResetForm(forms.Form):
     def get_branding(employee):
         """
         The name and logo the mail is sent under: the headquarters company
-        when WHITE_LABELLING is on, Horilla when it is off or there is no HQ
+        when WHITE_LABELLING is on, ScoReview when it is off or there is no HQ
         company.
 
         Always the HQ company -- never the employee's own company or
@@ -3286,7 +3286,7 @@ class PassWordResetForm(forms.Form):
         a white-labelled client's mail always reads as coming from their
         own organisation regardless of who triggers it.
         """
-        name = "Horilla"
+        name = "ScoReview"
         logo_path = finders.find("images/ui/horilla-sticker-round.png")
         if getattr(settings, "WHITE_LABELLING", False):
             company = Company.objects.filter(hq=True).last()
@@ -3353,7 +3353,7 @@ class PassWordResetForm(forms.Form):
         elif request is not None:
             # get_current_site() resolves through django.contrib.sites, whose
             # only row on a normal install is the one its own migration
-            # creates -- domain "example.com". Nothing in Horilla ever updates
+            # creates -- domain "example.com". Nothing in ScoReview ever updates
             # it, so every reset link pointed at example.com while the rest of
             # the product was reachable on the real host. Leave-request mail
             # never had the problem because it takes the host straight off the

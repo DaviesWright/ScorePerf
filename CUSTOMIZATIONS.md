@@ -62,6 +62,42 @@ names in deployment config: database name, database user, Docker image
 tags, environment variable prefixes. These are not user-visible but should
 match ScoReview naming for operational clarity.
 
+**Status (rebrand run 2026-11-03).** The word "Horilla" was replaced with
+"ScoReview" in every tracked text file: Python strings, docstrings and comments,
+templates, JavaScript, translation catalogs (`.po`), JSON demo and mail data,
+Dockerfile labels, Compose files, scripts and the README (about 1,760
+replacements in about 180 files). Sample email addresses on the upstream
+project's domain (written `@horilla` plus `.com`) were changed to `@example.com`,
+a reserved domain nobody owns.
+
+- The system user `Horilla Bot` is now `ScoReview Bot`. Code looks it up by
+  username, so migration `scoreview_performance/migrations/0002_rename_bot_user.py`
+  renames the existing row.
+- `.po` files changed but `.mo` files are not committed. Run `compilemessages`
+  at deploy time (needs GNU gettext).
+
+**Deliberately left as "Horilla" or "horilla"** (renaming would break the app
+or falsify provenance):
+
+- Code identifiers: the `horilla/` package and `from horilla…` imports, the
+  `horilla_*` apps, `Horilla*` classes, the `createhorillauser` command, the
+  `horillafilters` template-tag library, URL and template names.
+- `HORILLA_*` environment variables and the `horilla_db` / `horilla_user`
+  Docker database defaults (Layer 2, not done yet).
+- The health check's `"product": "horilla"` (mobile and API clients may rely on
+  it), the cache `KEY_PREFIX`, and the LDAP default DNs.
+- URLs and domains: `docs.horilla.com` and `www.horilla.com` (in-app help links;
+  override with `DOC_BASE_URL` in `local_settings.py`) and every
+  `github.com/horilla/…` link.
+- `LICENSE` and the upstream project documents `CHANGELOG.md`, `SECURITY.md`,
+  `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`, plus `.github/` and
+  `docker/dockerhub/`. These describe the upstream project and its channels.
+  `SECURITY.md` still sends reports to upstream, so replace it with Senrab's own
+  process before external release.
+
+When writing new text that names the upstream project (provenance, licence),
+keep the word "Horilla". Do not re-run a blanket replacement over this file.
+
 **Explicitly out of scope: renaming the `horilla/` Python package and
 directory.** Django package renaming requires coordinated changes to
 `DJANGO_SETTINGS_MODULE`, `ROOT_URLCONF`, `WSGI_APPLICATION`, `manage.py`,
@@ -282,6 +318,7 @@ change.
 
 | Date | Summary | Author |
 |---|---|---|
+| 2026-11-03 | Rebrand run: "Horilla" replaced by "ScoReview" across code, templates, translations, data and scripts; `Horilla Bot` user renamed by migration; sample emails moved to `@example.com`; identifiers, URLs and upstream docs intentionally kept (see Brand removal policy) | paa.barnes |
 | 2026-11-03 | Hid Payroll, Recruitment, Onboarding and Offboarding for all users (sidebar, 404 middleware, CSS); modules stay installed with data intact | paa.barnes |
 | 2026-11-03 | Dependabot: bumped `svgo` in the vendored ionicons `package.json` to 2.8.4 (3 alerts); `pdfkit` alert has no patched release, mitigated in code and documented | paa.barnes |
 | 2026-11-03 | Colour pass: ScoReview theme migration, vivid chart palette and colourful tiles (`colors.js`/`colors.css`), base layout override `index.html`; logo uploaded to the HQ company; White Labelling on | paa.barnes |

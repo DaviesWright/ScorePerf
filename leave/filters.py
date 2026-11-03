@@ -613,7 +613,7 @@ class LeaveAllocationRequestFilter(HorillaFilterSet):
     # created_by is a FK to HorillaUser, not Employee -- rendering/
     # filtering on it directly (Meta.fields's own auto-generated
     # ModelChoiceFilter) surfaced raw usernames/emails ("admin",
-    # "michael.brown@horilla.com", ...) in the picker instead of the
+    # "michael.brown@example.com", ...) in the picker instead of the
     # employee's name, since a HorillaUser has no display-friendly
     # __str__ of its own. Overrides that auto field with one that goes
     # through the User -> Employee reverse OneToOne instead

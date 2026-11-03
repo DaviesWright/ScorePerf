@@ -1,7 +1,7 @@
 """
 Server-side Excel / CSV export for standard report payloads.
 
-Workbook layout (aligned with Horilla explorer exports):
+Workbook layout (aligned with ScoReview explorer exports):
   1. Cover   — company letterhead, report title, metadata, filters, KPIs
   2. Data    — letterhead + primary tabular result set, print-ready
   3. Charts  — native openpyxl chart objects + their source data (when present)
@@ -24,7 +24,7 @@ from horilla.export_safety import FORMULA_TRIGGERS, neutralize_formula
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Style tokens — Horilla primary (coral / #E54F38)
+# Style tokens — ScoReview primary (coral / #E54F38)
 # ---------------------------------------------------------------------------
 COLOR_PRIMARY = "E54F38"
 COLOR_PRIMARY_DARK = "CE4732"
@@ -428,7 +428,7 @@ def _apply_print_setup(ws, meta: Optional[dict] = None, landscape: bool = False)
     ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
 
-    product = meta.get("product_name") or "Horilla HR"
+    product = meta.get("product_name") or "ScoReview HR"
     generated = _local_stamp()
     ws.oddFooter.left.text = f"{product}"
     ws.oddFooter.left.size = 8
@@ -487,7 +487,7 @@ def _write_letterhead(ws, company: dict, styles, meta: dict, col_span: int = 6) 
     product = ws.cell(
         row=1,
         column=col_span,
-        value=meta.get("product_name") or "Horilla HR · Standard Reports",
+        value=meta.get("product_name") or "ScoReview HR · Standard Reports",
     )
     product.font = styles["product_font"]
     product.alignment = styles["right"]
@@ -803,7 +803,7 @@ def _write_cover(wb, payload: dict[str, Any], meta: Optional[dict] = None):
         column=1,
         value=(
             "Confidential — for internal use only. "
-            "Figures are aggregated server-side from Horilla HR source data."
+            "Figures are aggregated server-side from ScoReview HR source data."
         ),
     )
     footer.font = styles["footer_font"]
@@ -1126,9 +1126,9 @@ def export_xlsx(
     _write_chart_sheet(wb, payload, meta=meta)
 
     props = wb.properties
-    props.title = str(payload.get("title") or "Horilla Report")
+    props.title = str(payload.get("title") or "ScoReview Report")
     company = _company_from_meta(meta)
-    props.creator = company.get("name") or "Horilla HR"
+    props.creator = company.get("name") or "ScoReview HR"
     props.description = (
         f"Standard report export · {(payload.get('slug') or '')} · "
         f"{_period_label(payload.get('period') or {})}"
@@ -1397,7 +1397,7 @@ def export_pdf(
                 "dense": len(headers) > 8,
                 "report_ref": payload.get("slug") or meta.get("slug") or "",
                 "product_name": meta.get("product_name")
-                or "Horilla HR · Standard Reports",
+                or "ScoReview HR · Standard Reports",
                 "generated_at": generated_str,
                 "generated_by": meta.get("user") or "",
             },

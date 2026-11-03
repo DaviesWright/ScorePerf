@@ -1,7 +1,7 @@
 """
 horilla/config.py
 
-Horilla app configurations
+ScoReview app configurations
 """
 
 import importlib

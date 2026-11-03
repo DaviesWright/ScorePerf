@@ -1,4 +1,4 @@
-# Horilla HRMS
+# ScoReview HRMS
 
 [![License: LGPL v2.1](https://img.shields.io/badge/License-LGPL%20v2.1-blue.svg)](https://www.gnu.org/licenses/lgpl-2.1)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
@@ -46,7 +46,7 @@
 
 ## 🌳 Which Branch Do I Want?
 
-- **`2.0`** (default) — the latest stable v2 snapshot. This is what a plain `git clone` gives you. Use it to run or deploy Horilla.
+- **`2.0`** (default) — the latest stable v2 snapshot. This is what a plain `git clone` gives you. Use it to run or deploy ScoReview.
 - **`dev/v2.0`** — the active integration branch. If you want to contribute code, branch from and open PRs against this, not `2.0`.
 - **`1.0`/`master`** — v1, now deprioritized (fixes considered case-by-case, no guaranteed schedule). Not deleted, but no longer where active development happens.
 
@@ -242,7 +242,7 @@ Please report security vulnerabilities via [GitHub Private Vulnerability Reporti
 ### Professional Support
 
 For enterprise support, custom development, and consulting services:
-- 📧 **Email**: support@horilla.com
+- 📧 **Email**: support@example.com
 - 🌐 **Website**: [www.horilla.com](https://www.horilla.com)
 
 
@@ -252,7 +252,7 @@ This project is licensed under the [LGPL-2.1 License](LICENSE) - see the LICENSE
 
 <div align="center">
 
-**Made with ❤️ by the Horilla Team**
+**Made with ❤️ by the ScoReview Team**
 
 [⭐ Star us on GitHub](https://github.com/horilla/horilla-hr) | [🐛 Report Bug](https://github.com/horilla/horilla-hr/issues) | [💡 Request Feature](https://github.com/horilla/horilla-hr/issues)
 

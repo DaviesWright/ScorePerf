@@ -1,5 +1,5 @@
 """
-Horilla management command to create a new user and associated employee.
+ScoReview management command to create a new user and associated employee.
 """
 
 import uuid
@@ -12,7 +12,7 @@ from horilla_auth.models import HorillaUser
 
 class Command(BaseCommand):
     """
-    Horilla management command to create a new user and associated employee.
+    ScoReview management command to create a new user and associated employee.
     """
 
     help = "Creates a new user"
@@ -59,10 +59,10 @@ class Command(BaseCommand):
             employee.phone = phone
             employee.save()
 
-            bot = HorillaUser.objects.filter(username="Horilla Bot").first()
+            bot = HorillaUser.objects.filter(username="ScoReview Bot").first()
             if bot is None:
                 HorillaUser.objects.create_user(
-                    username="Horilla Bot",
+                    username="ScoReview Bot",
                     password=str(uuid.uuid4()),
                 )
 

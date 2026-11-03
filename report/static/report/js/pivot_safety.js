@@ -2,7 +2,7 @@
  * Surfaces server-side row truncation on the pivot explorers.
  *
  * report/pivot_limits.py caps a pivot payload at MAX_PIVOT_ROWS and reports
- * that fact in the X-Horilla-Pivot-Truncated response header. The explorer
+ * that fact in the X-ScoReview-Pivot-Truncated response header. The explorer
  * pages fetch with $.getJSON, which discards headers, and nothing read it --
  * so past the cap the pivot presented the sum of the first N rows as if it
  * were the complete total. On payroll data that is silently wrong money.
@@ -73,7 +73,7 @@
         }
         var truncated;
         try {
-            truncated = xhr.getResponseHeader("X-Horilla-Pivot-Truncated");
+            truncated = xhr.getResponseHeader("X-ScoReview-Pivot-Truncated");
         } catch (err) {
             // Some transports throw rather than returning null.
             return;
@@ -81,7 +81,7 @@
         if (truncated === "1") {
             var limit = null;
             try {
-                limit = xhr.getResponseHeader("X-Horilla-Pivot-Limit");
+                limit = xhr.getResponseHeader("X-ScoReview-Pivot-Limit");
             } catch (err) {
                 limit = null;
             }

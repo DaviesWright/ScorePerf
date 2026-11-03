@@ -137,7 +137,7 @@ def daywise_template(request):
     def fmt(**kw):
         return book.add_format({**base, **kw})
 
-    # Horilla's warning yellow (hsl(40, 91%, 60%)) for the headers; weekends a shade deeper.
+    # ScoReview's warning yellow (hsl(40, 91%, 60%)) for the headers; weekends a shade deeper.
     yellow, deep = "#f6b83c", "#e8a21f"
     edge = "#c98a1a"
     head = fmt(

@@ -2,7 +2,7 @@
 ``/health/`` identifies the product without disclosing the release.
 
 Mobile clients probe a user-typed host with this before posting credentials,
-so that a wrong host reports "not a Horilla server" instead of "invalid
+so that a wrong host reports "not a ScoReview server" instead of "invalid
 credentials". The endpoint must therefore stay unauthenticated and must carry
 enough for that decision -- and no more.
 

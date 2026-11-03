@@ -40,14 +40,14 @@ def health_check(request):
     Liveness probe — cheap, no dependency checks (Docker HEALTHCHECK).
 
     Also identifies the product and the API contract it speaks. Mobile and
-    other API clients need to know whether a host is a Horilla server, and one
+    other API clients need to know whether a host is a ScoReview server, and one
     they can talk to, *before* posting credentials: a typo'd host should
-    report "not a Horilla server" rather than "invalid credentials".
+    report "not a ScoReview server" rather than "invalid credentials".
 
     Deliberately not the release string. This route is unauthenticated, and
     published security advisories name exact patched versions -- handing the
     precise release to anyone who asks turns a scan into a list of which
-    advisories apply to this host. ``product`` answers "is this Horilla" and
+    advisories apply to this host. ``product`` answers "is this ScoReview" and
     ``api`` answers "can I talk to it"; neither narrows an install to a patch
     level. The exact version is still available to a signed-in client, in the
     capabilities payload.
@@ -138,7 +138,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # django.contrib.auth.urls is here for the password_reset_* routes its forms
     # and mails reverse. Its /accounts/login/ renders registration/login.html,
-    # which Horilla does not ship, so that one URL 500s — send it to the real
+    # which ScoReview does not ship, so that one URL 500s — send it to the real
     # login page instead. (The include was also listed twice.)
     path(
         "accounts/login/",

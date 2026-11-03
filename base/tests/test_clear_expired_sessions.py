@@ -2,7 +2,7 @@
 Expired sessions are deleted daily.
 
 Django keeps expired sessions until `clearsessions` runs, and nothing in
-Horilla ran it, so the table only grew (one install had 92,543 expired rows,
+ScoReview ran it, so the table only grew (one install had 92,543 expired rows,
 29% of its database).
 """
 

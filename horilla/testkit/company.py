@@ -13,7 +13,7 @@ class CompanyFilterTestMixin:
     """
     Set/clear the ContextVar used by ``HorillaCompanyManager.get_queryset``.
 
-    Prefer this over mutating model class attributes — current Horilla
+    Prefer this over mutating model class attributes — current ScoReview
     tenancy reads ``get_selected_company()``, not ``model.company_filter``.
     """
 

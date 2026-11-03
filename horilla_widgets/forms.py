@@ -1,7 +1,7 @@
 """
 forms.py
 
-Horilla forms
+ScoReview forms
 """
 
 from typing import Any, Dict

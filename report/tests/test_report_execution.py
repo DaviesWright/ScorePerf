@@ -604,14 +604,14 @@ class PivotTruncationDisclosureTests(TestCase):
 
         rows = [{"n": i} for i in range(12)]
         response = pivot_json_with_meta(rows, limit=5)
-        self.assertEqual(response["X-Horilla-Pivot-Truncated"], "1")
-        self.assertEqual(response["X-Horilla-Pivot-Limit"], "5")
+        self.assertEqual(response["X-ScoReview-Pivot-Truncated"], "1")
+        self.assertEqual(response["X-ScoReview-Pivot-Limit"], "5")
 
     def test_untruncated_response_sets_no_flag(self):
         from report.pivot_limits import pivot_json_with_meta
 
         response = pivot_json_with_meta([{"n": 1}], limit=5)
-        self.assertIsNone(response.get("X-Horilla-Pivot-Truncated"))
+        self.assertIsNone(response.get("X-ScoReview-Pivot-Truncated"))
 
 
 class SharedFormulaGuardTests(TestCase):

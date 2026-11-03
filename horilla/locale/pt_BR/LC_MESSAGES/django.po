@@ -66,7 +66,7 @@ msgstr "grupos"
 msgid "Default Accessibility"
 msgstr "Acessibilidade Padrão"
 
-msgid "Limit default view access to horilla feature"
+msgid "Limit default view access to ScoReview feature"
 msgstr "Limitar o acesso de visualização padrão ao recurso horilla"
 
 msgid "Actions"
@@ -4015,9 +4015,9 @@ msgstr "Defina os tipos de contratação — Integral, Meio Período, Contrato."
 msgid "Mail Server"
 msgstr "Servidor de email"
 
-msgid "Configure an outgoing mail server so Horilla can send emails."
+msgid "Configure an outgoing mail server so ScoReview can send emails."
 msgstr ""
-"Configure um servidor de e-mail de saída para o Horilla enviar mensagens."
+"Configure um servidor de e-mail de saída para o ScoReview enviar mensagens."
 
 msgid "First Employee"
 msgstr "Primeiro funcionário"
@@ -4416,7 +4416,7 @@ msgid "Enable this to trigger automatic check out."
 msgstr "Habilite isto para acionar a verificação automática."
 
 msgid ""
-"Time at which the horilla will automatically check out the employee "
+"Time at which ScoReview will automatically check out the employee "
 "attendance if they forget."
 msgstr ""
 "Tempo em que a horilla verificará automaticamente a presença do empregado, "
@@ -5454,8 +5454,8 @@ msgstr "Salvar senha"
 msgid "Forgot password"
 msgstr "Esqueceu a senha"
 
-msgid "Horilla"
-msgstr "Horilla"
+msgid "ScoReview"
+msgstr "ScoReview"
 
 msgid "Assign"
 msgstr "Atribuir"
@@ -6075,8 +6075,8 @@ msgstr "Controles de dados e acesso"
 msgid "About"
 msgstr "SOBRE"
 
-msgid "Horilla HR"
-msgstr "Horilla HR"
+msgid "ScoReview HR"
+msgstr "ScoReview HR"
 
 msgid "Quote this version when reporting a problem."
 msgstr "Cite esta versão ao relatar um problema."
@@ -6087,8 +6087,8 @@ msgstr "Notas de versão"
 msgid "HR setup checklist"
 msgstr "Checklist de configuração de RH"
 
-msgid "Get started with Horilla HR"
-msgstr "Comece com o Horilla HR"
+msgid "Get started with ScoReview HR"
+msgstr "Comece com o ScoReview HR"
 
 #, python-format
 msgid ""
@@ -7617,8 +7617,8 @@ msgstr "{} não encontrado."
 msgid "%(model__meta_verbose_name)s object does not exist."
 msgstr "%(model__meta_verbose_name)s objeto não existe."
 
-msgid "Test mail from Horilla"
-msgstr "Email de teste da Horilla"
+msgid "Test mail from ScoReview"
+msgstr "Email de teste da ScoReview"
 
 msgid "Something went wrong :"
 msgstr "Algo deu errado:"
@@ -11443,7 +11443,7 @@ msgstr "Data desconhecida"
 msgid "Yesterday"
 msgstr "ontem"
 
-msgid "Horilla Bot"
+msgid "ScoReview Bot"
 msgstr "Horila Bot"
 
 msgid "record created"
@@ -11582,8 +11582,8 @@ msgstr "Configuração de rastreamento de auditoria atualizada."
 msgid "Tracked fields updated for %(model)s."
 msgstr "Campos rastreados atualizados para %(model)s."
 
-msgid "Horilla Auth"
-msgstr "Autenticação Horilla"
+msgid "ScoReview Auth"
+msgstr "Autenticação ScoReview"
 
 msgid "Users"
 msgstr "Usuários"
@@ -12173,12 +12173,12 @@ msgstr "Integração com Google Meet"
 msgid "Enable Google meet"
 msgstr "Ative o Google Meet"
 
-msgid "Enable this to integrate Google meet to Horilla."
-msgstr "Ative isso para integrar o Google Meet ao Horilla."
+msgid "Enable this to integrate Google meet to ScoReview."
+msgstr "Ative isso para integrar o Google Meet ao ScoReview."
 
-msgid "Schedule and join Google Meet video calls directly from Horilla."
+msgid "Schedule and join Google Meet video calls directly from ScoReview."
 msgstr ""
-"Agende e participe de videochamadas do Google Meet diretamente do Horilla."
+"Agende e participe de videochamadas do Google Meet diretamente do ScoReview."
 
 msgid "Google Cloud Credential not found."
 msgstr "Credencial do Google Cloud não encontrada."
@@ -13706,8 +13706,8 @@ msgstr "Minha Empresa"
 msgid "Main navigation"
 msgstr "Navegação principal"
 
-msgid "Horilla HR version"
-msgstr "Versão do Horilla HR"
+msgid "ScoReview HR version"
+msgstr "Versão do ScoReview HR"
 
 msgid "Version"
 msgstr "Versão"
@@ -13918,8 +13918,8 @@ msgstr "RH"
 msgid "Please login to access the dashboard."
 msgstr "Por favor, faça login para acessar o painel."
 
-msgid "e.g. adam.luis@horilla.com"
-msgstr "ex.: adam.luis@horilla.com"
+msgid "e.g. adam.luis@example.com"
+msgstr "ex.: adam.luis@example.com"
 
 msgid "Sign In"
 msgstr "Iniciar sessão"
@@ -15144,14 +15144,14 @@ msgstr "Nenhuma configuração encontrada"
 msgid "Enable Linkedin"
 msgstr "Habilitar LinkedIn"
 
-msgid "Enable this to integrate linkedin to Horilla."
-msgstr "Ative isso para integrar o LinkedIn ao Horilla."
+msgid "Enable this to integrate linkedin to ScoReview."
+msgstr "Ative isso para integrar o LinkedIn ao ScoReview."
 
 msgid ""
-"Post job openings directly to LinkedIn and manage applicants from Horilla."
+"Post job openings directly to LinkedIn and manage applicants from ScoReview."
 msgstr ""
 "Publique vagas diretamente no LinkedIn e gerencie candidatos a partir do "
-"Horilla."
+"ScoReview."
 
 msgid "Prefix added to every auto-generated employee badge ID (e.g. PEP0001)."
 msgstr ""
@@ -22324,8 +22324,8 @@ msgid "Error occurred while deleting candidate rejection"
 msgstr "Ocorreu um erro ao excluir a rejeição do candidato"
 
 #, python-format
-msgid "Horilla report ready: %(name)s"
-msgstr "Relatório do Horilla pronto: %(name)s"
+msgid "ScoReview report ready: %(name)s"
+msgstr "Relatório do ScoReview pronto: %(name)s"
 
 #, python-format
 msgid ""
@@ -22340,8 +22340,8 @@ msgstr ""
 "Formato: %(fmt)s"
 
 #, python-format
-msgid "Horilla report export failed: %(name)s"
-msgstr "Falha ao exportar o relatório do Horilla: %(name)s"
+msgid "ScoReview report export failed: %(name)s"
+msgstr "Falha ao exportar o relatório do ScoReview: %(name)s"
 
 #, python-format
 msgid ""
@@ -22397,8 +22397,8 @@ msgstr "Assinatura atualizada."
 msgid "Comparison"
 msgstr "Comparação"
 
-msgid "Attached is your scheduled Horilla report:"
-msgstr "Em anexo está o seu relatório agendado do Horilla:"
+msgid "Attached is your scheduled ScoReview report:"
+msgstr "Em anexo está o seu relatório agendado do ScoReview:"
 
 #, python-format
 msgid "Showing first %(n)s rows."
@@ -24464,8 +24464,8 @@ msgstr " Importação bem sucedida"
 msgid "Download Error File"
 msgstr "Baixar arquivo de erro"
 
-msgid "Horilla HRMS"
-msgstr "Horilla HRMS"
+msgid "ScoReview HRMS"
+msgstr "ScoReview HRMS"
 
 msgid "Sign Up"
 msgstr "Criar conta"
@@ -24477,12 +24477,12 @@ msgid "Go To Home"
 msgstr "Ir para casa"
 
 msgid ""
-"Authenticate with your password to initialize the Horilla HRMS database."
+"Authenticate with your password to initialize the ScoReview HRMS database."
 msgstr ""
-"Autenticar com sua senha para inicializar o banco de dados do Horilla HRMS."
+"Autenticar com sua senha para inicializar o banco de dados do ScoReview HRMS."
 
-msgid "Please sign up to access the Horilla HRMS."
-msgstr "Inscreva-se para acessar o Horilla HRMS."
+msgid "Please sign up to access the ScoReview HRMS."
+msgstr "Inscreva-se para acessar o ScoReview HRMS."
 
 msgid "e.g. Adam"
 msgstr "por exemplo, Adam"
@@ -24661,12 +24661,12 @@ msgstr "Segredo do aplicativo"
 
 msgid ""
 "Meta app secret, used to verify the X-Hub-Signature-256 header on incoming "
-"webhook calls. Without it Horilla cannot tell a real delivery from a forged "
+"webhook calls. Without it ScoReview cannot tell a real delivery from a forged "
 "one, so unsigned payloads are rejected. Find it under App Settings > Basic "
 "in the Meta developer console."
 msgstr ""
 "Segredo do aplicativo Meta, usado para verificar o cabeçalho X-Hub-"
-"Signature-256 nas chamadas de webhook recebidas. Sem ele, o Horilla não "
+"Signature-256 nas chamadas de webhook recebidas. Sem ele, o ScoReview não "
 "consegue distinguir uma entrega real de uma falsificada, portanto payloads "
 "não assinados são rejeitados. Encontre-o em App Settings > Basic no console "
 "de desenvolvedores da Meta."
@@ -24674,8 +24674,8 @@ msgstr ""
 msgid "WhatsApp Integration"
 msgstr "Integração com WhatsApp"
 
-msgid "Enable this to integrate WhatsApp to Horilla."
-msgstr "Ative isso para integrar o WhatsApp ao Horilla."
+msgid "Enable this to integrate WhatsApp to ScoReview."
+msgstr "Ative isso para integrar o WhatsApp ao ScoReview."
 
 msgid ""
 "Send HR notifications and updates directly through WhatsApp for better "

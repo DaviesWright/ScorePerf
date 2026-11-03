@@ -1,6 +1,6 @@
-# Horilla HRMS — Docker Deployment Guide
+# ScoReview HRMS — Docker Deployment Guide
 
-A complete, step-by-step guide to running Horilla HR using Docker. Covers development setup, production deployment, customization, troubleshooting, and maintenance.
+A complete, step-by-step guide to running ScoReview HR using Docker. Covers development setup, production deployment, customization, troubleshooting, and maintenance.
 
 ---
 
@@ -56,7 +56,7 @@ A complete, step-by-step guide to running Horilla HR using Docker. Covers develo
 
 ## 2. Quick Start (Development)
 
-Get Horilla running in under 5 minutes:
+Get ScoReview running in under 5 minutes:
 
 ```bash
 # 1. Clone the repository (defaults to stable 2.0; contributors: use -b dev/v2.0)
@@ -74,7 +74,7 @@ make status
 open http://localhost:8000
 ```
 
-On first launch, Horilla will:
+On first launch, ScoReview will:
 1. Wait for PostgreSQL to be ready (30s timeout)
 2. Run database migrations automatically
 3. Collect static files
@@ -394,7 +394,7 @@ make db-shell
 
 ### Loading Demo Data
 
-From the Horilla login page, click "Load Demo Data" to populate the system with sample employees, departments, and other test data.
+From the ScoReview login page, click "Load Demo Data" to populate the system with sample employees, departments, and other test data.
 
 ---
 
@@ -425,7 +425,7 @@ docker cp $(docker compose ps -q web):/app/media ./media-backup
 
 ### Using Cloud Storage (S3/GCP)
 
-Horilla supports AWS S3 and Google Cloud Storage. Add to your environment:
+ScoReview supports AWS S3 and Google Cloud Storage. Add to your environment:
 
 **AWS S3:**
 ```

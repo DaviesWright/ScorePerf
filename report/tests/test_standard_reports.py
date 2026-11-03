@@ -383,7 +383,7 @@ class ExportTests(SimpleTestCase):
                     "logo_path": None,
                 },
                 "user": "Admin",
-                "product_name": "Horilla HR · Standard Reports",
+                "product_name": "ScoReview HR · Standard Reports",
                 "filters_label": "This month · Active",
                 "slug": "workforce-composition",
                 "domain": "workforce",
@@ -614,7 +614,7 @@ class PdfExportTests(SimpleTestCase):
                         "logo_path": None,
                     },
                     "user": "Admin",
-                    "product_name": "Horilla HR · Standard Reports",
+                    "product_name": "ScoReview HR · Standard Reports",
                     "domain": "workforce",
                 },
             )

@@ -129,7 +129,7 @@ USER appuser
 ARG VERSION=dev
 ARG VCS_REF=unknown
 ARG BUILD_DATE=unknown
-LABEL org.opencontainers.image.title="Horilla HR" \
+LABEL org.opencontainers.image.title="ScoReview HR" \
       org.opencontainers.image.description="Free and open source HR software" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${VCS_REF}" \
@@ -137,7 +137,7 @@ LABEL org.opencontainers.image.title="Horilla HR" \
       org.opencontainers.image.source="https://github.com/horilla/horilla-hr" \
       org.opencontainers.image.url="https://www.horilla.com" \
       org.opencontainers.image.documentation="https://docs.horilla.com" \
-      org.opencontainers.image.vendor="Horilla" \
+      org.opencontainers.image.vendor="ScoReview" \
       org.opencontainers.image.licenses="LGPL-2.1"
 
 EXPOSE 8000

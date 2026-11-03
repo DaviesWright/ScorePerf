@@ -1,4 +1,4 @@
-# Production overlay for Horilla HR (open-source).
+# Production overlay for ScoReview HR (open-source).
 #
 # Usage:
 #   cp .env.dist .env   # then set strong secrets

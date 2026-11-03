@@ -47,7 +47,7 @@ _VIEW_SKIP_KEYS = frozenset(
 
 class HorillaViewInheritMixin:
     """
-    Mixin that enables _inherit on Horilla CBV extension classes.
+    Mixin that enables _inherit on ScoReview CBV extension classes.
 
     Include as the first base alongside the target view class.
     The target view's own metaclass is inherited from the second base,

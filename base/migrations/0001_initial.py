@@ -606,7 +606,7 @@ class Migration(migrations.Migration):
                     "auto_punch_out_time",
                     models.TimeField(
                         blank=True,
-                        help_text="Time at which the horilla will automatically check out the employee attendance if they forget.",
+                        help_text="Time at which ScoReview will automatically check out the employee attendance if they forget.",
                         null=True,
                         verbose_name="Automatic Check Out Time",
                     ),

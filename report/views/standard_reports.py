@@ -61,7 +61,7 @@ def _export_meta(request, definition, filters, slug: str) -> dict:
     company = company_letterhead(request, company_id=filters.company_id)
     filters_pairs = filters.summary_pairs()
     return {
-        "product_name": "Horilla HR · Standard Reports",
+        "product_name": "ScoReview HR · Standard Reports",
         "company": company,
         "user": getattr(request.user, "get_full_name", lambda: "")()
         or getattr(request.user, "username", ""),
@@ -93,7 +93,7 @@ def _parse_json_body(request) -> dict:
 
 # Per-domain icon for the catalog's category rail and report rows. Icons are
 # Ionicons (already loaded app-wide). Every domain shares the same neutral
-# tile color -- the rest of Horilla reserves color for hover/active/selected
+# tile color -- the rest of ScoReview reserves color for hover/active/selected
 # states, not for a rainbow of category accents, so this matches that
 # convention instead of inventing a 5-color palette with no precedent
 # elsewhere in the app.

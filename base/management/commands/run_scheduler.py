@@ -1,5 +1,5 @@
 """
-Run Horilla's background jobs in one dedicated process.
+Run ScoReview's background jobs in one dedicated process.
 
 Deploy this as its own service with **exactly one replica**. Jobs used to start
 inside every gunicorn worker (see ``horilla.scheduling``), so payroll runs and

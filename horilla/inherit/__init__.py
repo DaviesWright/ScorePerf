@@ -1,7 +1,7 @@
 """
 horilla/inherit/
 
-Extension infrastructure for Horilla — model field injection and CBV replacement.
+Extension infrastructure for ScoReview — model field injection and CBV replacement.
 
 Key public symbols re-exported here for convenience:
 

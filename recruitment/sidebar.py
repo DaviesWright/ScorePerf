@@ -1,7 +1,7 @@
 """
 recruitment/sidebar.py
 
-To set Horilla sidebar for onboarding
+To set ScoReview sidebar for onboarding
 """
 
 from django.apps import apps

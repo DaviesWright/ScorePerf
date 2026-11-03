@@ -1,9 +1,9 @@
-# Horilla Tour & Getting Started Checklist
+# ScoReview Tour & Getting Started Checklist
 
-Functional and technical reference for Horilla’s onboarding UX:
+Functional and technical reference for ScoReview’s onboarding UX:
 
 1. **Product Tours** (`horilla_tour`) — guided, driver.js walkthroughs on any page
-2. **Setup Checklist** — “Get started with Horilla HR” banner on the dashboard (8 setup steps)
+2. **Setup Checklist** — “Get started with ScoReview HR” banner on the dashboard (8 setup steps)
 
 These systems are complementary: the checklist drives first-time HR configuration; product tours teach UI features after (or during) setup.
 
@@ -151,7 +151,7 @@ End users only need authentication for the JSON API.
 
 ---
 
-## Part 2 — Setup Checklist (“Get started with Horilla HR”)
+## Part 2 — Setup Checklist (“Get started with ScoReview HR”)
 
 Dashboard onboarding banner that walks admins through foundational HR configuration. Not part of `horilla_tour`, but the primary “first run” tour of the product.
 
@@ -159,7 +159,7 @@ Dashboard onboarding banner that walks admins through foundational HR configurat
 
 **Copy & UX**
 
-- Title: **Get started with Horilla HR**
+- Title: **Get started with ScoReview HR**
 - Subtitle: `N of 8 steps complete — finish setup to unlock your full HR system`
 - Progress bar + step circles with connector lines
 - Action card: **Next: {step}** + short description + **Set up now** CTA

@@ -173,8 +173,8 @@ msgstr "Phasenreihenfolge aktualisiert"
 msgid "Dashboard"
 msgstr "Dashboard"
 
-msgid "Horilla dashboard section"
-msgstr "Horilla-Dashboard-Bereich"
+msgid "ScoReview dashboard section"
+msgstr "ScoReview-Dashboard-Bereich"
 
 msgid "Mark Attendance"
 msgstr "Anwesenheit erfassen"
@@ -215,8 +215,8 @@ msgstr "Profil- und Passwortänderungsoptionen"
 msgid "Dashboard Tiles"
 msgstr "Dashboard-Kacheln"
 
-msgid "Horilla Dashboard Tiles"
-msgstr "Horilla-Dashboard-Kacheln"
+msgid "ScoReview Dashboard Tiles"
+msgstr "ScoReview-Dashboard-Kacheln"
 
 msgid "Dashboard Actions"
 msgstr "Dashboard-Aktionen"
@@ -245,8 +245,8 @@ msgstr "Ihr aktueller Unternehmenszugriff"
 msgid "App"
 msgstr "App"
 
-msgid "Horilla Hr Apps. eg Dashboard"
-msgstr "Horilla-HR-Apps, z. B. Dashboard"
+msgid "ScoReview Hr Apps. eg Dashboard"
+msgstr "ScoReview-HR-Apps, z. B. Dashboard"
 
 msgid "Pipeline"
 msgstr "Pipeline"

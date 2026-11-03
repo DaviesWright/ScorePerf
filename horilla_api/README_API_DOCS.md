@@ -1,6 +1,6 @@
-# Horilla API Documentation
+# ScoReview API Documentation
 
-This document provides information on how to use and maintain the API documentation for Horilla HRMS.
+This document provides information on how to use and maintain the API documentation for ScoReview HRMS.
 
 ## Accessing API Documentation
 

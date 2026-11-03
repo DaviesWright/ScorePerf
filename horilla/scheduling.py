@@ -1,5 +1,5 @@
 """
-Central registry for Horilla's background jobs.
+Central registry for ScoReview's background jobs.
 
 Why this exists
 ---------------

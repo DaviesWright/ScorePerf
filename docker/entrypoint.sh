@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Starting Horilla HR..."
+echo "Starting ScoReview HR..."
 
 DB_HOST="${DB_HOST:-db}"
 DB_PORT="${DB_PORT:-5432}"

@@ -27,7 +27,7 @@ Add the loader class to the Django template engine’s `OPTIONS["loaders"]`. The
 
 `horilla_dbtemplate.loaders.Loader`
 
-Place it according to product rules: usually **first among custom loaders** so active DB templates override packaged files. Exact `TEMPLATES` structure depends on your Horilla project; search the repo for `Loader` or `horilla_dbtemplate.loaders`.
+Place it according to product rules: usually **first among custom loaders** so active DB templates override packaged files. Exact `TEMPLATES` structure depends on your ScoReview project; search the repo for `Loader` or `horilla_dbtemplate.loaders`.
 
 ---
 
