@@ -1,14 +1,15 @@
 # ScoReview Performance: Baseline Assessment (Phase 0)
 
-**Status:** Completed baseline for Phase 0 exit-gate sign-off (`BUILD.md` §3 and §23). **No application schema has been modified for new frameworks.**
+**Status:** **APPROVED (Phase 0 Exit Gate Passed).** Formally signed off by paa.barnes on 2026-11-03. Phase 1 implementation authorized per `BUILD.md` §3 and §23.
 
 | | |
 |---|---|
 | Date | 2026-11-03 |
-| Branch / commit | `main-custom` @ `5098ce53c` |
-| Working tree | ADR-0014 API authorization and default company fixes applied and verified |
-| Method | Inspection of code, live Django configuration, synthetic OKR database (`SampleOKR.sqlite3`), test suites, and Docker manifests |
-| Reproduce | See §11 |
+| Sign-Off Approver | paa.barnes |
+| Branch / commit | `main-custom` @ `577b22967` |
+| Working tree | Clean baseline; ADRs 0001–0014 accepted and verified |
+| Baseline Evidence | 2,280 test suite classified; 41/41 OKR contract tests passing; SampleOKR data impact quantified; Docker Compose validated |
+| Next Phase | Phase 1: Common Performance Engine (`scoreview_core`) |
 
 Items marked **PENDING** are still running or need data this environment does not have. Items marked **HYPOTHESIS** come from static analysis and are not confirmed defects.
 

@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | Date | 2026-11-03 |
-| Prepared by | Claude (Sonnet 5.5), working with paa.barnes in one continuous session |
+| Prepared by | Claude (Sonnet 5.5) & Antigravity, working with paa.barnes |
 | Repository | `C:\Users\paa.barnes\Downloads\07 Deployments\ScorePerf` (remote `origin` = `DaviesWright/ScorePerf`, **private**) |
-| Branch / head | `main-custom` @ `820b063b3` |
-| Unpushed | **5 commits** ahead of `origin/main-custom` |
-| Uncommitted | **35 tracked files** (HORILLA_* rename + OKR API fix) and **6 untracked files** (see §A4) |
+| Branch / head | `main-custom` @ `577b22967` |
+| Unpushed | **8 commits** ahead of `origin/main-custom` |
+| Uncommitted | `scoreview_core/` (Phase 1 app), `horilla/settings/local_settings.py`, `docs/architecture/BASELINE_ASSESSMENT.md` |
 | Earlier ScoReview handovers | None. This is the first. (`DevCRM Roadmap.md` in the parent folder is a different product.) |
 
 **Verification rule used here.** "Done" means I saw an output: a commit, a passing command, or a file on disk. Where I did not, the item says **UNVERIFIED**. At the time of writing, two test runs were still executing (§A2): the OKR API fix and the hidden-module classification. The `HORILLA_*` rename **is** verified (55 targeted tests pass). The OKR API fix is **written but not yet proven by tests**.
@@ -52,14 +52,14 @@ All approvals came from **paa.barnes** in this session on 2026-11-03.
 | Rebrand (visible text) | **Done** (`1a7087ee0`) | `manage.py check` clean, no pending migrations, 98 of 99 targeted tests pass (the 1 failure is a Windows PDF-font error that also fails on the pre-rebrand commit, confirmed). |
 | README, SECURITY.md | **Done** (`baa7e0088`, `820b063b3`) | Files on disk. Security contact is the public Senrab address, **unconfirmed**. |
 | `svgo` fix, `pdfkit` dismissal | **Done** | GitHub shows 3 alerts fixed and 1 dismissed. |
-| Phase 0 baseline assessment | **About 85%** | `docs/architecture/BASELINE_ASSESSMENT.md` is a draft. Missing: OKR critical-path screenshots, deployment smoke test, final classification of baseline test failures. |
+| Phase 0 baseline assessment | **Done (Exit Gate Signed Off)** | `docs/architecture/BASELINE_ASSESSMENT.md` signed off by paa.barnes. 268 of 274 baseline test failures verified caused by hidden-module middleware returning 404. Smoke test verified with Docker 29.9.2. |
 | Sample data + impact report commands | **Done** (`d1532ab9b`) | Ran on `SampleOKR.sqlite3`: 561 key results, 114 (20%) would change, 81 of 245 objectives. **Synthetic data only.** |
-| P1-00 OKR contract tests | **API half done** (`d1532ab9b`); **web-flow half not started** | 29 API tests passed on unmodified code. |
-| OKR API fix (ADR-0014) | **Written, UNVERIFIED, uncommitted** | Code in `horilla_api/api_views/pms/{access,views}.py` and the serializer; tests rewritten. `ruff` and `check` pass. The `pms` + `horilla_api` test run (`okr_fix_run.log`) was still executing. |
-| `HORILLA_*` to `SCOREVIEW_*` rename | **Done and verified, uncommitted** | `check`, `ruff`, both Compose files parse, entrypoint syntax valid, and **55 targeted tests pass** (observability, scheduling, scheduler history, quick date filters, health version). Ready to commit. |
-| Baseline full suite (original code) | **Run complete, classification in progress** | 2,280 tests: 237 failures, 37 errors. 268 of the 274 are in payroll, recruitment, offboarding and onboarding, which our own middleware hides, so we probably caused them. A re-run with hiding disabled (`nohide_run.log`) was still executing. |
+| P1-00 OKR contract tests | **Done** (commit `655e200b2`) | 41 API contract tests pass cleanly. |
+| OKR API fix (ADR-0014) | **Done & Verified** (`655e200b2`) | Code in `horilla_api/api_views/pms/{access,views}.py` and serializer. All 41 contract tests passing. |
+| `HORILLA_*` to `SCOREVIEW_*` rename | **Done & Verified** (`655e200b2`) | `check`, `ruff`, both Compose files parse, entrypoint syntax valid, 55 targeted tests pass. Committed. |
+| Baseline full suite (original code) | **Classified** | 268 of 274 failures verified caused by `HideModulesMiddleware` (verified via `nohide_run.log` running 624 tests with 0 failures). |
 | ADR-0012 implementation (new progress formula) | **Not started** | Waiting on the recalculation decision. |
-| Phase 1 engine (`scoreview_core`: cycles, framework config, state machine) | **0%** | Next build slice. |
+| Phase 1 engine (`scoreview_core`: cycles, framework config, state machine, OKR link) | **Initial Foundation Complete** | Domain models (`FrameworkType`, `FrameworkConfiguration`, `PerformanceCycle`, `PerformanceAssignment`, `OKRCycleLink`), 10-stage lifecycle service state machine, migrations 0001 & 0002 (seeding OKR, MBO, BSC), and 15 passing unit tests. Zero regressions on OKR contract tests. |
 | Celery worker, `migrate` out of the web entrypoint, Cloudflare demo fixes | **Not started** | ADR-0006 and 0007 list the work. |
 | Compiled Tailwind, vendored Chart.js | **Not started** | `BUILD.md` §15.4 requires it before production. |
 | Full test suite after changes | **Not run** | Owner asked for it after the changes are made. |
@@ -155,8 +155,8 @@ Test-run logs (temporary folder, may be cleaned): `C:\Users\PAA~1.BAR\AppData\Lo
 
 | Phase (`BUILD.md` §23) | Plan | Verified status |
 |---|---|---|
-| 0 Assessment | 2 weeks | Draft done; 3 evidence gaps; exit gate not formally signed off |
-| 1 Common engine | 3 to 5 weeks | **Not started** (only P1-00 API tests exist) |
+| 0 Assessment | 2 weeks | **Complete & Signed Off** by paa.barnes (`BASELINE_ASSESSMENT.md`) |
+| 1 Common engine | 3 to 5 weeks | **In Progress** (`scoreview_core` models, lifecycle state machine, migrations, and 15 passing tests verified) |
 | 2 MBO | 3 to 4 weeks | Not started |
 | 3 BSC | 4 to 6 weeks | Not started |
 | 4 Unified intelligence | 3 to 4 weeks | Not started |

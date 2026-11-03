@@ -31,7 +31,7 @@ from .base import (
     STATICFILES_DIRS,
 )
 
-INSTALLED_APPS += ["scoreview_performance"]
+INSTALLED_APPS += ["scoreview_core", "scoreview_performance"]
 
 # Modules kept installed (tables and data intact) but hidden from everyone:
 # no sidebar entry, and their URLs answer 404 (scoreview_performance/middleware.py).
