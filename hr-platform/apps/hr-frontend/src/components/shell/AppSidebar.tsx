@@ -60,7 +60,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       try {
         const stored = localStorage.getItem("scoreview_sidebar_pinned");
         return stored === "true";
-      } catch (e) {}
+      } catch (e) { }
     }
     return false; // Auto-hide by default!
   });
@@ -80,7 +80,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("scoreview_sidebar_pinned", next ? "true" : "false");
-        } catch (e) {}
+        } catch (e) { }
       }
       if (next) {
         setCollapsed(false);
@@ -278,464 +278,463 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             : "none",
         }}
       >
-      {/* Brand & Organization Header */}
-      <div
-        style={{
-          padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isEffectiveCollapsed ? "center" : "space-between",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", overflow: "hidden" }}>
-          <div
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: radii.md,
-              backgroundColor: colors.indigoAction,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              fontSize: "13px",
-              letterSpacing: "-0.02em",
-              color: "#ffffff",
-              flexShrink: 0,
-              boxShadow: "0 2px 6px rgba(79, 70, 229, 0.35)",
-            }}
-          >
-            SC
-          </div>
-          {!isEffectiveCollapsed && (
-            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <span
-                style={{
-                  fontSize: typography.sizes.sm,
-                  fontWeight: 700,
-                  color: "#ffffff",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                Senrab ConsulTech
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <span
-                  style={{
-                    width: "5px",
-                    height: "5px",
-                    borderRadius: "50%",
-                    backgroundColor: colors.emeraldAction,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "10px",
-                    color: "#94a3b8",
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Enterprise 45
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Pin / Auto-Hide Mode Toggle Button */}
-        {!isEffectiveCollapsed && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-            <button
-              onClick={() => togglePin()}
-              title={
-                isPinned
-                  ? "Sidebar is Pinned Open. Click to enable Auto-Hide by default."
-                  : "Auto-Hide is Active by default. Click to Pin sidebar open."
-              }
-              style={{
-                background: isPinned ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.08)",
-                border: `1px solid ${isPinned ? colors.emeraldAction : "rgba(255, 255, 255, 0.15)"}`,
-                color: isPinned ? colors.emeraldAction : "#cbd5e1",
-                cursor: "pointer",
-                padding: "4px 8px",
-                borderRadius: radii.sm,
-                display: "flex",
-                alignItems: "center",
-                gap: "0.3rem",
-                fontSize: "10px",
-                fontWeight: 700,
-                transition: "all 0.15s ease",
-              }}
-            >
-              {isPinned ? <Icons.Pin size={12} color={colors.emeraldAction} /> : <Icons.PinOff size={12} color="#94a3b8" />}
-              <span>{isPinned ? "Pinned" : "Auto-Hide"}</span>
-            </button>
-
-            {isPinned && (
-              <button
-                onClick={() => setCollapsed(!collapsed)}
-                title={collapsed ? "Expand sidebar (⌘[)" : "Collapse sidebar (⌘[)"}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                  padding: "4px",
-                  borderRadius: radii.sm,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "color 0.15s ease",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
-              >
-                {collapsed ? <Icons.SidebarExpand size={15} /> : <Icons.SidebarCollapse size={15} />}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Role / Persona Switcher Bar */}
-      {!isEffectiveCollapsed && (
-        <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", position: "relative" }}>
-          <button
-            onClick={() => setShowPersonaMenu(!showPersonaMenu)}
-            style={{
-              width: "100%",
-              padding: "0.45rem 0.65rem",
-              borderRadius: radii.md,
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-              fontSize: "11px",
-              textAlign: "left",
-            }}
-          >
-            <div>
-              <div style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Viewing As</div>
-              <div style={{ fontWeight: 600, color: "#ffffff", marginTop: "1px" }}>{personaLabels[persona].title}</div>
-            </div>
-            <Icons.ChevronDown size={14} color="#94a3b8" />
-          </button>
-
-          {showPersonaMenu && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: "0.85rem",
-                right: "0.85rem",
-                backgroundColor: colors.indigoDark,
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: radii.md,
-                boxShadow: "0 8px 18px rgba(0,0,0,0.45)",
-                zIndex: 35,
-                marginTop: "4px",
-                overflow: "hidden",
-              }}
-            >
-              {(Object.keys(personaLabels) as UserPersona[]).map((pKey) => (
-                <div
-                  key={pKey}
-                  onClick={() => {
-                    onSelectPersona(pKey);
-                    setShowPersonaMenu(false);
-                    if (pKey === "employee") onSelectView("self_service");
-                    if (pKey === "hr_director") onSelectView("command_centre");
-                    if (pKey === "hr_admin") onSelectView("workforce_directory");
-                    if (pKey === "line_manager") onSelectView("time_and_leave");
-                  }}
-                  style={{
-                    padding: "0.55rem 0.75rem",
-                    cursor: "pointer",
-                    fontSize: "11px",
-                    color: persona === pKey ? "#ffffff" : "#cbd5e1",
-                    backgroundColor: persona === pKey ? colors.indigoAction : "transparent",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (persona !== pKey) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (persona !== pKey) e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  <span style={{ fontWeight: persona === pKey ? 600 : 400 }}>{personaLabels[pKey].title}</span>
-                  <span style={{ fontSize: "9px", color: persona === pKey ? "#ffffff" : "#94a3b8" }}>{personaLabels[pKey].badge}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Omni-Agent AI Copilot Trigger */}
-      <div style={{ padding: isEffectiveCollapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
-        <button
-          onClick={onOpenOmniAgent}
+        {/* Brand & Organization Header */}
+        <div
           style={{
-            width: "100%",
-            padding: "0.5rem 0.65rem",
-            borderRadius: radii.md,
-            background: `linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)`,
-            border: "1px solid rgba(168, 85, 247, 0.4)",
-            color: "#ffffff",
+            padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",
             justifyContent: isEffectiveCollapsed ? "center" : "space-between",
-            cursor: "pointer",
-            fontSize: "11px",
-            fontWeight: 600,
-            transition: "all 0.15s ease",
           }}
-          title="Open Omni-Agent Copilot (⌘J)"
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.8)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)")}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Icons.Sparkles size={14} color="#c084fc" />
-            {!collapsed && <span>Omni-Agent AI</span>}
-          </div>
-          {!isEffectiveCollapsed && (
-            <span style={{ fontSize: "10px", padding: "0.1rem 0.35rem", borderRadius: radii.sm, backgroundColor: "rgba(255,255,255,0.15)" }}>
-              ⌘J
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Navigation Sections */}
-      <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
-        {navSections.map((section, sIdx) => (
-          <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", overflow: "hidden" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: radii.md,
+                backgroundColor: colors.indigoAction,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                fontSize: "13px",
+                letterSpacing: "-0.02em",
+                color: "#ffffff",
+                flexShrink: 0,
+                boxShadow: "0 2px 6px rgba(79, 70, 229, 0.35)",
+              }}
+            >
+              SC
+            </div>
             {!isEffectiveCollapsed && (
-              <div
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  color: "#64748b",
-                  padding: "0.25rem 0.65rem 0.35rem",
-                  textTransform: "uppercase",
-                }}
-              >
-                {section.group}
+              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                <span
+                  style={{
+                    fontSize: typography.sizes.sm,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  Senrab ConsulTech
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <span
+                    style={{
+                      width: "5px",
+                      height: "5px",
+                      borderRadius: "50%",
+                      backgroundColor: colors.emeraldAction,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "#94a3b8",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Enterprise 45
+                  </span>
+                </div>
               </div>
             )}
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {section.items.map((item) => {
-                const isActive = currentView === item.key;
-                const IconComponent = item.icon;
-                const isHovered = hoveredItem === item.key;
+          </div>
 
-                return (
-                  <li key={item.key} style={{ margin: "2px 0", position: "relative" }}>
-                    <button
-                      onClick={() => {
-                        onSelectView(item.key);
-                        if (!isPinned) {
-                          setIsSidebarHovered(false);
-                          setShowPersonaMenu(false);
-                        }
-                      }}
-                      onMouseEnter={() => setHoveredItem(item.key)}
-                      onMouseLeave={() => setHoveredItem(null)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.65rem",
-                        padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem 0.65rem",
-                        justifyContent: isEffectiveCollapsed ? "center" : "space-between",
-                        backgroundColor: isActive
-                          ? "rgba(79, 70, 229, 0.22)"
-                          : isHovered
-                          ? "rgba(255, 255, 255, 0.05)"
-                          : "transparent",
-                        border: "none",
-                        borderRadius: radii.md,
-                        cursor: "pointer",
-                        color: isActive ? "#ffffff" : isHovered ? "#f1f5f9" : "#94a3b8",
-                        fontWeight: isActive ? 600 : 400,
-                        fontSize: typography.sizes.sm,
-                        textAlign: "left",
-                        transition: "all 0.12s ease",
-                        borderLeft: isActive && !isEffectiveCollapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                        <IconComponent
-                          size={16}
-                          color={isActive ? "#818cf8" : isHovered ? "#ffffff" : "#94a3b8"}
-                        />
-                        {!collapsed && <span>{item.label}</span>}
-                      </div>
+          {/* Pin / Auto-Hide Mode Toggle Button */}
+          {!isEffectiveCollapsed && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <button
+                onClick={() => togglePin()}
+                title={
+                  isPinned
+                    ? "Sidebar is Pinned Open. Click to enable Auto-Hide by default."
+                    : "Auto-Hide is Active by default. Click to Pin sidebar open."
+                }
+                style={{
+                  background: isPinned ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.08)",
+                  border: `1px solid ${isPinned ? colors.emeraldAction : "rgba(255, 255, 255, 0.15)"}`,
+                  color: isPinned ? colors.emeraldAction : "#cbd5e1",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  borderRadius: radii.sm,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.3rem",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {isPinned ? <Icons.Pin size={12} color={colors.emeraldAction} /> : <Icons.PinOff size={12} color="#94a3b8" />}
+                <span>{isPinned ? "Pinned" : "Auto-Hide"}</span>
+              </button>
 
-                      {!collapsed && item.badge && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            padding: "0.1rem 0.45rem",
-                            borderRadius: radii.full,
-                            fontWeight: 600,
-                            fontVariantNumeric: "tabular-nums",
-                            backgroundColor:
-                              item.badgeType === "emerald"
-                                ? "rgba(16, 185, 129, 0.2)"
-                                : item.badgeType === "peach"
-                                ? "rgba(249, 115, 22, 0.2)"
-                                : item.badgeType === "indigo"
-                                ? "rgba(99, 102, 241, 0.25)"
-                                : "rgba(255, 255, 255, 0.1)",
-                            color:
-                              item.badgeType === "emerald"
-                                ? "#6ee7b7"
-                                : item.badgeType === "peach"
-                                ? "#fdba74"
-                                : item.badgeType === "indigo"
-                                ? "#c7d2fe"
-                                : "#cbd5e1",
-                            border: `1px solid ${
-                              item.badgeType === "emerald"
-                                ? "rgba(16, 185, 129, 0.35)"
-                                : item.badgeType === "peach"
-                                ? "rgba(249, 115, 22, 0.35)"
-                                : item.badgeType === "indigo"
-                                ? "rgba(99, 102, 241, 0.35)"
-                                : "rgba(255, 255, 255, 0.15)"
-                            }`,
-                          }}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
+              {isPinned && (
+                <button
+                  onClick={() => setCollapsed(!collapsed)}
+                  title={collapsed ? "Expand sidebar (⌘[)" : "Collapse sidebar (⌘[)"}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#94a3b8",
+                    cursor: "pointer",
+                    padding: "4px",
+                    borderRadius: radii.sm,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                >
+                  {collapsed ? <Icons.SidebarExpand size={15} /> : <Icons.SidebarCollapse size={15} />}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-                    {/* Collapsed Tooltip Flyout */}
-                    {isEffectiveCollapsed && isHovered && (
-                      <div
+        {/* Role / Persona Switcher Bar */}
+        {!isEffectiveCollapsed && (
+          <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", position: "relative" }}>
+            <button
+              onClick={() => setShowPersonaMenu(!showPersonaMenu)}
+              style={{
+                width: "100%",
+                padding: "0.45rem 0.65rem",
+                borderRadius: radii.md,
+                backgroundColor: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                cursor: "pointer",
+                fontSize: "11px",
+                textAlign: "left",
+              }}
+            >
+              <div>
+                <div style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Viewing As</div>
+                <div style={{ fontWeight: 600, color: "#ffffff", marginTop: "1px" }}>{personaLabels[persona].title}</div>
+              </div>
+              <Icons.ChevronDown size={14} color="#94a3b8" />
+            </button>
+
+            {showPersonaMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "100%",
+                  left: "0.85rem",
+                  right: "0.85rem",
+                  backgroundColor: colors.indigoDark,
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: radii.md,
+                  boxShadow: "0 8px 18px rgba(0,0,0,0.45)",
+                  zIndex: 35,
+                  marginTop: "4px",
+                  overflow: "hidden",
+                }}
+              >
+                {(Object.keys(personaLabels) as UserPersona[]).map((pKey) => (
+                  <div
+                    key={pKey}
+                    onClick={() => {
+                      onSelectPersona(pKey);
+                      setShowPersonaMenu(false);
+                      if (pKey === "employee") onSelectView("self_service");
+                      if (pKey === "hr_director") onSelectView("command_centre");
+                      if (pKey === "hr_admin") onSelectView("workforce_directory");
+                      if (pKey === "line_manager") onSelectView("time_and_leave");
+                    }}
+                    style={{
+                      padding: "0.55rem 0.75rem",
+                      cursor: "pointer",
+                      fontSize: "11px",
+                      color: persona === pKey ? "#ffffff" : "#cbd5e1",
+                      backgroundColor: persona === pKey ? colors.indigoAction : "transparent",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    <span style={{ fontWeight: persona === pKey ? 600 : 400 }}>{personaLabels[pKey].title}</span>
+                    <span style={{ fontSize: "9px", color: persona === pKey ? "#ffffff" : "#94a3b8" }}>{personaLabels[pKey].badge}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Omni-Agent AI Copilot Trigger */}
+        <div style={{ padding: isEffectiveCollapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
+          <button
+            onClick={onOpenOmniAgent}
+            style={{
+              width: "100%",
+              padding: "0.5rem 0.65rem",
+              borderRadius: radii.md,
+              background: `linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)`,
+              border: "1px solid rgba(168, 85, 247, 0.4)",
+              color: "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: isEffectiveCollapsed ? "center" : "space-between",
+              cursor: "pointer",
+              fontSize: "11px",
+              fontWeight: 600,
+              transition: "all 0.15s ease",
+            }}
+            title="Open Omni-Agent Copilot (⌘J)"
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.8)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)")}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Icons.Sparkles size={14} color="#c084fc" />
+              {!collapsed && <span>Omni-Agent AI</span>}
+            </div>
+            {!isEffectiveCollapsed && (
+              <span style={{ fontSize: "10px", padding: "0.1rem 0.35rem", borderRadius: radii.sm, backgroundColor: "rgba(255,255,255,0.15)" }}>
+                ⌘J
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Navigation Sections */}
+        <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
+          {navSections.map((section, sIdx) => (
+            <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
+              {!isEffectiveCollapsed && (
+                <div
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: "#64748b",
+                    padding: "0.25rem 0.65rem 0.35rem",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.group}
+                </div>
+              )}
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {section.items.map((item) => {
+                  const isActive = currentView === item.key;
+                  const IconComponent = item.icon;
+                  const isHovered = hoveredItem === item.key;
+
+                  return (
+                    <li key={item.key} style={{ margin: "2px 0", position: "relative" }}>
+                      <button
+                        onClick={() => {
+                          onSelectView(item.key);
+                          if (!isPinned) {
+                            setIsSidebarHovered(false);
+                            setShowPersonaMenu(false);
+                          }
+                        }}
+                        onMouseEnter={() => setHoveredItem(item.key)}
+                        onMouseLeave={() => setHoveredItem(null)}
                         style={{
-                          position: "absolute",
-                          left: "72px",
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          backgroundColor: colors.indigoDark,
-                          color: "#ffffff",
-                          padding: "0.35rem 0.65rem",
-                          borderRadius: radii.md,
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          whiteSpace: "nowrap",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                          border: "1px solid rgba(255, 255, 255, 0.15)",
-                          zIndex: 60,
-                          pointerEvents: "none",
+                          width: "100%",
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.4rem",
+                          gap: "0.65rem",
+                          padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem 0.65rem",
+                          justifyContent: isEffectiveCollapsed ? "center" : "space-between",
+                          backgroundColor: isActive
+                            ? "rgba(79, 70, 229, 0.22)"
+                            : isHovered
+                              ? "rgba(255, 255, 255, 0.05)"
+                              : "transparent",
+                          border: "none",
+                          borderRadius: radii.md,
+                          cursor: "pointer",
+                          color: isActive ? "#ffffff" : isHovered ? "#f1f5f9" : "#94a3b8",
+                          fontWeight: isActive ? 600 : 400,
+                          fontSize: typography.sizes.sm,
+                          textAlign: "left",
+                          transition: "all 0.12s ease",
+                          borderLeft: isActive && !isEffectiveCollapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
                         }}
                       >
-                        <span>{item.label}</span>
-                        {item.badge && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                          <IconComponent
+                            size={16}
+                            color={isActive ? "#818cf8" : isHovered ? "#ffffff" : "#94a3b8"}
+                          />
+                          {!collapsed && <span>{item.label}</span>}
+                        </div>
+
+                        {!collapsed && item.badge && (
                           <span
                             style={{
-                              fontSize: "9px",
-                              padding: "0.05rem 0.3rem",
-                              borderRadius: radii.sm,
-                              backgroundColor: "rgba(255,255,255,0.2)",
+                              fontSize: "10px",
+                              padding: "0.1rem 0.45rem",
+                              borderRadius: radii.full,
+                              fontWeight: 600,
+                              fontVariantNumeric: "tabular-nums",
+                              backgroundColor:
+                                item.badgeType === "emerald"
+                                  ? "rgba(16, 185, 129, 0.2)"
+                                  : item.badgeType === "peach"
+                                    ? "rgba(249, 115, 22, 0.2)"
+                                    : item.badgeType === "indigo"
+                                      ? "rgba(99, 102, 241, 0.25)"
+                                      : "rgba(255, 255, 255, 0.1)",
+                              color:
+                                item.badgeType === "emerald"
+                                  ? "#6ee7b7"
+                                  : item.badgeType === "peach"
+                                    ? "#fdba74"
+                                    : item.badgeType === "indigo"
+                                      ? "#c7d2fe"
+                                      : "#cbd5e1",
+                              border: `1px solid ${item.badgeType === "emerald"
+                                  ? "rgba(16, 185, 129, 0.35)"
+                                  : item.badgeType === "peach"
+                                    ? "rgba(249, 115, 22, 0.35)"
+                                    : item.badgeType === "indigo"
+                                      ? "rgba(99, 102, 241, 0.35)"
+                                      : "rgba(255, 255, 255, 0.15)"
+                                }`,
                             }}
                           >
                             {item.badge}
                           </span>
                         )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
+                      </button>
 
-      {/* User Session Bar */}
-      <div
-        style={{
-          padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
-          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isEffectiveCollapsed ? "center" : "space-between",
-          gap: "0.65rem",
-          backgroundColor: "rgba(0, 0, 0, 0.2)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
-          <UserAvatar name={currentUser?.name || "Paa Kwesi Barnes"} initials={currentUser?.avatarText || "PB"} photoUrl={photoUrl} size={30} />
-          {!isEffectiveCollapsed && (
-            <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
-              <span
-                style={{
-                  fontSize: typography.sizes.xs,
-                  fontWeight: 600,
-                  color: "#ffffff",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {currentUser?.name || "Paa Kwesi Barnes"}
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  color: "#94a3b8",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {currentUser?.email || "paa.barnes@bscscoreview.com"}
-              </span>
+                      {/* Collapsed Tooltip Flyout */}
+                      {isEffectiveCollapsed && isHovered && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: "72px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            backgroundColor: colors.indigoDark,
+                            color: "#ffffff",
+                            padding: "0.35rem 0.65rem",
+                            borderRadius: radii.md,
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                            zIndex: 60,
+                            pointerEvents: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                          }}
+                        >
+                          <span>{item.label}</span>
+                          {item.badge && (
+                            <span
+                              style={{
+                                fontSize: "9px",
+                                padding: "0.05rem 0.3rem",
+                                borderRadius: radii.sm,
+                                backgroundColor: "rgba(255,255,255,0.2)",
+                              }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
+          ))}
+        </nav>
+
+        {/* User Session Bar */}
+        <div
+          style={{
+            padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
+            borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: isEffectiveCollapsed ? "center" : "space-between",
+            gap: "0.65rem",
+            backgroundColor: "rgba(0, 0, 0, 0.2)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
+            <UserAvatar name={currentUser?.name || "Paa Kwesi Barnes"} initials={currentUser?.avatarText || "PB"} photoUrl={photoUrl} size={30} />
+            {!isEffectiveCollapsed && (
+              <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                <span
+                  style={{
+                    fontSize: typography.sizes.xs,
+                    fontWeight: 600,
+                    color: "#ffffff",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {currentUser?.name || "Paa Kwesi Barnes"}
+                </span>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "#94a3b8",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {currentUser?.email || "paa.barnes@bscscoreview.com"}
+                </span>
+              </div>
+            )}
+          </div>
+          {onSignOut && !isEffectiveCollapsed && (
+            <button
+              onClick={onSignOut}
+              title="Sign Out / Lock Session"
+              style={{
+                background: "none",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "0.25rem",
+                borderRadius: radii.sm,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+            >
+              <Icons.LogOut size={14} />
+            </button>
           )}
         </div>
-        {onSignOut && !isEffectiveCollapsed && (
-          <button
-            onClick={onSignOut}
-            title="Sign Out / Lock Session"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#94a3b8",
-              cursor: "pointer",
-              padding: "0.25rem",
-              borderRadius: radii.sm,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#f87171")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
-          >
-            <Icons.LogOut size={14} />
-          </button>
-        )}
-      </div>
-    </aside>
+      </aside>
     </div>
   );
 };

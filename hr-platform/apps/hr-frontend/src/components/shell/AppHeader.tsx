@@ -22,6 +22,9 @@ interface AppHeaderProps {
   onRemovePhoto?: () => void;
   onNavigate?: (view: ModuleViewKey) => void;
   onSignOut?: () => void;
+  isFollowPromptActive?: boolean;
+  onToggleFollowPrompt?: () => void;
+  onOpenFollowPromptDrawer?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -41,6 +44,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onRemovePhoto,
   onNavigate,
   onSignOut,
+  isFollowPromptActive = true,
+  onToggleFollowPrompt,
+  onOpenFollowPromptDrawer,
 }) => {
   const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [internalSandbox, setInternalSandbox] = useState(false);
@@ -130,6 +136,43 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Omni-Agent & Notifications */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        {/* Follow the Prompt Guided Navigator Button */}
+        <button
+          onClick={() => {
+            if (isFollowPromptActive && onOpenFollowPromptDrawer) {
+              onOpenFollowPromptDrawer();
+            } else if (onToggleFollowPrompt) {
+              onToggleFollowPrompt();
+            }
+          }}
+          title="Follow the Prompt — Interactive Guided System Tour & Next Steps"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            backgroundColor: isFollowPromptActive ? "#ecfdf5" : colors.surfaceSubtle,
+            border: `1px solid ${isFollowPromptActive ? "#6ee7b7" : colors.border}`,
+            borderRadius: radii.md,
+            padding: "0.35rem 0.65rem",
+            fontSize: "11px",
+            fontWeight: 700,
+            cursor: "pointer",
+            color: isFollowPromptActive ? "#065f46" : colors.indigoPrimary,
+            transition: "all 0.15s ease",
+          }}
+        >
+          <Icons.Compass size={14} color={isFollowPromptActive ? "#059669" : colors.indigoAction} />
+          <span>Follow the Prompt</span>
+          <span
+            style={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              backgroundColor: isFollowPromptActive ? "#10b981" : "#94a3b8",
+            }}
+          />
+        </button>
+
         {/* Dede AI Copilot Trigger */}
         <Button
           variant="outline"

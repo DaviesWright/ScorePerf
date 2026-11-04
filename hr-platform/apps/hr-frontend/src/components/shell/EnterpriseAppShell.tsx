@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { colors } from "../../design-system/tokens";
 import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { FollowThePromptBar } from "./FollowThePromptBar";
 import { CommandPalette } from "../../design-system/CommandPalette";
 import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
 import { CommandCentreView } from "../modules/CommandCentreView";
@@ -84,6 +85,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
+  const [isFollowPromptExpanded, setIsFollowPromptExpanded] = useState(true);
+  const [isFollowPromptDrawerOpen, setIsFollowPromptDrawerOpen] = useState(false);
 
   // Authentication & Session State
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
@@ -318,6 +321,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         onUploadPhoto={handleUploadPhoto}
         onNavigate={setCurrentView}
         onOpenOmniAgent={() => setIsOmniAgentOpen(true)}
+        onStartFollowPrompt={() => {
+          setIsFollowPromptExpanded(true);
+          setIsFollowPromptDrawerOpen(true);
+        }}
       />
 
       {/* Omni-Agent Zero-UI AI Copilot Drawer */}
@@ -382,6 +389,20 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           onRemovePhoto={handleRemovePhoto}
           onNavigate={setCurrentView}
           onSignOut={handleSignOut}
+          isFollowPromptActive={isFollowPromptExpanded}
+          onToggleFollowPrompt={() => setIsFollowPromptExpanded((prev) => !prev)}
+          onOpenFollowPromptDrawer={() => setIsFollowPromptDrawerOpen(true)}
+        />
+
+        <FollowThePromptBar
+          persona={persona}
+          currentView={currentView}
+          onNavigate={setCurrentView}
+          isExpanded={isFollowPromptExpanded}
+          onToggleExpand={() => setIsFollowPromptExpanded((prev) => !prev)}
+          isDrawerOpen={isFollowPromptDrawerOpen}
+          onCloseDrawer={() => setIsFollowPromptDrawerOpen(false)}
+          onOpenDrawer={() => setIsFollowPromptDrawerOpen(true)}
         />
 
         <main style={{ flex: 1 }}>
