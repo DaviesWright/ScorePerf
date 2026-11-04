@@ -405,6 +405,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
               }}
               onReportIssue={() => setCurrentView("helpdesk")}
               onOpenPayslip={() => setIsPayslipModalOpen(true)}
+              onNavigate={setCurrentView}
             />
           )}
 

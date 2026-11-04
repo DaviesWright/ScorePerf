@@ -8,6 +8,8 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { LeaveRecord } from "./TimeAndLeaveView";
 import { AssetRecord } from "./WorkforceDirectoryView";
 import { formatDateRange, formatDate } from "../../utils/date";
+import { ModuleViewKey } from "../shell/AppSidebar";
+import { EssShortcutsHub } from "./ess/EssShortcutsHub";
 
 interface EmployeeSelfServiceViewProps {
   currentEmployee: {
@@ -25,6 +27,7 @@ interface EmployeeSelfServiceViewProps {
   onRequestLeave: () => void;
   onReportIssue: () => void;
   onOpenPayslip?: () => void;
+  onNavigate?: (view: ModuleViewKey) => void;
 }
 
 interface PersonalGoal {
@@ -42,6 +45,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
   onRequestLeave,
   onReportIssue,
   onOpenPayslip,
+  onNavigate,
 }) => {
   const [goals, setGoals] = useState<PersonalGoal[]>([
     {
@@ -207,6 +211,15 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
           </Button>
         </div>
       </div>
+
+      {/* ESS 8-Pillar Workflow Shortcut Links & Launchpad */}
+      <EssShortcutsHub
+        employee={currentEmployee}
+        onNavigate={onNavigate}
+        onOpenPayslip={onOpenPayslip}
+        onRequestLeave={onRequestLeave}
+        onReportIssue={onReportIssue}
+      />
 
       {/* Proactive Push Intelligence Feed (The Push-Based HR Standard) */}
       <div
