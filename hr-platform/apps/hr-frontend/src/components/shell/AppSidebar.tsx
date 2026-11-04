@@ -54,21 +54,56 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   onSignOut,
   counts,
 }) => {
+  // By default, sidebar is auto-hide (unpinned). Users can pin to stop auto-hide.
+  const [isPinned, setIsPinned] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("scoreview_sidebar_pinned");
+        return stored === "true";
+      } catch (e) {}
+    }
+    return false; // Auto-hide by default!
+  });
+
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showPersonaMenu, setShowPersonaMenu] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  // Shortcut ⌘[ or Ctrl+[ to toggle sidebar collapse
+  // When pinned, effective collapsed state is controlled by manual toggle (default open)
+  // When NOT pinned (auto-hide by default), effective collapsed is !isSidebarHovered!
+  const isEffectiveCollapsed = isPinned ? collapsed : !isSidebarHovered;
+
+  const togglePin = (pinnedState?: boolean) => {
+    setIsPinned((prev) => {
+      const next = pinnedState !== undefined ? pinnedState : !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("scoreview_sidebar_pinned", next ? "true" : "false");
+        } catch (e) {}
+      }
+      if (next) {
+        setCollapsed(false);
+      }
+      return next;
+    });
+  };
+
+  // Shortcut ⌘[ or Ctrl+[ to toggle sidebar collapse / pin
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "[") {
         e.preventDefault();
-        setCollapsed((prev) => !prev);
+        if (!isPinned) {
+          togglePin(true);
+        } else {
+          setCollapsed((prev) => !prev);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [isPinned]);
 
   const personaLabels: Record<UserPersona, { title: string; badge: string }> = {
     hr_director: { title: "HR Director", badge: "Executive" },
@@ -204,31 +239,53 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   ];
 
   return (
-    <aside
+    <div
       style={{
-        width: collapsed ? "68px" : "240px",
-        backgroundColor: colors.indigoPrimary,
-        color: colors.textInverse,
-        display: "flex",
-        flexDirection: "column",
+        width: isPinned ? (collapsed ? "68px" : "240px") : "68px",
         flexShrink: 0,
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-        borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-        transition: "width 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-        userSelect: "none",
-        zIndex: 25,
+        position: "relative",
+        transition: "width 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
+      <aside
+        onMouseEnter={() => {
+          if (!isPinned) setIsSidebarHovered(true);
+        }}
+        onMouseLeave={() => {
+          if (!isPinned) {
+            setIsSidebarHovered(false);
+            setShowPersonaMenu(false);
+          }
+        }}
+        style={{
+          width: isEffectiveCollapsed ? "68px" : "240px",
+          backgroundColor: colors.indigoPrimary,
+          color: colors.textInverse,
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          height: "100vh",
+          position: isPinned ? "sticky" : "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          borderRight: "1px solid rgba(255, 255, 255, 0.08)",
+          transition: "width 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease",
+          userSelect: "none",
+          zIndex: 40,
+          boxShadow: (!isPinned && isSidebarHovered)
+            ? "0 20px 25px -5px rgba(0, 0, 0, 0.5), 4px 0 16px rgba(0, 0, 0, 0.35)"
+            : "none",
+        }}
+      >
       {/* Brand & Organization Header */}
       <div
         style={{
-          padding: collapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
+          padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           display: "flex",
           alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
+          justifyContent: isEffectiveCollapsed ? "center" : "space-between",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", overflow: "hidden" }}>
@@ -251,7 +308,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           >
             SC
           </div>
-          {!collapsed && (
+          {!isEffectiveCollapsed && (
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
               <span
                 style={{
@@ -290,31 +347,63 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           )}
         </div>
 
-        {/* Sidebar Collapse Toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? "Expand sidebar (⌘[)" : "Collapse sidebar (⌘[)"}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#94a3b8",
-            cursor: "pointer",
-            padding: "4px",
-            borderRadius: radii.sm,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "color 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
-        >
-          {collapsed ? <Icons.SidebarExpand size={16} /> : <Icons.SidebarCollapse size={16} />}
-        </button>
+        {/* Pin / Auto-Hide Mode Toggle Button */}
+        {!isEffectiveCollapsed && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <button
+              onClick={() => togglePin()}
+              title={
+                isPinned
+                  ? "Sidebar is Pinned Open. Click to enable Auto-Hide by default."
+                  : "Auto-Hide is Active by default. Click to Pin sidebar open."
+              }
+              style={{
+                background: isPinned ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.08)",
+                border: `1px solid ${isPinned ? colors.emeraldAction : "rgba(255, 255, 255, 0.15)"}`,
+                color: isPinned ? colors.emeraldAction : "#cbd5e1",
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: radii.sm,
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontSize: "10px",
+                fontWeight: 700,
+                transition: "all 0.15s ease",
+              }}
+            >
+              {isPinned ? <Icons.Pin size={12} color={colors.emeraldAction} /> : <Icons.PinOff size={12} color="#94a3b8" />}
+              <span>{isPinned ? "Pinned" : "Auto-Hide"}</span>
+            </button>
+
+            {isPinned && (
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                title={collapsed ? "Expand sidebar (⌘[)" : "Collapse sidebar (⌘[)"}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: radii.sm,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "color 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
+              >
+                {collapsed ? <Icons.SidebarExpand size={15} /> : <Icons.SidebarCollapse size={15} />}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Role / Persona Switcher Bar */}
-      {!collapsed && (
+      {!isEffectiveCollapsed && (
         <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", position: "relative" }}>
           <button
             onClick={() => setShowPersonaMenu(!showPersonaMenu)}
@@ -394,7 +483,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       )}
 
       {/* Omni-Agent AI Copilot Trigger */}
-      <div style={{ padding: collapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
+      <div style={{ padding: isEffectiveCollapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
         <button
           onClick={onOpenOmniAgent}
           style={{
@@ -406,7 +495,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             color: "#ffffff",
             display: "flex",
             alignItems: "center",
-            justifyContent: collapsed ? "center" : "space-between",
+            justifyContent: isEffectiveCollapsed ? "center" : "space-between",
             cursor: "pointer",
             fontSize: "11px",
             fontWeight: 600,
@@ -420,7 +509,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             <Icons.Sparkles size={14} color="#c084fc" />
             {!collapsed && <span>Omni-Agent AI</span>}
           </div>
-          {!collapsed && (
+          {!isEffectiveCollapsed && (
             <span style={{ fontSize: "10px", padding: "0.1rem 0.35rem", borderRadius: radii.sm, backgroundColor: "rgba(255,255,255,0.15)" }}>
               ⌘J
             </span>
@@ -429,10 +518,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       </div>
 
       {/* Navigation Sections */}
-      <nav style={{ flex: 1, padding: collapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
+      <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
         {navSections.map((section, sIdx) => (
           <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
-            {!collapsed && (
+            {!isEffectiveCollapsed && (
               <div
                 style={{
                   fontSize: "10px",
@@ -455,7 +544,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 return (
                   <li key={item.key} style={{ margin: "2px 0", position: "relative" }}>
                     <button
-                      onClick={() => onSelectView(item.key)}
+                      onClick={() => {
+                        onSelectView(item.key);
+                        if (!isPinned) {
+                          setIsSidebarHovered(false);
+                          setShowPersonaMenu(false);
+                        }
+                      }}
                       onMouseEnter={() => setHoveredItem(item.key)}
                       onMouseLeave={() => setHoveredItem(null)}
                       style={{
@@ -463,8 +558,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         display: "flex",
                         alignItems: "center",
                         gap: "0.65rem",
-                        padding: collapsed ? "0.65rem 0" : "0.5rem 0.65rem",
-                        justifyContent: collapsed ? "center" : "space-between",
+                        padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem 0.65rem",
+                        justifyContent: isEffectiveCollapsed ? "center" : "space-between",
                         backgroundColor: isActive
                           ? "rgba(79, 70, 229, 0.22)"
                           : isHovered
@@ -478,7 +573,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                         fontSize: typography.sizes.sm,
                         textAlign: "left",
                         transition: "all 0.12s ease",
-                        borderLeft: isActive && !collapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
+                        borderLeft: isActive && !isEffectiveCollapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
@@ -530,7 +625,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                     </button>
 
                     {/* Collapsed Tooltip Flyout */}
-                    {collapsed && isHovered && (
+                    {isEffectiveCollapsed && isHovered && (
                       <div
                         style={{
                           position: "absolute",
@@ -579,18 +674,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       {/* User Session Bar */}
       <div
         style={{
-          padding: collapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
+          padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
           display: "flex",
           alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
+          justifyContent: isEffectiveCollapsed ? "center" : "space-between",
           gap: "0.65rem",
           backgroundColor: "rgba(0, 0, 0, 0.2)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", minWidth: 0, flex: 1 }}>
           <UserAvatar name={currentUser?.name || "Paa Kwesi Barnes"} initials={currentUser?.avatarText || "PB"} photoUrl={photoUrl} size={30} />
-          {!collapsed && (
+          {!isEffectiveCollapsed && (
             <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
               <span
                 style={{
@@ -618,7 +713,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </div>
           )}
         </div>
-        {onSignOut && !collapsed && (
+        {onSignOut && !isEffectiveCollapsed && (
           <button
             onClick={onSignOut}
             title="Sign Out / Lock Session"
@@ -641,5 +736,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         )}
       </div>
     </aside>
+    </div>
   );
 };
