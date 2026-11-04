@@ -106,13 +106,19 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     | "settings"
   >("dashboard");
 
-  // State 1: Cascading Scorecard Builder (Balanced Scorecard: Fin 30%, Cust 50%, Int 15%, Lrn 5%)
+  // State 1: Cascading Scorecard Builder (Balanced Scorecard: Fin 40%, Cust 35%, Int 15%, Lrn 10%)
   const [bscWeights, setBscWeights] = useState({
-    financial: 30,
-    customer: 50,
+    financial: 40,
+    customer: 35,
     internal: 15,
-    learning: 5,
+    learning: 10,
   });
+
+  // Dashboard Stat Cards Interactive Drilldown State
+  const [dashboardDrilldownCohort, setDashboardDrilldownCohort] = useState<
+    "NO_OBJECTIVES" | "ACTIVE" | "PENDING_APPROVAL" | "APPROVED" | "DECLINED" | null
+  >(null);
+  const [dashboardDrilldownSearch, setDashboardDrilldownSearch] = useState("");
 
   // State 2: Sequential Multi-tier Sign-off Chain
   const [militaryChain, setMilitaryChain] = useState([
@@ -1058,12 +1064,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
           >
             {/* Card 1: No Objectives */}
             <div
-              {...drillProps(() => { setRequestStatusFilter("NO_OBJECTIVES"); setActiveMainTab("requests"); }, "Drill down to 84 staff pending goal drafting")}
+              {...drillProps(() => setDashboardDrilldownCohort((prev) => prev === "NO_OBJECTIVES" ? null : "NO_OBJECTIVES"), "Drill down to 84 staff pending goal drafting")}
               style={{
                 borderLeft: "3.5px solid #2563eb",
                 padding: "0.6rem 0.85rem",
                 borderRadius: radii.md,
-                backgroundColor: requestStatusFilter === "NO_OBJECTIVES" ? "rgba(37, 99, 235, 0.08)" : "transparent",
+                backgroundColor: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "rgba(37, 99, 235, 0.1)" : "transparent",
+                outline: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "2px solid #2563eb" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -1072,7 +1079,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
                   No Objectives
                 </span>
-                <span style={{ fontSize: "10px", color: "#2563eb", fontWeight: 700 }}>Drill down →</span>
+                <span style={{ fontSize: "10px", color: "#2563eb", fontWeight: 700 }}>
+                  {dashboardDrilldownCohort === "NO_OBJECTIVES" ? "▲ Close" : "Drill down →"}
+                </span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.noObjectives}
@@ -1084,12 +1093,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
             {/* Card 2: Active Objectives */}
             <div
-              {...drillProps(() => { setRequestStatusFilter("ACTIVE"); setActiveMainTab("requests"); }, "Drill down to 9 active objectives")}
+              {...drillProps(() => setDashboardDrilldownCohort((prev) => prev === "ACTIVE" ? null : "ACTIVE"), "Drill down to 9 active objectives")}
               style={{
                 borderLeft: "3.5px solid #f97316",
                 padding: "0.6rem 0.85rem",
                 borderRadius: radii.md,
-                backgroundColor: requestStatusFilter === "ACTIVE" ? "rgba(249, 115, 22, 0.08)" : "transparent",
+                backgroundColor: dashboardDrilldownCohort === "ACTIVE" ? "rgba(249, 115, 22, 0.1)" : "transparent",
+                outline: dashboardDrilldownCohort === "ACTIVE" ? "2px solid #f97316" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -1098,7 +1108,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
                   Active Objectives
                 </span>
-                <span style={{ fontSize: "10px", color: "#ea580c", fontWeight: 700 }}>Drill down →</span>
+                <span style={{ fontSize: "10px", color: "#ea580c", fontWeight: 700 }}>
+                  {dashboardDrilldownCohort === "ACTIVE" ? "▲ Close" : "Drill down →"}
+                </span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.activeObjectives}
@@ -1110,12 +1122,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
             {/* Card 3: Objectives Pending Approval */}
             <div
-              {...drillProps(() => { setRequestStatusFilter("PENDING APPROVAL"); setActiveMainTab("requests"); }, "Drill down to 1 pending approval objective")}
+              {...drillProps(() => setDashboardDrilldownCohort((prev) => prev === "PENDING_APPROVAL" ? null : "PENDING_APPROVAL"), "Drill down to 1 pending approval objective")}
               style={{
                 borderLeft: "3.5px solid #ef4444",
                 padding: "0.6rem 0.85rem",
                 borderRadius: radii.md,
-                backgroundColor: requestStatusFilter === "PENDING APPROVAL" ? "rgba(239, 68, 68, 0.08)" : "transparent",
+                backgroundColor: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "rgba(239, 68, 68, 0.1)" : "transparent",
+                outline: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "2px solid #ef4444" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -1124,7 +1137,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
                   Objectives Pending Approval
                 </span>
-                <span style={{ fontSize: "10px", color: "#dc2626", fontWeight: 700 }}>Drill down →</span>
+                <span style={{ fontSize: "10px", color: "#dc2626", fontWeight: 700 }}>
+                  {dashboardDrilldownCohort === "PENDING_APPROVAL" ? "▲ Close" : "Drill down →"}
+                </span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.pendingApproval}
@@ -1136,12 +1151,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
             {/* Card 4: Approved Objectives */}
             <div
-              {...drillProps(() => { setRequestStatusFilter("APPROVED"); setActiveMainTab("requests"); }, "Drill down to 3 approved objectives")}
+              {...drillProps(() => setDashboardDrilldownCohort((prev) => prev === "APPROVED" ? null : "APPROVED"), "Drill down to 3 approved objectives")}
               style={{
                 borderLeft: "3.5px solid #8b5cf6",
                 padding: "0.6rem 0.85rem",
                 borderRadius: radii.md,
-                backgroundColor: requestStatusFilter === "APPROVED" ? "rgba(139, 92, 246, 0.08)" : "transparent",
+                backgroundColor: dashboardDrilldownCohort === "APPROVED" ? "rgba(139, 92, 246, 0.1)" : "transparent",
+                outline: dashboardDrilldownCohort === "APPROVED" ? "2px solid #8b5cf6" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -1150,7 +1166,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
                   Approved Objectives
                 </span>
-                <span style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 700 }}>Drill down →</span>
+                <span style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 700 }}>
+                  {dashboardDrilldownCohort === "APPROVED" ? "▲ Close" : "Drill down →"}
+                </span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.approvedObjectives}
@@ -1162,12 +1180,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
             {/* Card 5: Declined Objectives */}
             <div
-              {...drillProps(() => { setRequestStatusFilter("DECLINED"); setActiveMainTab("requests"); }, "Drill down to declined objectives")}
+              {...drillProps(() => setDashboardDrilldownCohort((prev) => prev === "DECLINED" ? null : "DECLINED"), "Drill down to declined objectives")}
               style={{
                 borderLeft: "3.5px solid #10b981",
                 padding: "0.6rem 0.85rem",
                 borderRadius: radii.md,
-                backgroundColor: requestStatusFilter === "DECLINED" ? "rgba(16, 185, 129, 0.08)" : "transparent",
+                backgroundColor: dashboardDrilldownCohort === "DECLINED" ? "rgba(16, 185, 129, 0.1)" : "transparent",
+                outline: dashboardDrilldownCohort === "DECLINED" ? "2px solid #10b981" : "none",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
@@ -1176,7 +1195,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
                   Declined Objectives
                 </span>
-                <span style={{ fontSize: "10px", color: "#059669", fontWeight: 700 }}>Drill down →</span>
+                <span style={{ fontSize: "10px", color: "#059669", fontWeight: 700 }}>
+                  {dashboardDrilldownCohort === "DECLINED" ? "▲ Close" : "Drill down →"}
+                </span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.declinedObjectives}
@@ -1186,6 +1207,276 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               </div>
             </div>
           </div>
+
+          {/* Interactive Dashboard Drill-down Panel */}
+          {dashboardDrilldownCohort && (
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                border: `2px solid ${
+                  dashboardDrilldownCohort === "NO_OBJECTIVES"
+                    ? "#2563eb"
+                    : dashboardDrilldownCohort === "ACTIVE"
+                    ? "#f97316"
+                    : dashboardDrilldownCohort === "PENDING_APPROVAL"
+                    ? "#ef4444"
+                    : dashboardDrilldownCohort === "APPROVED"
+                    ? "#8b5cf6"
+                    : "#10b981"
+                }`,
+                padding: "1.25rem 1.5rem",
+                marginBottom: "1.5rem",
+                boxShadow: shadows.md,
+              }}
+            >
+              {/* Header Bar */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.75rem" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "16px" }}>
+                      {dashboardDrilldownCohort === "NO_OBJECTIVES" ? "📋" : dashboardDrilldownCohort === "ACTIVE" ? "⚡" : dashboardDrilldownCohort === "PENDING_APPROVAL" ? "⏳" : dashboardDrilldownCohort === "APPROVED" ? "🔒" : "↩️"}
+                    </span>
+                    <h3 style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.textPrimary, margin: 0 }}>
+                      {dashboardDrilldownCohort === "NO_OBJECTIVES" && "Staff Pending Goal Formulation (84 Employees)"}
+                      {dashboardDrilldownCohort === "ACTIVE" && "Active Objectives in Execution (9 Objectives)"}
+                      {dashboardDrilldownCohort === "PENDING_APPROVAL" && "Objectives Pending Line Manager Approval (1 Objective)"}
+                      {dashboardDrilldownCohort === "APPROVED" && "Approved & Locked Objectives (3 Objectives)"}
+                      {dashboardDrilldownCohort === "DECLINED" && "Declined / Returned Objectives (0 Objectives)"}
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
+                    {dashboardDrilldownCohort === "NO_OBJECTIVES" && `Employees enrolled in ${selectedAppraisalCycle} who have not drafted strategic BSC/OKR objectives.`}
+                    {dashboardDrilldownCohort === "ACTIVE" && "Approved and active strategic objectives currently being executed across Accra and London."}
+                    {dashboardDrilldownCohort === "PENDING_APPROVAL" && "Objectives submitted by appraisees awaiting line manager review and signoff."}
+                    {dashboardDrilldownCohort === "APPROVED" && "Finalized objectives approved and locked for the active evaluation cycle."}
+                    {dashboardDrilldownCohort === "DECLINED" && "Objectives returned to appraisee for scope adjustment or realignment."}
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="text"
+                    placeholder="Filter list..."
+                    value={dashboardDrilldownSearch}
+                    onChange={(e) => setDashboardDrilldownSearch(e.target.value)}
+                    style={{
+                      padding: "0.35rem 0.65rem",
+                      borderRadius: radii.md,
+                      border: `1px solid ${colors.border}`,
+                      fontSize: typography.sizes.xs,
+                      width: "180px",
+                    }}
+                  />
+                  {dashboardDrilldownCohort === "NO_OBJECTIVES" && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setStatusMessage({ text: "Dede AI sent Slack & Email drafting nudges to all 84 pending staff members." });
+                      }}
+                    >
+                      Nudge All 84 Staff
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setRequestStatusFilter(
+                        dashboardDrilldownCohort === "PENDING_APPROVAL" ? "PENDING APPROVAL" : dashboardDrilldownCohort
+                      );
+                      setActiveMainTab("requests");
+                    }}
+                  >
+                    Open in Requests Workspace →
+                  </Button>
+                  <button
+                    onClick={() => setDashboardDrilldownCohort(null)}
+                    style={{
+                      border: "none",
+                      backgroundColor: "transparent",
+                      color: colors.textMuted,
+                      cursor: "pointer",
+                      padding: "0.25rem 0.5rem",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                    }}
+                    title="Close Drilldown"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Drilldown Content Table */}
+              <div style={{ maxHeight: "360px", overflowY: "auto", border: `1px solid ${colors.border}`, borderRadius: radii.md }}>
+                {dashboardDrilldownCohort === "NO_OBJECTIVES" && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left", position: "sticky", top: 0 }}>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>#</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>STAFF MEMBER</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>STAFF ID</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>DEPARTMENT</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>TEAM / SQUAD</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>LINE MANAGER</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OVERDUE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted, textAlign: "right" }}>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingGoalStaffList
+                        .filter((s) => {
+                          if (!dashboardDrilldownSearch.trim()) return true;
+                          const q = dashboardDrilldownSearch.toLowerCase();
+                          return (
+                            s.name.toLowerCase().includes(q) ||
+                            s.staffId.toLowerCase().includes(q) ||
+                            s.department.toLowerCase().includes(q) ||
+                            s.team.toLowerCase().includes(q) ||
+                            s.manager.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((s, idx) => (
+                          <tr key={s.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textMuted }}>{idx + 1}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", fontWeight: 700, color: colors.textPrimary }}>{s.name}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", fontFamily: typography.fontMono, color: colors.textSecondary }}>{s.staffId}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textSecondary }}>{s.department}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.indigoPrimary, fontWeight: 600 }}>{s.team}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textMuted }}>{s.manager}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: "#b91c1c", fontWeight: 700 }}>{s.daysOverdue} days</td>
+                            <td style={{ padding: "0.55rem 0.75rem", textAlign: "right" }}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setStatusMessage({ text: `Automated Slack reminder sent to ${s.name} (${s.manager} CC'd).` });
+                                }}
+                              >
+                                Nudge
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
+
+                {dashboardDrilldownCohort === "ACTIVE" && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left", position: "sticky", top: 0 }}>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OWNER</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OBJECTIVE TITLE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>FRAMEWORK</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>TARGET / CURRENT</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {objectiveRequests
+                        .filter((r) => r.status === "APPROVED" || r.status === "UNDETERMINED")
+                        .map((r) => (
+                          <tr key={r.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                            <td style={{ padding: "0.55rem 0.75rem", fontWeight: 700, color: colors.textPrimary }}>{r.ownerName}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textPrimary }}>{r.goals[0]?.title || "Strategic Objective Set"}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.indigoPrimary, fontWeight: 600 }}>{r.objectiveType} ({r.goals[0]?.weight || 25}%)</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textMuted }}>{r.goals[0]?.target || "100% Target"} ({r.goals[0]?.metric || "Execution Metric"})</td>
+                            <td style={{ padding: "0.55rem 0.75rem" }}>
+                              <span style={{ fontSize: "10px", fontWeight: 700, padding: "0.15rem 0.45rem", borderRadius: radii.full, backgroundColor: "rgba(16, 185, 129, 0.15)", color: "#065f46" }}>
+                                {r.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
+
+                {dashboardDrilldownCohort === "PENDING_APPROVAL" && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left", position: "sticky", top: 0 }}>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OWNER</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OBJECTIVE TITLE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>SUBSIDIARY / HUB</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>SUBMITTED DATE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted, textAlign: "right" }}>ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {objectiveRequests
+                        .filter((r) => r.status === "PENDING APPROVAL")
+                        .map((r) => (
+                          <tr key={r.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                            <td style={{ padding: "0.55rem 0.75rem", fontWeight: 700, color: colors.textPrimary }}>{r.ownerName}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textPrimary }}>{r.goals[0]?.title || "Strategic Objective Set"}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textSecondary }}>{r.subsidiary}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textMuted }}>{r.date}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", textAlign: "right" }}>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => {
+                                  setStatusMessage({ text: `Objective '${r.goals[0]?.title || "Strategic Objective"}' approved for ${r.ownerName}.` });
+                                }}
+                              >
+                                Approve
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
+
+                {dashboardDrilldownCohort === "APPROVED" && (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left", position: "sticky", top: 0 }}>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OWNER</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>OBJECTIVE TITLE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>FRAMEWORK</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted }}>LOCKED DATE</th>
+                        <th style={{ padding: "0.6rem 0.75rem", color: colors.textMuted, textAlign: "right" }}>LOCKED STATE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {objectiveRequests
+                        .filter((r) => r.status === "APPROVED")
+                        .map((r) => (
+                          <tr key={r.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                            <td style={{ padding: "0.55rem 0.75rem", fontWeight: 700, color: colors.textPrimary }}>{r.ownerName}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textPrimary }}>{r.goals[0]?.title || "Strategic Objective Set"}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.indigoPrimary, fontWeight: 600 }}>{r.objectiveType} ({r.goals[0]?.weight || 25}%)</td>
+                            <td style={{ padding: "0.55rem 0.75rem", color: colors.textMuted }}>{r.date}</td>
+                            <td style={{ padding: "0.55rem 0.75rem", textAlign: "right" }}>
+                              <span style={{ fontSize: "10px", fontWeight: 700, padding: "0.15rem 0.45rem", borderRadius: radii.full, backgroundColor: "rgba(139, 92, 246, 0.15)", color: "#7c3aed" }}>
+                                LOCKED &amp; ACTIVE
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
+
+                {dashboardDrilldownCohort === "DECLINED" && (
+                  <div style={{ padding: "2.5rem 1rem", textAlign: "center", color: colors.textMuted }}>
+                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>✓</div>
+                    <div style={{ fontWeight: 700, fontSize: typography.sizes.sm, color: colors.textPrimary }}>
+                      No Objectives Declined
+                    </div>
+                    <div style={{ fontSize: typography.sizes.xs, marginTop: "0.25rem" }}>
+                      Zero objectives have been declined or returned for revision in {selectedAppraisalCycle}.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Dede AI Performance Co-pilot Briefing */}
           <div
@@ -2662,7 +2953,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Operational Automation
                 </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
+                
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Bulk Actions & Mass Management
@@ -2927,281 +3218,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB: BULK ACTIONS (Screenshot 2 item 'Bulk Actions')                       */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* ========================================================================= */}
       {/* TAB 3: OBJECTIVES SETUP (Screenshot 5)                                     */}
@@ -3649,556 +3666,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
+      
 
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB: BULK ACTIONS (Screenshot 2 item 'Bulk Actions')                       */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* ========================================================================= */}
       {/* TAB 5: FORMAL APPRAISAL CYCLES                                            */}
@@ -4278,556 +3748,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
+      
 
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB: BULK ACTIONS (Screenshot 2 item 'Bulk Actions')                       */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* ========================================================================= */}
       {/* TAB 6: APPRAISALS & CALIBRATION                                           */}
@@ -4922,281 +3845,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* TAB: BULK ACTIONS (Screenshot 2 item 'Bulk Actions')                       */}
-      {/* ========================================================================= */}
-      {activeMainTab === "bulk_actions" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Operational Automation
-                </span>
-                <Badge variant="info" size="sm">Mass Execution</Badge>
-              </div>
-              <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
-                Bulk Actions & Mass Management
-              </h2>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Accelerate appraisal operations: bulk objective cascading, mass spreadsheet score uploads, automated reminder nudges, and cycle freezes.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: "Dede AI dispatched 38 nudges to line managers via Slack & email." });
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Icons.Sparkles size={14} />
-                  <span>Dispatch Dede Nudges</span>
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          {/* 4 Bulk Operation Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Bulk Assign Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(99, 102, 241, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.indigoPrimary }}>
-                    <Icons.Target size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Bulk Objective Cascading
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Mass assign corporate or departmental goals to all {objectiveMetrics.noObjectives} employees currently with zero objectives.
-                </p>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      TARGET SUBSIDIARY / DIVISION
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="ALL">All Subsidiaries (Ghana, UK & Regional Subsidiaries)</option>
-                      <option value="GH">Ghana Subsidiary Only</option>
-                      <option value="UK">Senrab ConsulTech UK Only</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.25rem" }}>
-                      STRATEGIC OBJECTIVE TEMPLATE
-                    </label>
-                    <select
-                      style={{ width: "100%", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: colors.surfaceSubtle }}
-                    >
-                      <option value="BSC_FIN">BSC: Revenue Retention & Advisory CSAT (Weight: 25%)</option>
-                      <option value="OKR_EDGE">OKR: Zero Latency Cloudflare Edge Reliability (Weight: 30%)</option>
-                      <option value="BSC_OPS">BSC: ISO 27001 & SOC2 Compliance Certification (Weight: 20%)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Successfully cascaded strategic objective to 84 employees in ${selectedAppraisalCycle}.` });
-                }}
-              >
-                Assign to 84 Staff Without Objectives
-              </Button>
-            </div>
-
-            {/* Card 2: Bulk Score & Rating Upload */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(16, 185, 129, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: colors.emeraldDark }}>
-                    <Icons.FileCheck size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Score & Appraisal Upload
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
-                </p>
-
-                <div
-                  style={{
-                    border: `2px dashed ${colors.border}`,
-                    borderRadius: radii.md,
-                    padding: "1.25rem",
-                    textAlign: "center",
-                    backgroundColor: colors.surfaceSubtle,
-                    marginBottom: "1rem",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setStatusMessage({ text: "Spreadsheet template parsed. 91 employee appraisal rows validated with 0 errors." });
-                  }}
-                >
-                  <Icons.Plus size={20} color={colors.textMuted} />
-                  <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginTop: "0.35rem" }}>
-                    Drop CSV here or Browse
-                  </div>
-                  <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                    Columns: staff_id, cycle, self_score, manager_score, comments
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <a
-                  href="#download-template"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setStatusMessage({ text: "Downloaded 'Score_Upload_Template.csv'." });
-                  }}
-                  style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600, textDecoration: "underline" }}
-                >
-                  Download CSV Template
-                </a>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatusMessage({ text: "Scores for 91 employees uploaded and calibrated." });
-                  }}
-                >
-                  Process Upload
-                </Button>
-              </div>
-            </div>
-
-            {/* Card 3: Mass Approval of Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(249, 115, 22, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#c2410c" }}>
-                    <Icons.Check size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Mass Request Approval
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Approve all pending objective requests across departments after leadership calibration.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: colors.surfaceSubtle, border: `1px solid ${colors.borderSubtle}`, marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs, marginBottom: "0.25rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Pending Signoff:</span>
-                    <strong style={{ color: colors.textPrimary }}>{objectiveRequests.filter((r) => r.status === "PENDING APPROVAL" || r.status === "UNDETERMINED").length} Requests</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: typography.sizes.xs }}>
-                    <span style={{ color: colors.textSecondary }}>Cycle:</span>
-                    <strong style={{ color: colors.brandBlue }}>{selectedAppraisalCycle}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setObjectiveRequests((prev) => prev.map((r) => ({ ...r, status: "APPROVED" })));
-                  setStatusMessage({ text: "All outstanding objective requests bulk approved." });
-                }}
-                style={{ backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
-              >
-                Approve All Pending ({objectiveRequests.filter((r) => r.status !== "APPROVED").length})
-              </Button>
-            </div>
-
-            {/* Card 4: Freeze & Lock Objectives */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: radii.lg,
-                border: `1px solid ${colors.border}`,
-                padding: "1.5rem",
-                boxShadow: shadows.xs,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: "28px", height: "28px", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#b91c1c" }}>
-                    <Icons.Lock size={16} />
-                  </div>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    Cycle Freeze & Goal Lock
-                  </h3>
-                </div>
-                <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Lock all objective weights and targets to prohibit retrospective goal alterations during mid-year or annual reviews.
-                </p>
-
-                <div style={{ padding: "0.75rem", borderRadius: radii.md, backgroundColor: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, marginBottom: "1rem" }}>
-                  <div style={{ fontSize: "11px", color: "#b91c1c", fontWeight: 600 }}>
-                    ⚠️ Once locked, amendments require HR Director & Managing Principal cryptographic override.
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setStatusMessage({ text: `Cycle '${selectedAppraisalCycle}' locked. All 91 employee scorecards frozen for formal evaluation.` });
-                }}
-                style={{ color: "#b91c1c", borderColor: "#fca5a5" }}
-              >
-                Lock Current Cycle Objectives
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* ========================================================================= */}
       {/* TAB 7: PERFORMANCE INSIGHTS & 9-BOX TALENT MATRIX                          */}

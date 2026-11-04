@@ -613,7 +613,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   textOverflow: "ellipsis",
                 }}
               >
-                {currentUser?.email || "paa.barnes@scoreview.com"}
+                {currentUser?.email || "paa.barnes@bscscoreview.com"}
               </span>
             </div>
           )}

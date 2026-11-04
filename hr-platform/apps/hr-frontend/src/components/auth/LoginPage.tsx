@@ -21,7 +21,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
   {
     id: "EMP-001",
     name: "Paa Kwesi Barnes",
-    email: "paa.barnes@scoreview.com",
+    email: "paa.barnes@bscscoreview.com",
     role: "Managing Principal",
     persona: "hr_director",
     avatarText: "PB",
@@ -31,7 +31,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
   {
     id: "EMP-002",
     name: "Benedicta Agbesi",
-    email: "benedicta.agbesi@scoreview.com",
+    email: "benedicta.agbesi@bscscoreview.com",
     role: "Lead Software Engineer (Demo Admin)",
     persona: "hr_director",
     avatarText: "BA",
@@ -41,7 +41,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
   {
     id: "EMP-005",
     name: "Philip Aryee",
-    email: "philip.aryee@scoreview.com",
+    email: "philip.aryee@bscscoreview.com",
     role: "Cloud Engineer (Demo Admin)",
     persona: "hr_director",
     avatarText: "PA",
@@ -51,7 +51,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
   {
     id: "EMP-003",
     name: "Richard Mamphey",
-    email: "richard.mamphey@scoreview.com",
+    email: "richard.mamphey@bscscoreview.com",
     role: "Head, Human Resources",
     persona: "hr_admin",
     avatarText: "RM",
@@ -61,7 +61,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
   {
     id: "EMP-004",
     name: "Adjoa Asare",
-    email: "adjoa.asare@scoreview.com",
+    email: "adjoa.asare@bscscoreview.com",
     role: "HR Analytics Specialist",
     persona: "line_manager",
     avatarText: "AA",

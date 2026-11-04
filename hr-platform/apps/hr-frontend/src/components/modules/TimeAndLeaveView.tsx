@@ -10,6 +10,7 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { AttendanceTimeZonesPanel } from "./AttendanceTimeZonesPanel";
+import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
 
 export interface LeaveRecord {
   id: number;
@@ -80,9 +81,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   showNewLeaveModal = false,
   onCloseNewLeaveModal,
 }) => {
-  // Leave Navigation Tabs (12 Modules)
+  // Leave Navigation Tabs (13 Modules)
   const [activeTab, setActiveTab] = useState<
     | "dashboard"
+    | "department_schedules"
     | "attendance_zones"
     | "requests"
     | "resumption"
@@ -474,9 +476,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
         >
           {[
             { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
+            { key: "department_schedules", label: "Department Schedules & Rosters", icon: Icons.Clock },
             { key: "attendance_zones", label: "Attendance by Time Zone", icon: Icons.Globe },
-            { key: "requests", label: "Leave Requests", icon: Icons.Users, badge: `${leaves.length}` },
-            { key: "resumption", label: "Leave Resumption Requests", icon: Icons.FileCheck, badge: `${resumptions.filter((r) => r.status === "PENDING_REVIEW").length}` },
+            { key: "requests", label: "Leave Requests", icon: Icons.Users },
+            { key: "resumption", label: "Leave Resumption Requests", icon: Icons.FileCheck },
             { key: "plan_history", label: "Leave Plan History", icon: Icons.Calendar },
             { key: "policies", label: "Leave Policies", icon: Icons.FileText },
             { key: "upload_history", label: "Upload Leave History", icon: Icons.Download },
@@ -511,20 +514,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               >
                 <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
                 <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: radii.full,
-                      backgroundColor: isActive ? colors.indigoAccent : colors.borderSubtle,
-                      color: isActive ? colors.surface : colors.textMuted,
-                    }}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -581,7 +570,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
                   On Leave Today
                 </span>
-                <Badge variant="info" size="sm">Active</Badge>
               </div>
               <div style={{ fontSize: "2rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 2 Staff
@@ -608,7 +596,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
                   Pending Approval
                 </span>
-                <Badge variant="warning" size="sm">Action Req</Badge>
               </div>
               <div style={{ fontSize: "2rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {pendingLeavesCount} Request
@@ -635,7 +622,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
                   Unused Leave Liability
                 </span>
-                <Badge variant="success" size="sm">Balance Sheet</Badge>
               </div>
               <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#065f46", lineHeight: 1 }}>
                 GH₵{totalLiabilityGhs.toLocaleString()}
@@ -662,7 +648,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700, textTransform: "uppercase" }}>
                   Resumptions Pending
                 </span>
-                <Badge variant="info" size="sm">Re-entry</Badge>
               </div>
               <div style={{ fontSize: "2rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 2 Staff
@@ -1225,7 +1210,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
                 2026 Quarter-by-Quarter Planned Leaves
               </h3>
-              <Badge variant="info" size="sm">Zero-Clash Verified</Badge>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
@@ -1323,7 +1307,12 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 5: LEAVE POLICIES (Screenshot item 5)                                  */}
+      {/* TAB: DEPARTMENT SCHEDULES & SHIFT ROSTERS                                  */}
+      {/* ========================================================================= */}
+      {activeTab === "department_schedules" && <DepartmentSchedulesRosterView />}
+
+      {/* ========================================================================= */}
+      {/* TAB: ATTENDANCE BY TIME ZONE                                               */}
       {/* ========================================================================= */}
       {activeTab === "attendance_zones" && <AttendanceTimeZonesPanel />}
 
@@ -1424,7 +1413,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Data Migration & Ingestion
                 </span>
-                <Badge variant="info" size="sm">CSV / Excel Batch</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Upload Leave History & Attendance Records
@@ -1620,7 +1608,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Corporate Directives
                 </span>
-                <Badge variant="info" size="sm">Mandatory Shutdowns</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Reserved Leave Days (Company-Wide Shutdowns)
@@ -1697,7 +1684,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Discretionary Benefits
                 </span>
-                <Badge variant="info" size="sm">Discretionary Grants</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Additional Leave Days (Special Grants)
@@ -1775,7 +1761,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: "#b91c1c", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Operational Blackout
                 </span>
-                <Badge variant="error" size="sm">Strict Freeze</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Blocked Leave Days (Operational Blackout Periods)
@@ -1853,7 +1838,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Compensation & Benefits
                 </span>
-                <Badge variant="info" size="sm">GH₵ Currency</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Leave Allowances & Encashment Payouts
@@ -1957,7 +1941,6 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Module Configuration
                 </span>
-                <Badge variant="info" size="sm">Global Parameters</Badge>
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Leave Settings & Policy Parameters
