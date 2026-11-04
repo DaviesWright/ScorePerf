@@ -166,3 +166,10 @@ CLAUDE.md
 .specify/
 .neon/
 .neon
+
+
+# Worker configs holding localConnectionString credentials
+hr-platform/apps/hr-api/wrangler.jsonc
+hr-platform/apps/hr-jobs/wrangler.jsonc
+apps/hr-api/wrangler.jsonc
+apps/hr-jobs/wrangler.jsonc

@@ -13,15 +13,15 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "d1468c75b19f437b994c969eb1fa2b41",
-      "localConnectionString": "postgresql://neondb_owner:npg_yEVhg3OA9qKI@ep-steep-bonus-zak8wuuy.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require"
+      "id": "YOUR_HYPERDRIVE_ID",
+      "localConnectionString": "postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require"
     }
   ],
 
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
-      "id": "ab360608196c48c5b8958d5e6ce7d8ff"
+      "id": "YOUR_KV_NAMESPACE_ID"
     }
   ],
 
@@ -42,4 +42,3 @@
     }
   ]
 }
-
