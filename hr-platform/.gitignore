@@ -10,4 +10,8 @@ dist/
 .DS_Store
 .neon
 
+# Worker configs hold a database connection string (Hyperdrive localConnectionString)
+apps/hr-api/wrangler.jsonc
+apps/hr-jobs/wrangler.jsonc
+
 *.tsbuildinfo

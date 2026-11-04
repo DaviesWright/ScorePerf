@@ -96,7 +96,7 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
                 Welcome back, {user.name}!
               </h2>
               <p style={{ fontSize: typography.sizes.xs, color: colors.textMuted, margin: "0.25rem 0 0 0" }}>
-                {user.role} • {user.department} ({user.location})
+                {[user.role, user.department, user.location && `(${user.location})`].filter(Boolean).join(" • ")}
               </p>
             </div>
           </div>

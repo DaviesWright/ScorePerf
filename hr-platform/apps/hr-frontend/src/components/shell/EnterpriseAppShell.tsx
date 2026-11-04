@@ -23,7 +23,7 @@ import { EmployeeSettingsView } from "../modules/EmployeeSettingsView";
 import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
-import { DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
+import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
 import { clearHeadshot, loadHeadshot, processHeadshot, saveHeadshot } from "../../utils/headshot";
 import { PayslipModal } from "../modals/PayslipModal";
 import { RbacGuard } from "../common/RbacGuard";
@@ -38,6 +38,8 @@ interface EnterpriseAppShellProps {
   initialTickets: TicketRecord[];
   initialProjects: ProjectRecord[];
   apiOnline: boolean;
+  /** The signed-in user from the API, when the browser has a real session. Absent only in demo-login mode. */
+  initialUser?: AuthenticatedUser | null;
 }
 
 export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
@@ -48,10 +50,28 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   initialTickets,
   initialProjects,
   apiOnline,
+  initialUser = null,
 }) => {
   const [currentView, setCurrentView] = useState<ModuleViewKey>("command_centre");
-  const [persona, setPersona] = useState<UserPersona>("hr_director");
-  const [employees, setEmployees] = useState<EmployeeRecord[]>(initialEmployees);
+  const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
+
+  const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
+    const source = initialEmployees.length > 0 ? initialEmployees : DEFAULT_EMPLOYEES;
+    return source.map((emp) => {
+      if (emp.team_name) return emp;
+      const dept = emp.department_name || "";
+      let team = "General Workforce Squad";
+      if (dept.includes("Engineering") || dept.includes("Cloud")) team = "Hyperdrive Edge Performance Squad";
+      else if (dept.includes("People") || dept.includes("Culture") || dept.includes("HR")) team = "West Africa Talent Onboarding Taskforce";
+      else if (dept.includes("Executive") || dept.includes("Leadership")) team = "Executive Committee";
+      else if (dept.includes("Advisory")) team = "Solutions Delivery Squad";
+      else if (dept.includes("Customer") || dept.includes("Client")) team = "Customer Success & Service Quality Guild";
+      else if (dept.includes("Security") || dept.includes("Governance")) team = "Corporate Information Security Committee";
+      else if (dept.includes("Finance")) team = "Corporate Governance & Audit Committee";
+      else if (dept.includes("Operations") || dept.includes("Healthcare")) team = "Workforce Logistics & Facilities Squad";
+      return { ...emp, team_name: team };
+    });
+  });
   const [cycles, setCycles] = useState<CycleRecord[]>(initialCycles);
   // The API sends nothing until the frontend has a login, so the demo registry stands in.
   const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 ? initialAssets : DEMO_ASSETS);
@@ -66,13 +86,25 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
 
   // Authentication & Session State
-  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
-  // Restore authenticated session from localStorage
+  // Restore the session. A real session comes from the server (initialUser); the localStorage path is demo mode only.
   useEffect(() => {
+    if (initialUser) {
+      setPhotoUrl(loadHeadshot(initialUser.id));
+      try {
+        // Set by /login/verify right after a fresh sign-in, so the welcome brief shows once.
+        if (sessionStorage.getItem("scoreview_show_welcome") === "1") {
+          sessionStorage.removeItem("scoreview_show_welcome");
+          setIsWelcomeModalOpen(true);
+        }
+      } catch {}
+      setHasCheckedAuth(true);
+      return;
+    }
     try {
       const stored = localStorage.getItem("scoreview_session");
       if (stored) {
@@ -116,7 +148,15 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     setPhotoUrl(null);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    if (initialUser) {
+      // Real session: clear the httpOnly cookie on the server, then go to the sign-in screen.
+      try {
+        await fetch("/api/session", { method: "DELETE" });
+      } catch {}
+      window.location.assign("/login");
+      return;
+    }
     try {
       localStorage.removeItem("scoreview_session");
     } catch {}

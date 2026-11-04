@@ -17,6 +17,7 @@ export interface EmployeeRecord {
   role: string;
   is_active: boolean;
   department_name?: string;
+  team_name?: string;
   staff_id?: string;
   job_title?: string;
   subsidiary?: string;
@@ -117,6 +118,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   // Search & Filter state
   const [search, setSearch] = useState("");
   const [selectedDept, setSelectedDept] = useState("ALL");
+  const [selectedTeam, setSelectedTeam] = useState("ALL");
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(selectedInitialEmployee);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"overview" | "assets" | "performance" | "contracts">("overview");
@@ -128,6 +130,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState("consultant");
   const [newDept, setNewDept] = useState("Cloud & Edge Engineering");
+  const [newTeam, setNewTeam] = useState("Hyperdrive Edge Performance Squad");
   const [newContractType, setNewContractType] = useState("Permanent");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -306,20 +309,33 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
     return ["ALL", ...Array.from(set)];
   }, [employees]);
 
+  // Unique teams / squads for filter
+  const teams = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.team_name) set.add(e.team_name);
+    });
+    squads.forEach((s) => set.add(s.name));
+    return ["ALL", ...Array.from(set)];
+  }, [employees, squads]);
+
   // Filtered employees
   const filteredEmployees = useMemo(() => {
     return employees.filter((e) => {
+      const empTeam = e.team_name || "General Workforce Squad";
       const matchesSearch =
         `${e.first_name} ${e.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
         e.email.toLowerCase().includes(search.toLowerCase()) ||
         e.role.toLowerCase().includes(search.toLowerCase()) ||
+        empTeam.toLowerCase().includes(search.toLowerCase()) ||
         (e.staff_id && e.staff_id.toLowerCase().includes(search.toLowerCase()));
 
       const matchesDept = selectedDept === "ALL" || e.department_name === selectedDept;
+      const matchesTeam = selectedTeam === "ALL" || empTeam === selectedTeam;
 
-      return matchesSearch && matchesDept;
+      return matchesSearch && matchesDept && matchesTeam;
     });
-  }, [employees, search, selectedDept]);
+  }, [employees, search, selectedDept, selectedTeam]);
 
   const handleApproveProfileRequest = (id: number) => {
     setProfileRequests((prev) =>
@@ -351,6 +367,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
         role: newRole,
         is_active: true,
         department_name: newDept,
+        team_name: newTeam,
         staff_id: `SEN-2026-${String(employees.length + 1).padStart(4, "0")}`,
         contract_type: newContractType,
         join_date: new Date().toISOString().slice(0, 10),
@@ -801,6 +818,27 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                   </option>
                 ))}
               </select>
+
+              <select
+                value={selectedTeam}
+                onChange={(e) => setSelectedTeam(e.target.value)}
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  borderRadius: radii.md,
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.surface,
+                  fontSize: typography.sizes.sm,
+                  color: colors.textPrimary,
+                  outline: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {teams.map((t) => (
+                  <option key={t} value={t}>
+                    {t === "ALL" ? "All Teams / Squads" : t}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -808,8 +846,8 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const csv = "STAFF_ID,NAME,EMAIL,ROLE,DEPARTMENT,STATUS\n" +
-                    filteredEmployees.map((e) => `"${e.staff_id || "SEN-N/A"}","${e.first_name} ${e.last_name}","${e.email}","${e.role}","${e.department_name || "General"}","${e.is_active ? "Active" : "On Leave"}"`).join("\n");
+                  const csv = "STAFF_ID,NAME,EMAIL,ROLE,DEPARTMENT,TEAM,STATUS\n" +
+                    filteredEmployees.map((e) => `"${e.staff_id || "SEN-N/A"}","${e.first_name} ${e.last_name}","${e.email}","${e.role}","${e.department_name || "General"}","${e.team_name || "General Workforce Squad"}","${e.is_active ? "Active" : "On Leave"}"`).join("\n");
                   const blob = new Blob([csv], { type: "text/csv" });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
@@ -844,6 +882,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EMPLOYEE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>PRACTICE / DEPARTMENT</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>TEAM / SQUAD</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>CORPORATE ROLE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>ALLOCATED HARDWARE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
@@ -891,6 +930,27 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
 
                       <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>
                         {emp.department_name || "General Advisory"}
+                      </td>
+
+                      <td style={{ padding: "0.85rem 1rem" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            padding: "0.2rem 0.55rem",
+                            borderRadius: radii.full,
+                            backgroundColor: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            color: "#1d4ed8",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <Icons.Layers size={11} color="#2563eb" />
+                          <span>{emp.team_name || "General Workforce Squad"}</span>
+                        </span>
                       </td>
 
                       <td style={{ padding: "0.85rem 1rem" }}>
@@ -1302,6 +1362,14 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     </div>
                   </div>
                 </div>
+
+                <div style={{ backgroundColor: colors.surfaceSubtle, padding: "0.75rem 1rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+                  <div style={{ fontSize: "11px", color: colors.textMuted, marginBottom: "0.25rem" }}>Assigned Team / Squad</div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.25rem 0.6rem", borderRadius: radii.full, backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: "12px", fontWeight: 700 }}>
+                    <Icons.Layers size={13} color="#2563eb" />
+                    <span>{selectedEmployee.team_name || "General Workforce Squad"}</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1449,18 +1517,40 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
 
                 <div>
                   <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                    Contract Type
+                    Assigned Team / Squad
                   </label>
                   <select
-                    value={newContractType}
-                    onChange={(e) => setNewContractType(e.target.value)}
+                    value={newTeam}
+                    onChange={(e) => setNewTeam(e.target.value)}
                     style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                   >
-                    <option value="Permanent">Permanent</option>
-                    <option value="Fixed-Term">Fixed-Term</option>
-                    <option value="Independent Contractor">Independent Contractor</option>
+                    <option value="Hyperdrive Edge Performance Squad">Hyperdrive Edge Performance Squad</option>
+                    <option value="West Africa Talent Onboarding Taskforce">West Africa Talent Onboarding Taskforce</option>
+                    <option value="Corporate Information Security Committee">Corporate Information Security Committee</option>
+                    <option value="Customer Success & Service Quality Guild">Customer Success & Service Quality Guild</option>
+                    <option value="People Operations Team">People Operations Team</option>
+                    <option value="Executive Committee">Executive Committee</option>
+                    <option value="Solutions Delivery Squad">Solutions Delivery Squad</option>
+                    <option value="Workforce Logistics & Facilities Squad">Workforce Logistics & Facilities Squad</option>
+                    <option value="Corporate Governance & Audit Committee">Corporate Governance & Audit Committee</option>
+                    <option value="General Workforce Squad">General Workforce Squad</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
+                  Contract Type
+                </label>
+                <select
+                  value={newContractType}
+                  onChange={(e) => setNewContractType(e.target.value)}
+                  style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                >
+                  <option value="Permanent">Permanent</option>
+                  <option value="Fixed-Term">Fixed-Term</option>
+                  <option value="Independent Contractor">Independent Contractor</option>
+                </select>
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem", marginTop: "0.5rem" }}>

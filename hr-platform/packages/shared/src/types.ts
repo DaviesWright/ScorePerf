@@ -30,6 +30,7 @@ export interface Employee {
   email: string;
   role: string;
   isActive: boolean;
+  teamName?: string;
 }
 
 export interface PerformanceCycle {

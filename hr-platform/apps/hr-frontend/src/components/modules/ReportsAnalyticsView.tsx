@@ -45,11 +45,11 @@ const ALL_60_REPORTS: ReportItem[] = [
       { label: "Verified National IDs", value: "100%", trend: "up" },
     ],
     sampleRows: [
-      { id: "SEN-001", name: "Paa Kwesi Barnes", role: "Managing Principal", dept: "Executive Leadership", location: "London HQ", status: "Active" },
-      { id: "SEN-002", name: "Richard Barnes", role: "Chief Executive Officer", dept: "Executive Leadership", location: "London HQ", status: "Active" },
-      { id: "SEN-003", name: "Sarah Jenkins", role: "VP of People & Culture", dept: "People & Culture", location: "London HQ", status: "Active" },
-      { id: "SEN-004", name: "Benedicta Agbesi", role: "HR Operations Consultant", dept: "People & Culture", location: "Accra Hub", status: "Active" },
-      { id: "SEN-005", name: "Philip Aryee", role: "Senior Cloud & Edge Consultant", dept: "Cloud Engineering", location: "Accra Hub", status: "Active" },
+      { id: "SEN-001", name: "Paa Kwesi Barnes", role: "Managing Principal", dept: "Executive Leadership", team: "Executive Committee", location: "London HQ", status: "Active" },
+      { id: "SEN-002", name: "Richard Barnes", role: "Chief Executive Officer", dept: "Executive Leadership", team: "Executive Committee", location: "London HQ", status: "Active" },
+      { id: "SEN-003", name: "Sarah Jenkins", role: "VP of People & Culture", dept: "People & Culture", team: "Corporate Information Security Committee", location: "London HQ", status: "Active" },
+      { id: "SEN-004", name: "Benedicta Agbesi", role: "HR Operations Consultant", dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", location: "Accra Hub", status: "Active" },
+      { id: "SEN-005", name: "Philip Aryee", role: "Senior Cloud & Edge Consultant", dept: "Cloud Engineering", team: "Hyperdrive Edge Performance Squad", location: "Accra Hub", status: "Active" },
     ],
   },
   {

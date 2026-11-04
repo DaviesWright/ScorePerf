@@ -208,6 +208,39 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState<string>("ALL");
   const [selectedRequestForDetail, setSelectedRequestForDetail] = useState<ObjectiveRequest | null>(null);
+  const [nudgedStaffIds, setNudgedStaffIds] = useState<Record<string, boolean>>({});
+
+  // Synthetic deterministic list of 84 staff members pending goal drafting (Drill-down from Image 3 KPI)
+  const pendingGoalStaffList = useMemo(() => {
+    const firstNames = ["Kofi", "Ama", "Kwame", "Akua", "Yaw", "Yaa", "Kwesi", "Abena", "Esi", "Kojo", "Afia", "Kwabena", "Fafali", "Mawuli", "Esenam", "Kweku", "Baaba", "Nana", "Jojo", "Maame"];
+    const lastNames = ["Mensah", "Osei", "Appiah", "Boakye", "Agyemang", "Frimpong", "Annan", "Quaye", "Tetteh", "Asante", "Darko", "Arthur", "Owusu", "Adjei", "Boateng", "Danquah", "Kwarteng", "Sarpong", "Addison", "Koomson"];
+    const depts = [
+      { dept: "Healthcare Operations", team: "Clinical Governance Unit", manager: "Dr. Emmanuel K. Quarshie", role: "Clinical Operations Officer", color: "#0284c7" },
+      { dept: "Engineering & Cloud", team: "Hyperdrive Edge Performance Squad", manager: "Benedicta Agbesi", role: "Cloud Infrastructure Engineer", color: "#6366f1" },
+      { dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", manager: "Richard Mamphey", role: "People Operations Specialist", color: "#ec4899" },
+      { dept: "Technology Advisory", team: "Corporate Information Security Committee", manager: "Paa Kwesi Barnes", role: "Security & Governance Consultant", color: "#8b5cf6" },
+      { dept: "Finance & Accounting", team: "Statutory Tax & Audit Reconciliation Team", manager: "Kojo Antwi", role: "Financial Planning Analyst", color: "#f59e0b" },
+      { dept: "Client Success", team: "Regional Enterprise Client Care Hub", manager: "Clara Nukunu", role: "Enterprise Client Account Partner", color: "#10b981" },
+    ];
+    return Array.from({ length: 84 }, (_, i) => {
+      const deptInfo = depts[i % depts.length];
+      const fn = firstNames[(i * 3 + 1) % firstNames.length];
+      const ln = lastNames[(i * 5 + 2) % lastNames.length];
+      const idNum = String(41 + i).padStart(3, "0");
+      return {
+        id: 1000 + i,
+        staffId: `SHR/GH/${idNum}`,
+        name: `${fn} ${ln}`,
+        role: deptInfo.role,
+        department: deptInfo.dept,
+        team: deptInfo.team,
+        manager: deptInfo.manager,
+        avatarColor: deptInfo.color,
+        daysOverdue: 6 + ((i * 3) % 18),
+        cycle: "2026 Annual Performance Cycle",
+      };
+    });
+  }, []);
 
   // Formal Cycle Evaluations & Check-in selections
   const [selectedCycleForReview, setSelectedCycleForReview] = useState<CycleRecord | null>(null);
@@ -321,6 +354,74 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       goals: [
         { title: "Objective: Modernize all onboarding journeys with automated zero-touch contract pipelines", weight: 50, target: "Zero-Touch Onboarding", metric: "Turnaround Time" },
         { title: "KR 1: Achieve 100% Ghana Card National ID PIN validation on pre-boarding", weight: 50, target: "100% Verified", metric: "ID PIN Verification" },
+      ],
+    },
+    {
+      id: 7,
+      requestNo: 7,
+      ownerName: "Philip Aryee",
+      ownerStaffId: "SEN/008",
+      ownerRole: "Cloud Engineer",
+      ownerAvatarColor: "#0284c7",
+      objectiveType: "BSC",
+      status: "UNDETERMINED",
+      subsidiary: "Senrab ConsulTech Namibia",
+      appraisalCycle: "Senrab Cycle",
+      date: "2026-10-14",
+      goals: [
+        { title: "Internal Processes: Deliver 99.99% uptime on multi-region OpenNext worker clusters", weight: 50, target: "99.99%", metric: "Cluster Availability" },
+        { title: "Financial: Optimize serverless compute unit consumption by 18%", weight: 50, target: "18% Reduction", metric: "Compute Spend" },
+      ],
+    },
+    {
+      id: 8,
+      requestNo: 8,
+      ownerName: "Ndapewa Shikongo",
+      ownerStaffId: "SEN/011",
+      ownerRole: "Solutions Architect",
+      ownerAvatarColor: "#10b981",
+      objectiveType: "OKR",
+      status: "UNDETERMINED",
+      subsidiary: "Senrab ConsulTech Namibia",
+      appraisalCycle: "Senrab Cycle",
+      date: "2026-10-18",
+      goals: [
+        { title: "Objective: Author and publish zero-trust enterprise edge design blueprints", weight: 50, target: "4 Blueprints", metric: "Docs Authored" },
+        { title: "KR 1: Lead 12 technical discovery architectures for SADC public sector clients", weight: 50, target: "12 Sessions", metric: "Discovery Workshops" },
+      ],
+    },
+    {
+      id: 9,
+      requestNo: 9,
+      ownerName: "Tangeni Haufiku",
+      ownerStaffId: "SEN/014",
+      ownerRole: "Delivery Manager",
+      ownerAvatarColor: "#f59e0b",
+      objectiveType: "BSC",
+      status: "UNDETERMINED",
+      subsidiary: "Senrab ConsulTech Namibia",
+      appraisalCycle: "Senrab Cycle",
+      date: "2026-10-20",
+      goals: [
+        { title: "Customer: Achieve 95% client sprint sign-off satisfaction", weight: 50, target: "95%", metric: "Client CSAT" },
+        { title: "Internal Processes: Zero missed milestone SLA breaches across advisory track", weight: 50, target: "0 Breaches", metric: "SLA Variance" },
+      ],
+    },
+    {
+      id: 10,
+      requestNo: 10,
+      ownerName: "Kojo Antwi",
+      ownerStaffId: "SEN/019",
+      ownerRole: "Finance Analyst",
+      ownerAvatarColor: "#d97706",
+      objectiveType: "BSC",
+      status: "UNDETERMINED",
+      subsidiary: "ScoReview Ghana",
+      appraisalCycle: "Senrab Cycle",
+      date: "2026-10-25",
+      goals: [
+        { title: "Financial: Automate multi-currency exchange reconciliations between GHS and GBP", weight: 50, target: "Daily Zero Variance", metric: "FX Recon" },
+        { title: "Internal Processes: Cut monthly close cycle duration from 6 days to 2 days", weight: 50, target: "2 Days", metric: "Close Timeline" },
       ],
     },
   ]);
@@ -681,11 +782,31 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         r.subsidiary.toLowerCase().includes(requestSearchQuery.toLowerCase());
 
       const matchesStatus =
-        requestStatusFilter === "ALL" || r.status === requestStatusFilter;
+        requestStatusFilter === "ALL" ||
+        (requestStatusFilter === "ACTIVE"
+          ? (r.status === "APPROVED" || r.status === "UNDETERMINED")
+          : r.status === requestStatusFilter);
 
       return matchesSearch && matchesStatus;
     });
   }, [objectiveRequests, requestSearchQuery, requestStatusFilter]);
+
+  // Filtered pending goal drafting staff (84 count)
+  const filteredPendingGoalStaff = useMemo(() => {
+    if (requestStatusFilter !== "NO_OBJECTIVES") return [];
+    return pendingGoalStaffList.filter((s) => {
+      if (!requestSearchQuery.trim()) return true;
+      const q = requestSearchQuery.toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.staffId.toLowerCase().includes(q) ||
+        s.role.toLowerCase().includes(q) ||
+        s.department.toLowerCase().includes(q) ||
+        s.team.toLowerCase().includes(q) ||
+        s.manager.toLowerCase().includes(q)
+      );
+    });
+  }, [pendingGoalStaffList, requestStatusFilter, requestSearchQuery]);
 
   // Status Metrics Counts (Screenshot 3)
   const objectiveMetrics = useMemo(() => {
@@ -695,7 +816,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     const declined = objectiveRequests.filter((r) => r.status === "DECLINED").length;
     return {
       noObjectives: 84, // Benchmark count from Image 3
-      activeObjectives: active > 0 ? 9 : 9,
+      activeObjectives: active,
       pendingApproval: pending,
       approvedObjectives: approved,
       declinedObjectives: declined,
@@ -771,17 +892,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         >
           {[
             { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
-            { key: "cascading_bsc", label: "Cascading BSC", icon: Icons.Layers, badge: "30/50/15/5" },
-            { key: "military_chain", label: "Sequential Sign-off", icon: Icons.ShieldCheck, badge: "5-Tier" },
-            { key: "trait_matrix", label: "Strict Trait Matrix", icon: Icons.Award, badge: "1-5 Scale" },
-            { key: "okr_heatmap", label: "OKR Heatmap", icon: Icons.Activity, badge: "Live" },
-            { key: "nine_box", label: "9-Box Succession", icon: Icons.Users, badge: "HiPo Grid" },
-            { key: "cycles", label: "Appraisal Cycles", icon: Icons.Calendar, badge: `${cycles.length}` },
-            { key: "requests", label: "Requests", icon: Icons.FileText, badge: `${objectiveRequests.length}` },
+            { key: "cascading_bsc", label: "Cascading BSC", icon: Icons.Layers },
+            { key: "military_chain", label: "Sequential Sign-off", icon: Icons.ShieldCheck },
+            { key: "trait_matrix", label: "Strict Trait Matrix", icon: Icons.Award },
+            { key: "okr_heatmap", label: "OKR Heatmap", icon: Icons.Activity },
+            { key: "nine_box", label: "9-Box Succession", icon: Icons.Users },
+            { key: "cycles", label: "Appraisal Cycles", icon: Icons.Calendar },
+            { key: "requests", label: "Requests", icon: Icons.FileText },
             { key: "objectives_setup", label: "Objectives Setup", icon: Icons.Target },
             { key: "appraisals", label: "Appraisals", icon: Icons.BookOpen },
             { key: "bulk_actions", label: "Bulk Actions", icon: Icons.Crosshair },
-            { key: "checkins", label: "1-on-1 Check-ins", icon: Icons.Users, badge: `${checkIns.length}` },
+            { key: "checkins", label: "1-on-1 Check-ins", icon: Icons.Users },
             { key: "settings", label: "Settings", icon: Icons.Settings },
             { key: "insights", label: "Performance Insights", icon: Icons.BarChart },
           ].map((tab) => {
@@ -809,20 +930,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               >
                 <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
                 <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: radii.full,
-                      backgroundColor: isActive ? colors.indigoAccent : colors.borderSubtle,
-                      color: isActive ? colors.surface : colors.textMuted,
-                    }}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -950,9 +1057,22 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             }}
           >
             {/* Card 1: No Objectives */}
-            <div {...drillProps(() => { setRequestStatusFilter("ALL"); setActiveMainTab("requests"); }, "Open all objective requests")} style={{ borderLeft: "3px solid #2563eb", paddingLeft: "1rem", cursor: "pointer" }}>
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 600, marginBottom: "0.5rem" }}>
-                No Objectives
+            <div
+              {...drillProps(() => { setRequestStatusFilter("NO_OBJECTIVES"); setActiveMainTab("requests"); }, "Drill down to 84 staff pending goal drafting")}
+              style={{
+                borderLeft: "3.5px solid #2563eb",
+                padding: "0.6rem 0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: requestStatusFilter === "NO_OBJECTIVES" ? "rgba(37, 99, 235, 0.08)" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
+                  No Objectives
+                </span>
+                <span style={{ fontSize: "10px", color: "#2563eb", fontWeight: 700 }}>Drill down →</span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.noObjectives}
@@ -963,9 +1083,22 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
 
             {/* Card 2: Active Objectives */}
-            <div {...drillProps(() => { setRequestStatusFilter("ALL"); setActiveMainTab("requests"); }, "Open all objective requests")} style={{ borderLeft: "3px solid #f97316", paddingLeft: "1rem", cursor: "pointer" }}>
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 600, marginBottom: "0.5rem" }}>
-                Active Objectives
+            <div
+              {...drillProps(() => { setRequestStatusFilter("ACTIVE"); setActiveMainTab("requests"); }, "Drill down to 9 active objectives")}
+              style={{
+                borderLeft: "3.5px solid #f97316",
+                padding: "0.6rem 0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: requestStatusFilter === "ACTIVE" ? "rgba(249, 115, 22, 0.08)" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
+                  Active Objectives
+                </span>
+                <span style={{ fontSize: "10px", color: "#ea580c", fontWeight: 700 }}>Drill down →</span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.activeObjectives}
@@ -976,9 +1109,22 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
 
             {/* Card 3: Objectives Pending Approval */}
-            <div {...drillProps(() => { setRequestStatusFilter("PENDING APPROVAL"); setActiveMainTab("requests"); }, "Open objectives pending approval")} style={{ borderLeft: "3px solid #ef4444", paddingLeft: "1rem", cursor: "pointer" }}>
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 600, marginBottom: "0.5rem" }}>
-                Objectives Pending Approval
+            <div
+              {...drillProps(() => { setRequestStatusFilter("PENDING APPROVAL"); setActiveMainTab("requests"); }, "Drill down to 1 pending approval objective")}
+              style={{
+                borderLeft: "3.5px solid #ef4444",
+                padding: "0.6rem 0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: requestStatusFilter === "PENDING APPROVAL" ? "rgba(239, 68, 68, 0.08)" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
+                  Objectives Pending Approval
+                </span>
+                <span style={{ fontSize: "10px", color: "#dc2626", fontWeight: 700 }}>Drill down →</span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.pendingApproval}
@@ -989,9 +1135,22 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
 
             {/* Card 4: Approved Objectives */}
-            <div {...drillProps(() => { setRequestStatusFilter("APPROVED"); setActiveMainTab("requests"); }, "Open approved objectives")} style={{ borderLeft: "3px solid #8b5cf6", paddingLeft: "1rem", cursor: "pointer" }}>
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 600, marginBottom: "0.5rem" }}>
-                Approved Objectives
+            <div
+              {...drillProps(() => { setRequestStatusFilter("APPROVED"); setActiveMainTab("requests"); }, "Drill down to 3 approved objectives")}
+              style={{
+                borderLeft: "3.5px solid #8b5cf6",
+                padding: "0.6rem 0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: requestStatusFilter === "APPROVED" ? "rgba(139, 92, 246, 0.08)" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
+                  Approved Objectives
+                </span>
+                <span style={{ fontSize: "10px", color: "#7c3aed", fontWeight: 700 }}>Drill down →</span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.approvedObjectives}
@@ -1002,9 +1161,22 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
 
             {/* Card 5: Declined Objectives */}
-            <div {...drillProps(() => { setRequestStatusFilter("DECLINED"); setActiveMainTab("requests"); }, "Open declined objectives")} style={{ borderLeft: "3px solid #10b981", paddingLeft: "1rem", cursor: "pointer" }}>
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 600, marginBottom: "0.5rem" }}>
-                Declined Objectives
+            <div
+              {...drillProps(() => { setRequestStatusFilter("DECLINED"); setActiveMainTab("requests"); }, "Drill down to declined objectives")}
+              style={{
+                borderLeft: "3.5px solid #10b981",
+                padding: "0.6rem 0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: requestStatusFilter === "DECLINED" ? "rgba(16, 185, 129, 0.08)" : "transparent",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontWeight: 700 }}>
+                  Declined Objectives
+                </span>
+                <span style={{ fontSize: "10px", color: "#059669", fontWeight: 700 }}>Drill down →</span>
               </div>
               <div style={{ fontSize: "2.25rem", fontWeight: 800, color: colors.textPrimary, lineHeight: 1 }}>
                 {objectiveMetrics.declinedObjectives}
@@ -1048,7 +1220,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontWeight: 800, color: colors.indigoPrimary, fontSize: typography.sizes.sm }}>
                   Dede — Strategic Performance Digest
                 </span>
-                <Badge variant="info" size="sm">Cycle Analysis</Badge>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
                 In <strong>{selectedAppraisalCycle}</strong>, 38 total objective requests have been processed. Ghana Practice exhibits a <strong>100% adherence rate</strong> to Balanced Scorecard four-pillar weighting (Financial, Customer, Internal Processes, Learning & Growth). <strong>4 continuous 1-on-1 check-ins</strong> were logged this sprint with an average progress velocity of <strong>79.8%</strong>.
@@ -1221,12 +1392,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Four-pillar strategic weighting (Financial 30%, Customer 50%, Internal Processes 15%, Learning &amp; Growth 5%). Direct ladder-up from individual contributor KPIs to executive corporate objectives.
+                Four-pillar strategic weighting (Financial {bscWeights.financial}%, Customer {bscWeights.customer}%, Internal Processes {bscWeights.internal}%, Learning &amp; Growth {bscWeights.learning}%). Direct ladder-up from individual contributor KPIs to executive corporate objectives.
               </p>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Badge variant="bsc" size="sm">BSC Pure Single-Framework</Badge>
-              <Badge variant="success" size="sm">Weights Total: {bscWeights.financial + bscWeights.customer + bscWeights.internal + bscWeights.learning}%</Badge>
             </div>
           </div>
 
@@ -1308,7 +1475,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   Live cascade trace for Emmanuel K. Quarshie (Healthcare Operations &amp; HR)
                 </span>
               </div>
-              <Badge variant="info" size="sm">100% Traceability Verified</Badge>
             </div>
 
             {/* Tree Flow Nodes */}
@@ -1380,8 +1546,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <div style={{ marginLeft: "4rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {[
                   {
-                    pillar: "Customer / Stakeholder (50%)",
-                    badge: "Highest Weight: 50%",
+                    pillar: `Customer / Stakeholder (${bscWeights.customer}%)`,
+                    badge: `Weight: ${bscWeights.customer}%`,
                     icon: "🤝",
                     kpi: "Patient Care Satisfaction & Ward Feedback Index > 95%",
                     target: "Target: 95.0% (Current: 96.4%)",
@@ -1389,8 +1555,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     status: "EXCEEDING",
                   },
                   {
-                    pillar: "Financial Perspective (30%)",
-                    badge: "Weight: 30%",
+                    pillar: `Financial Perspective (${bscWeights.financial}%)`,
+                    badge: `Weight: ${bscWeights.financial}%`,
                     icon: "💰",
                     kpi: "Clinical Supplies & Consumables Budget Variance < 3% under allocated budget",
                     target: "Target: < 3.0% (Current: 2.1%)",
@@ -1398,8 +1564,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     status: "ON_TRACK",
                   },
                   {
-                    pillar: "Internal Processes (15%)",
-                    badge: "Weight: 15%",
+                    pillar: `Internal Processes (${bscWeights.internal}%)`,
+                    badge: `Weight: ${bscWeights.internal}%`,
                     icon: "⚙️",
                     kpi: "Clinical Shift Handover Audit & Biometric Attendance Adherence > 98%",
                     target: "Target: 98.0% (Current: 99.2%)",
@@ -1407,8 +1573,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     status: "ON_TRACK",
                   },
                   {
-                    pillar: "Learning & Growth (5%)",
-                    badge: "Weight: 5%",
+                    pillar: `Learning & Growth (${bscWeights.learning}%)`,
+                    badge: `Weight: ${bscWeights.learning}%`,
                     icon: "🌱",
                     kpi: "Complete Advanced Clinical Triage & Emergency Preparedness Recertification",
                     target: "Target: 100% Complete (Current: 100%)",
@@ -1653,9 +1819,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Evaluates behavioral, operational, and disciplinary traits on a strict numeric scale (1 = Unsatisfactory, 2 = Marginal, 3 = Competent, 4 = Superior, 5 = Exemplary) completely independent of goal OKRs.
               </p>
             </div>
-            <Badge variant="info" size="sm">
-              Average Trait Index: {(Object.values(traitScores).reduce((a, b) => a + b, 0) / Object.values(traitScores).length).toFixed(2)} / 5.0
-            </Badge>
           </div>
 
           {/* Scoring Rows */}
@@ -1782,7 +1945,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Real-time organizational heatmap categorizing key results across 4 performance thresholds: 🚨 Critical (&lt;30%), 🛠 Off Track (30-69%), 👌 On Track (70-99%), 🚀 Exceeded (&gt;100%).
               </p>
             </div>
-            <Badge variant="okr" size="sm">OKR Pure Single-Framework</Badge>
           </div>
 
           {/* Threshold Summary Stat Cards */}
@@ -1899,7 +2061,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Cross-references actual Performance (X-Axis) against Leadership Potential (Y-Axis) to identify high-potentials (HiPo), flight risk candidates, and future C-suite successors.
               </p>
             </div>
-            <Badge variant="success" size="sm">4 HiPo Talent Identified</Badge>
           </div>
 
           {/* 9-Box Matrix Grid */}
@@ -1982,6 +2143,62 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </p>
           </div>
 
+          {/* Drill-down Active Banner */}
+          {requestStatusFilter !== "ALL" && (
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "0.65rem 1rem",
+                backgroundColor: "rgba(37, 99, 235, 0.08)",
+                border: "1px solid rgba(37, 99, 235, 0.25)",
+                borderRadius: radii.md,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.75rem",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: "#1e40af", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Active Drill-Down:
+                </span>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textPrimary, fontWeight: 700 }}>
+                  {requestStatusFilter === "NO_OBJECTIVES" && "84 Staff Members Pending Objective Formulation"}
+                  {requestStatusFilter === "ACTIVE" && "9 Active Objectives (Currently in Execution)"}
+                  {requestStatusFilter === "PENDING APPROVAL" && "1 Objective Awaiting Line Manager Sign-off"}
+                  {requestStatusFilter === "APPROVED" && "3 Approved Objectives (Locked for Current Cycle)"}
+                  {requestStatusFilter === "DECLINED" && "0 Declined Objectives (Returned for Revision)"}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {requestStatusFilter === "NO_OBJECTIVES" && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      setStatusMessage({ text: "Drafting reminder notifications dispatched to all 84 staff members and their line managers." });
+                    }}
+                    style={{ fontSize: "11px", padding: "0.3rem 0.65rem" }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                      <Icons.Sparkles size={12} />
+                      <span>Send Bulk Reminder to All 84 Staff</span>
+                    </span>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRequestStatusFilter("ALL")}
+                  style={{ fontSize: "11px", padding: "0.3rem 0.65rem" }}
+                >
+                  Clear Filter / Show All
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Card Container (Screenshot 4) */}
           <div
             style={{
@@ -2006,7 +2223,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               }}
             >
               <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                REQUEST LIST
+                {requestStatusFilter === "NO_OBJECTIVES" ? "STAFF PENDING GOAL FORMULATION" : "REQUEST LIST"}
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -2014,7 +2231,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <div style={{ position: "relative" }}>
                   <input
                     type="text"
-                    placeholder="Search by owner, staff ID, role..."
+                    placeholder={requestStatusFilter === "NO_OBJECTIVES" ? "Search pending staff, team, manager..." : "Search by owner, staff ID, role..."}
                     value={requestSearchQuery}
                     onChange={(e) => setRequestSearchQuery(e.target.value)}
                     style={{
@@ -2044,11 +2261,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     color: colors.textSecondary,
                   }}
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="UNDETERMINED">Undetermined</option>
-                  <option value="PENDING APPROVAL">Pending Approval</option>
-                  <option value="DECLINED">Declined</option>
+                  <option value="ALL">All Requests ({objectiveRequests.length})</option>
+                  <option value="NO_OBJECTIVES">No Objectives (84 Staff Pending)</option>
+                  <option value="ACTIVE">Active Objectives (9)</option>
+                  <option value="PENDING APPROVAL">Pending Approval (1)</option>
+                  <option value="APPROVED">Approved (3)</option>
+                  <option value="UNDETERMINED">Undetermined (6)</option>
+                  <option value="DECLINED">Declined (0)</option>
                 </select>
 
                 {/* Export Button */}
@@ -2056,6 +2275,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    if (requestStatusFilter === "NO_OBJECTIVES") {
+                      const csv = "NO,NAME,STAFF_ID,ROLE,DEPARTMENT,TEAM_SQUAD,LINE_MANAGER,DAYS_OVERDUE,CYCLE\n" +
+                        pendingGoalStaffList.map((s, idx) => `${idx + 1},"${s.name}","${s.staffId}","${s.role}","${s.department}","${s.team}","${s.manager}",${s.daysOverdue},"${s.cycle}"`).join("\n");
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `scoreview_staff_pending_goals_${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      return;
+                    }
                     const csv = "NO,OWNER,STAFF_ID,ROLE,TYPE,STATUS,SUBSIDIARY,CYCLE,DATE\n" +
                       objectiveRequests.map((r) => `${r.requestNo},"${r.ownerName}","${r.ownerStaffId}","${r.ownerRole}",${r.objectiveType},${r.status},"${r.subsidiary}","${r.appraisalCycle}",${r.date}`).join("\n");
                     const blob = new Blob([csv], { type: "text/csv" });
@@ -2074,12 +2304,153 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
                 {/* Pagination indicator */}
                 <div style={{ fontSize: "11px", color: colors.textMuted, marginLeft: "0.5rem" }}>
-                  Showing 1 to {filteredObjectiveRequests.length} of {objectiveRequests.length} | &lt; Page 1 of 1 &gt;
+                  {requestStatusFilter === "NO_OBJECTIVES"
+                    ? `Showing ${filteredPendingGoalStaff.length} of 84 Staff Pending`
+                    : `Showing 1 to ${filteredObjectiveRequests.length} of ${objectiveRequests.length}`}
                 </div>
               </div>
             </div>
 
-            {/* Table (Screenshot 4) */}
+            {/* Table View */}
+            {requestStatusFilter === "NO_OBJECTIVES" ? (
+              <div style={{ maxHeight: "560px", overflowY: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                  <thead>
+                    <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left", position: "sticky", top: 0, zIndex: 1 }}>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, width: "40px" }}>NO</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>STAFF MEMBER</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>ROLE &amp; DEPARTMENT</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>ASSIGNED TEAM / SQUAD</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>LINE MANAGER</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>CYCLE</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
+                      <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPendingGoalStaff.map((staff, idx) => {
+                      const isNudged = !!nudgedStaffIds[staff.staffId];
+                      return (
+                        <tr
+                          key={staff.id}
+                          style={{
+                            borderBottom: `1px solid ${colors.borderSubtle}`,
+                            transition: "background-color 0.1s ease",
+                          }}
+                        >
+                          <td style={{ padding: "0.75rem 0.85rem", color: colors.textMuted, fontWeight: 600 }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                              <div
+                                style={{
+                                  width: "30px",
+                                  height: "30px",
+                                  borderRadius: "50%",
+                                  backgroundColor: staff.avatarColor,
+                                  color: colors.surface,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontWeight: 700,
+                                  fontSize: "11px",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {staff.name.split(" ").map((n) => n[0]).join("")}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, color: colors.textPrimary }}>
+                                  {staff.name}
+                                </div>
+                                <div style={{ fontSize: "11px", color: colors.textMuted, fontFamily: typography.fontMono }}>
+                                  {staff.staffId}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem" }}>
+                            <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                              {staff.role}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textSecondary }}>
+                              {staff.department}
+                            </div>
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem" }}>
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                padding: "0.2rem 0.5rem",
+                                borderRadius: radii.sm,
+                                backgroundColor: "rgba(99, 102, 241, 0.08)",
+                                color: colors.indigoPrimary,
+                                fontWeight: 600,
+                                border: "1px solid rgba(99, 102, 241, 0.2)",
+                              }}
+                            >
+                              {staff.team}
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem", color: colors.textPrimary, fontWeight: 500 }}>
+                            {staff.manager}
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary }}>
+                            {staff.cycle}
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem" }}>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                padding: "0.2rem 0.55rem",
+                                borderRadius: radii.full,
+                                backgroundColor: "rgba(239, 68, 68, 0.12)",
+                                color: "#b91c1c",
+                                display: "inline-block",
+                              }}
+                            >
+                              Overdue ({staff.daysOverdue}d)
+                            </span>
+                          </td>
+                          <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                            <Button
+                              variant={isNudged ? "outline" : "primary"}
+                              size="sm"
+                              onClick={() => {
+                                setNudgedStaffIds((prev) => ({ ...prev, [staff.staffId]: true }));
+                                setStatusMessage({ text: `Nudge notification sent to ${staff.name} and CC'd to ${staff.manager}.` });
+                              }}
+                              style={{ padding: "0.25rem 0.55rem", fontSize: "11px" }}
+                            >
+                              {isNudged ? "✓ Nudged" : "Send Nudge"}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : filteredObjectiveRequests.length === 0 ? (
+              <div style={{ padding: "3rem 2rem", textAlign: "center" }}>
+                <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: colors.surfaceSubtle, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem auto", color: colors.textMuted }}>
+                  <Icons.ShieldCheck size={24} />
+                </div>
+                <h4 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  {requestStatusFilter === "DECLINED" ? "No Declined Objectives in Current Cycle" : "No Objective Requests Found"}
+                </h4>
+                <p style={{ margin: "0.4rem 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted, maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
+                  {requestStatusFilter === "DECLINED"
+                    ? "Zero objectives have been returned for revision. All 9 active employee scorecards comply with single-framework standards."
+                    : "No objective records matched your search query or status filter."}
+                </p>
+                <Button size="sm" variant="outline" onClick={() => { setRequestStatusFilter("ALL"); setRequestSearchQuery(""); }}>
+                  Reset Filters &amp; View All Requests
+                </Button>
+              </div>
+            ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
               <thead>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
@@ -2276,6 +2647,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </div>
       )}
@@ -4855,7 +5227,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
                 Organization 9-Box Matrix (Q1 Calibrated)
               </h3>
-              <Badge variant="info" size="sm">Executive Succession Grid</Badge>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
@@ -5052,7 +5423,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Configure enterprise objective models, 4-pillar Balanced Scorecard weights, OKR stretch thresholds, and single-framework purity rules.
                     </p>
                   </div>
-                  <Badge variant="info" size="sm">Single-Framework Purity</Badge>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.75rem" }}>
@@ -5303,7 +5673,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Sequential multi-tier approval hierarchy with stage-locking, immutable self-scores, and tamper-proof verification stamps.
                     </p>
                   </div>
-                  <Badge variant="success" size="sm">5 Tiers Active</Badge>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "1.75rem" }}>
@@ -5478,7 +5847,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Evaluate non-negotiable professional behaviors on a strict 1–5 scale, decoupled from goal OKR percentages.
                     </p>
                   </div>
-                  <Badge variant="info" size="sm">Strict 1–5 Likert Scale</Badge>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1.75rem" }}>
@@ -5612,7 +5980,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Configure peer rater quotas, anonymity protection thresholds, blind spot detection rules, and enterprise bell-curve targets.
                     </p>
                   </div>
-                  <Badge variant="info" size="sm">Multi-Rater Governance</Badge>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.75rem" }}>
@@ -5770,10 +6137,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     Calibrates actual Performance ratings (X-Axis) against Leadership Potential evaluations (Y-Axis) to identify future executive successors and retain high-impact talent.
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <Badge variant="success" size="sm">4 HiPo Talent Identified</Badge>
-                  <Badge variant="warning" size="sm">1 Flight Risk Flagged</Badge>
-                </div>
               </div>
 
               {/* Nine Box Matrix Visual Grid */}
@@ -5885,7 +6248,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Configure automated remediation triggers for low performers and manage policy-approved statutory appraisal exceptions.
                     </p>
                   </div>
-                  <Badge variant="warning" size="sm">Dual-Control Governance</Badge>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.75rem" }}>

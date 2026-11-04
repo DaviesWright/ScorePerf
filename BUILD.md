@@ -1040,8 +1040,12 @@ Per ADR-0005 and ADR-0015, tenant isolation operates across two coordinated laye
    - The access role comes from `employees.access_role` (`db/migrations/0001_employees_access_role.sql`), re-read
      at redemption. `employees.role` is a job title and is never used for authorization. KV session keys are
      prefixed `sess:` so a caller cannot plant a forged `ml:` entry (`test/wiring.test.ts` enforces it).
-   - Open: a mail provider (links are only printed to the worker log when `MAGIC_LINK_DEV_LOG=1`), and a real
-     frontend login screen that calls these routes.
+   - The frontend signs in through `/login` (asks for the email) and `/login/verify#token=...` (redeems the link,
+     then `POST /api/session` stores the access token in an httpOnly, SameSite=Lax cookie, same-origin requests
+     only). `apps/hr-frontend/src/app/page.tsx` reads the cookie, sends it as a Bearer token, loads
+     `GET /api/v1/me` for the signed-in user, and redirects to `/login` when there is no valid session. Sign-out
+     clears the cookie. `NEXT_PUBLIC_DEMO_LOGIN=1` restores the old persona picker (no real sign-in) for demos.
+   - Open: a mail provider (links are only printed to the worker log when `MAGIC_LINK_DEV_LOG=1`).
 
 2. **Relational PostgreSQL Layer (`db/schema.sql`):**
    - Every tenant-owned table (`employees`, `performance_cycles`, `kpis`, `framework_configurations`, etc.)

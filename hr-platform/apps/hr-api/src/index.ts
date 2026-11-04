@@ -180,6 +180,31 @@ function magicLinkDeps(env: Env): MagicLinkDeps {
   };
 }
 
+// The signed-in user's own profile. The frontend uses it to show who is signed in; the access role comes
+// from the verified token, never from the client.
+app.get("/api/v1/me", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT e.id, e.first_name, e.last_name, e.email, e.role AS job_title, d.name AS department
+    FROM employees e
+    LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+    WHERE e.id = ${userId} AND e.company_id = ${companyId} AND e.is_active
+  `;
+  if (rows.length === 0) return c.json({ error: "Not found" }, 404);
+  const r = rows[0];
+  return c.json({
+    id: Number(r.id),
+    companyId,
+    firstName: String(r.first_name),
+    lastName: String(r.last_name),
+    email: String(r.email),
+    jobTitle: String(r.job_title),
+    department: r.department ? String(r.department) : null,
+    accessRole: role,
+  });
+});
+
 // 1. Employees (DRF-style)
 app.get("/api/v1/employees", async (c) => {
   const { companyId } = c.get("tenant");
