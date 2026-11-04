@@ -2,10 +2,9 @@
 
 ## Comprehensive Developer Build Specification
 
-**Document status:** Proposed implementation baseline\
+**Document status:** Accepted implementation baseline (Updated per ADR-0015)\
 **Product:** ScoReview Performance Management Platform\
-**Architecture:** Modular Django monolith; cloud SaaS and on-premises
-deployment\
+**Architecture:** Cloudflare SaaS Edge Monorepo (`hr-platform`: Next.js 15 App Router, Hono REST API Worker, Cloudflare Queues/Workflows/KV, Hyperdrive) backed by Serverless PostgreSQL (Neon), with Python/Django core as domain reference engine\
 **Frameworks:** OKR, MBO and Balanced Scorecard (BSC)\
 **Primary audience:** Engineering, product, QA, DevOps, security and
 implementation teams
@@ -15,13 +14,13 @@ implementation teams
 ## 1. Purpose and implementation mandate
 
 This document defines the engineering instructions for extending
-ScoReview from its current OKR-focused performance management capability
+ScoReview from its initial OKR-focused performance management capability
 into a configurable, multi-framework performance management platform.
 
-ScoReview must support organisations across industries and sizes, with
-both cloud-hosted and customer-managed on-premises deployments. Each
-organisation must be able to select the performance methodology used for
-a performance cycle:
+ScoReview supports organisations across industries and sizes via a globally
+distributed Cloudflare SaaS Edge architecture, with portable PostgreSQL schema
+for customer-managed or hybrid scenarios. Each organisation selects the
+performance methodology used for a performance cycle:
 
 -   **OKR:** Objectives and Key Results.
 -   **MBO:** Management by Objectives.
@@ -40,21 +39,24 @@ configured multi-framework arrangement.
     evidence that a change is necessary.
 2.  Inspect the repository and existing database before designing
     migrations or assuming model names.
-3.  Reuse existing Horilla organisation, employee, department,
-    authentication and permission entities where appropriate. Do not
-    create parallel employee or company master records.
-4.  Build a **modular Django monolith**, not a collection of
-    microservices.
+3.  Maintain unified company, employee, department, authentication and
+    permission entities across all frameworks. Do not create parallel
+    employee or company master records.
+4.  Build a **Cloudflare SaaS Edge Monorepo (`hr-platform`)** leveraging
+    serverless edge primitives (Workers, Hyperdrive, Queues, Workflows, KV)
+    backed by Neon PostgreSQL, maintaining strict domain boundaries.
 5.  Keep methodology-specific structures and rules in their own domain
-    modules.
+    modules (`packages/shared`, `db/schema.sql`, framework engines).
 6.  Share genuinely common services: cycles, assignments, evidence,
     workflow, audit, notifications, reporting and access control.
 7.  Make scoring deterministic, versioned, testable and explainable.
     Never allow AI to calculate or certify a final score outside
     approved deterministic rules.
-8.  Treat company/tenant isolation as a security boundary, not merely a
-    UI filter.
-9.  Use one application codebase for cloud and on-premises deployments.
+8.  Treat company/tenant isolation as a security boundary (tenant and role
+    taken from a verified bearer token, never from client headers, plus
+    PostgreSQL relational scoping), not merely a UI filter.
+9.  Use a single edge monorepo (`hr-platform`) with portable PostgreSQL schema
+    (`db/schema.sql`) for Cloudflare SaaS edge delivery and portable deployment.
 10. Deliver in small, reviewable increments with migrations, tests,
     documentation and rollback considerations.
 11. Never silently change approved targets, weights, scoring rules or
@@ -175,6 +177,38 @@ contribute to organisational strategy. The four perspectives are the BSC
 organising framework, not a requirement for identical employee-level
 composition.
 
+### 2.5 Enterprise HRMS Suite Module Map
+
+Beyond the Performance Management System (PMS), ScoReview encompasses a complete
+suite of 13 Core HRMS functional modules:
+
+1.  **👥 Employee Management:** Centralized workforce data with LDAP/Active Directory
+    integration, organization hierarchy, departments, job positions, and work profiles.
+2.  **🎯 Recruitment:** End-to-end talent acquisition pipeline from job postings,
+    requisitions, applicant tracking (ATS), interview scheduling, and scoring stages to offer letters.
+3.  **📋 Onboarding & Offboarding:** Structured workflows for the entire employee
+    lifecycle, including orientation checklists, asset handover, exit interviews, and clearances.
+4.  **⏰ Attendance & Time Tracking:** Biometric device synchronization, automated check-in/out,
+    geofencing validation, shift rotations, break tracking, and overtime calculation.
+5.  **🏖️ Leave Management:** Multi-tier leave policies, balance tracking, accruals,
+    carry-forward rules, company holiday calendars, and multi-level approval workflows.
+6.  **💰 Payroll:** Automated salary structures, wage computation, tax deductions,
+    allowances, contract agreements, pay periods, and digital payslip delivery.
+7.  **📊 Performance Management (PMS):** Multi-framework evaluation (OKR, MBO, BSC),
+    10-stage review lifecycle, continuous check-ins, calibration grids, and deterministic scoring.
+8.  **🏢 Asset Management:** Tracking and custody management of company hardware,
+    equipment, software licenses, serial numbers, allocation history, and returns.
+9.  **🎫 Helpdesk:** Centralized internal HR and IT support ticketing system with SLA
+    tracking, categorization, priority escalation, and resolution audit trails.
+10. **🗂️ Project Management:** Project workspaces, task assignment, employee timesheets,
+    milestone tracking, and billable hour calculations.
+11. **📄 Documents:** Employee document requests, contracts, identity verifications,
+    expiration alerts, and secure digital signature/approvals.
+12. **📈 Dashboards & Reports:** Real-time role-based executive dashboards, workforce
+    analytics, and automated scheduled reporting with email distribution.
+13. **📥 Master Data Import:** High-volume spreadsheet/CSV ingest pipelines for bulk onboarding
+    of employees, leave balances, assets, historical records, and salary structures.
+
 ------------------------------------------------------------------------
 
 ## 3. Required repository discovery and baseline assessment
@@ -286,84 +320,81 @@ new work, but do not conceal them.
 
 ## 4. Target application architecture
 
-### 4.1 Architecture style
+### 4.1 Architecture style (Cloudflare SaaS Edge Monorepo)
 
-Use a modular Django monolith. Domain boundaries should be explicit
-through models, services, selectors/query services, validators,
-serializers, views and tests. Do not split into microservices merely to
-create conceptual separation.
-
-Suggested Django app boundaries (adapt names to existing conventions):
+Per **ADR-0015**, ScoReview is implemented as a **Cloudflare SaaS Edge Monorepo**
+(`hr-platform/`), providing global edge delivery, sub-50ms regional latency,
+and serverless scaling backed by Lakebase PostgreSQL (Neon) via Cloudflare Hyperdrive.
+Domain boundaries are strictly maintained across workspaces:
 
 ``` text
-horilla/                         # Existing host application; preserve conventions
-performance_core/                # Cycles, assignments, common objective references
-performance_catalog/             # KPI/measure library and target definitions
-okr/                              # Existing OKR domain; preserve and adapt carefully
-mbo/                              # MBO domain
-bsc/                              # Balanced Scorecard domain
-performance_evaluation/           # Assessment, scoring adapters, certification
-performance_workflow/            # Reusable approval workflow, if not already present
-performance_evidence/            # Evidence metadata, access and retention
-performance_analytics/            # Reports, aggregation and dashboards
-performance_ai/                  # AI orchestration, governance and audit
-performance_integrations/        # HRIS/mobile/external integration boundaries
+hr-platform/
+├── packages/
+│   └── shared/                  # Common TypeScript domain types, schemas, Zod validation
+├── apps/
+│   ├── hr-api/                  # Hono REST API Worker (Workers, KV Sessions, Hyperdrive)
+│   ├── hr-jobs/                 # Cloudflare Queues consumer (hr-jobs-queue, DLQ) & Workflows
+│   └── hr-frontend/             # Next.js 15 App Router (OpenNext on Cloudflare Workers)
+├── db/
+│   └── schema.sql               # Authoritative PostgreSQL DDL (14 relational tables)
+└── docs/
+    └── MIGRATION.md             # NestJS/Django to Hono migration reference
+
+scoreview_core/                  # Reference domain engine (10-stage lifecycle, deterministic scoring)
 ```
 
-These are logical boundaries, not a mandate to create empty apps. Reuse
-existing apps where they already own the domain. Avoid circular imports.
-Shared domain services must not import framework-specific models
-unnecessarily.
+Workspace responsibilities:
+- `packages/shared`: Canonical TypeScript types (`PerformanceCycle`, `KPI`, `Employee`, `TenantContext`) and Zod schemas replacing legacy DTOs/serializers.
+- `apps/hr-api`: High-performance Hono REST API running on Cloudflare Workers edge nodes. Authenticates every `/api/v1/*` call with a signed bearer token and derives the tenant from its claims, manages session tokens in Cloudflare KV, routes database reads/writes through Hyperdrive connection pooling, and dispatches async tasks to Cloudflare Queues.
+- `apps/hr-jobs`: Background execution engine consuming `hr-jobs-queue` with dead-letter queue fallback (`hr-jobs-dlq`), batch scheduling, and multi-stage lifecycle orchestration via Cloudflare Workflows (`PerformanceReviewWorkflow`).
+- `apps/hr-frontend`: Next.js 15 App Router with React 19, compiled for Cloudflare edge execution via `@opennextjs/cloudflare`.
+- `db/schema.sql`: Pure ANSI PostgreSQL DDL deployed to Neon Serverless Postgres (`aws-eu-west-2`), portable to any PostgreSQL 15+ engine.
 
 ### 4.2 Dependency direction
 
 Preferred dependency direction:
 
 ``` text
-Presentation (templates, views, API)
+Edge Presentation (Next.js 15 App Router / OpenNext)
               |
               v
-Application services / use cases
+Edge REST API (Hono Worker / apps/hr-api)
               |
        +------+------+
        |             |
        v             v
-Common domain    Framework domains
-(core, catalog)  (OKR / MBO / BSC)
+Shared Domain     Async Workflows & Queues
+(packages/shared) (apps/hr-jobs / Workflows)
        |             |
        +------+------+
               |
               v
-Infrastructure adapters
-(database, storage, email, queue, AI, audit)
+Infrastructure Adapters
+(Cloudflare Hyperdrive -> Neon PostgreSQL, Cloudflare KV, Queues)
 ```
 
-Framework modules may depend on shared core contracts. Shared core must
-not depend on MBO or BSC implementation details. Cross-framework
-reporting should consume common result contracts or read models, not
-reach into arbitrary framework tables from templates.
+Framework modules depend on shared domain contracts. The edge API does
+not directly couple to framework-specific scoring algorithms without type-safe
+contracts. Asynchronous jobs consume standardized payloads from `hr-jobs-queue`.
 
 ### 4.3 Layering rules
 
--   **Models:** persistence, basic invariants and relationships; avoid
-    putting complex workflow orchestration in model save methods.
--   **Services/use cases:** business operations and transaction
-    boundaries.
--   **Selectors/query services:** scoped reads and reusable query logic.
--   **Validators:** domain and cross-field validation.
--   **Scoring adapters:** pure deterministic calculations with explicit
-    inputs and outputs.
--   **Views/API:** authentication, request validation, service
-    invocation and response formatting.
--   **Tasks:** asynchronous orchestration; call the same services used
-    by synchronous paths.
--   **Signals:** use sparingly; do not hide critical business operations
-    in signals.
--   **Templates:** presentation only; never calculate authoritative
-    scores in the browser.
-
-Use `transaction.atomic()` for multi-record operations and lock rows
-where concurrent approval or target changes could cause race conditions.
+-   **Database DDL (`db/schema.sql`):** Pure PostgreSQL schema with foreign keys,
+    unique constraints, enums (`framework_code`, `cycle_status`), and indexes.
+-   **Validation (`packages/shared/src/schemas.ts`):** Zod schemas runtime-validating
+    payloads at the edge before hitting business logic or database queries.
+-   **API Handlers (`apps/hr-api/src/index.ts`):** Fast, stateless Hono endpoints
+    handling authentication, tenant scoping, and parameter extraction.
+-   **Connection Pooling (Cloudflare Hyperdrive):** Edge connection pooling to
+    Neon PostgreSQL, eliminating connection overhead and query latency across regions.
+-   **Async Tasks (`apps/hr-jobs/src/index.ts`):** Durable background processing
+    via Cloudflare Queues with automatic exponential backoff and DLQ capture.
+-   **Workflows (`PerformanceReviewWorkflow`):** Durable Cloudflare Workflows with
+    deterministic step execution, automated retries, and persistence across pauses.
+-   **State & Caching (Cloudflare KV):** Low-latency session management and ephemeral
+    tenant metadata storage (`SESSIONS` namespace).
+-   **Presentation (`apps/hr-frontend`):** Server-rendered React components fetching
+    from edge APIs with zero secret leakage to the client.
 
 ------------------------------------------------------------------------
 
@@ -935,89 +966,106 @@ Support configurable controls such as:
 
 ## 10. Workflow and state management
 
-Use a shared workflow capability where it fits existing Horilla
-patterns. Do not build an overly generic workflow designer for the MVP.
+ScoReview leverages **Cloudflare Workflows** (`PerformanceReviewWorkflow`)
+alongside Cloudflare Queues to execute multi-stage performance cycles durably.
+Long-running workflows survive edge worker evictions, maintain state across
+step pauses, and provide automated retries with deterministic step execution.
 
 ### 10.1 Workflow capabilities
 
--   Configurable stages.
+-   **Cloudflare Workflows Engine:** Implemented via `WorkflowEntrypoint`,
+    executing stages as discrete `step.do()` calls with automatic persistence.
+-   Configurable stages matching the 10-stage lifecycle state machine.
 -   Role- and relationship-based task assignment.
 -   Submit, return, reject, approve and reopen actions.
--   Due dates and reminders.
--   Escalation.
--   Comments and supporting evidence.
--   Delegation with audit.
--   Stage-specific permissions.
--   Notifications.
--   Workflow history.
+-   Due dates, reminders, and scheduled stage advancement (`step.sleep()`).
+-   Escalation and timeout handlers.
+-   Comments and supporting evidence references.
+-   Delegation with complete audit trail.
+-   Stage-specific permissions and role validation.
+-   Notifications dispatched via `hr-jobs-queue`.
+-   Immutable workflow step history recorded in PostgreSQL `audit_logs`.
 
 ### 10.2 State transition controls
 
 Each transition must validate:
 
--   Current state.
--   Actor permission.
--   Tenant scope.
--   Required fields and evidence.
--   Weight/target completeness.
--   Separation-of-duties rules.
--   Cycle status.
+-   Current state against the valid transition matrix (ADR-0005).
+-   Actor permission (`admin`, `manager`, `employee`, `calibrator`).
+-   Tenant scope (`company_id` integrity).
+-   Required fields and evidence completeness.
+-   Weight/target completeness (e.g. weights sum to 100%).
+-   Separation-of-duties rules (e.g. manager cannot certify their own review).
+-   Cycle status (cannot submit reviews in draft or closed cycles).
 -   Any required preceding approvals.
 
-Use atomic transactions and concurrency controls to prevent duplicate
-approval or conflicting updates.
+Use database transactions and optimistic locking to prevent race conditions
+during concurrent reviewer submissions.
 
 ### 10.3 Notifications
 
-Support in-app and email notifications, with optional channels according
-to deployment configuration. Notifications should be queued, retryable
-and deduplicated. Avoid sending mail inside a long database transaction.
+Notifications are dispatched asynchronously via `hr-jobs-queue` with message
+type `notification_dispatch`. Handlers support email delivery, in-app KV alerts,
+and webhook integrations without blocking HTTP request latency. Retries and
+dead-letter logging prevent silent notification drops.
 
 ------------------------------------------------------------------------
 
 ## 11. Multi-tenancy and authorisation
 
-Security is a release-blocking requirement.
+Security and strict tenant isolation are release-blocking requirements.
 
-### 11.1 Tenant isolation
+### 11.1 Tenant isolation (Edge & Database Enforcement)
 
--   Use the existing authoritative company/tenant model.
--   Scope all tenant-owned queries by the authenticated user's
-    authorised company context.
--   Validate tenant consistency across every foreign-key relationship
-    accepted from user input.
--   Never trust a tenant/company ID supplied by the client without
-    checking authority.
--   Do not rely on hiding UI links as an access control.
--   Apply the same rules to HTML views, APIs, exports, background jobs,
-    reports and document downloads.
--   Ensure scheduled tasks process only the intended tenant records.
--   Add database constraints where possible to prevent cross-tenant
-    relationships.
+Per ADR-0005 and ADR-0015, tenant isolation operates across two coordinated layers:
 
-For SaaS, a shared PostgreSQL database with strict tenant scoping is the
-initial recommendation. Larger or regulated customers may be deployed in
-isolated databases or dedicated environments.
+1. **Edge Middleware Layer (`apps/hr-api/src/index.ts`):**
+   - Every API route (`/api/v1/*`, including `/session`) passes through the `authenticate` middleware
+     (`apps/hr-api/src/auth.ts`). Only `/` and `/health` are public.
+   - Requires `Authorization: Bearer <JWT>`: HS256 only, signature checked against the `AUTH_JWT_SECRET`
+     Worker secret (at least 32 characters), `iss` = `scoreview-auth`, `aud` = `hr-api`, `exp` required.
+   - Takes the tenant from the token, never from the request: `company_id` (positive integer),
+     `sub` (user id) and `role` (one of `employee`, `line_manager`, `hr_admin`, `hr_director`) are injected as the
+     `TenantContext` (`c.set("tenant", ...)`). `X-Company-ID`, `X-User-ID` and `X-User-Role` headers are ignored.
+   - Rejects a missing, malformed, expired, unsigned or wrongly signed token with HTTP 401 (no reason given)
+     before any database work, and fails closed with HTTP 500 if the secret is missing or too short.
+   - `authenticate` must stay registered above every `/api/v1` route (Hono runs handlers in registration
+     order); `apps/hr-api/test/wiring.test.ts` enforces this.
+   - Tokens come from passwordless magic-link sign-in (`apps/hr-api/src/magic-link.ts`, `auth-routes.ts`),
+     mounted at `/auth` outside `/api/v1`: `POST /auth/magic-link` {email} always answers 202; `POST /auth/verify`
+     {token} returns a 1-hour bearer token. Links are one-time, valid 10 minutes, stored in KV as a SHA-256 hash
+     (`ml:`), throttled per address (`mlr:`), carried in the URL fragment, and built from `FRONTEND_URL` (never from
+     the request). An address that matches more than one tenant is refused. KV single use is best-effort (eventual
+     consistency); strict single use would need a Durable Object.
+   - The access role comes from `employees.access_role` (`db/migrations/0001_employees_access_role.sql`), re-read
+     at redemption. `employees.role` is a job title and is never used for authorization. KV session keys are
+     prefixed `sess:` so a caller cannot plant a forged `ml:` entry (`test/wiring.test.ts` enforces it).
+   - Open: a mail provider (links are only printed to the worker log when `MAGIC_LINK_DEV_LOG=1`), and a real
+     frontend login screen that calls these routes.
 
-PostgreSQL Row Level Security may be introduced as defence in depth only
-after a complete design for setting and clearing tenant context across
-requests, tasks, connection pooling and transactions. It must not
-replace application-level authorisation.
+2. **Relational PostgreSQL Layer (`db/schema.sql`):**
+   - Every tenant-owned table (`employees`, `performance_cycles`, `kpis`, `framework_configurations`, etc.)
+     maintains a direct `company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE`.
+   - All SQL queries generated by Hono endpoints or queue consumers enforce `WHERE company_id = ${tenant.companyId}`.
+   - Unique constraints are tenant-scoped (e.g. `UNIQUE (company_id, email)` on employees, `UNIQUE (company_id, name)` on departments).
+   - Cross-tenant foreign keys are rejected at the database schema level.
+
+PostgreSQL Row Level Security (RLS) is supported on Neon as defence-in-depth,
+but application-level scoping remains the primary isolation guarantee.
 
 ### 11.2 Permission layers
 
-Use the existing company-scoped permission backend and employee
-permission conventions where appropriate. Add domain permissions for:
+Domain permissions enforced at the edge API:
 
--   Configure framework.
--   Create/edit objectives.
--   Approve objectives.
--   Submit actuals/evidence.
--   Assess.
--   Review.
--   Calibrate.
--   Certify.
--   Publish.
+-   Configure framework (`admin`).
+-   Create/edit objectives (`manager`, `admin`, `employee` for self).
+-   Approve objectives (`manager`, `admin`).
+-   Submit actuals/evidence (`employee`, `manager`).
+-   Assess (`employee` for self-assessment, `manager` for supervisor assessment).
+-   Review (`manager`, `hr_admin`).
+-   Calibrate (`calibrator`, `hr_admin`).
+-   Certify (`hr_admin`, `executive`).
+-   Publish (`hr_admin`).
 -   View own/team/department/company results.
 -   Export sensitive reports.
 -   Administer AI settings.
@@ -1057,158 +1105,106 @@ For every new endpoint and workflow action, test:
 
 ------------------------------------------------------------------------
 
-## 12. Cloud SaaS and on-premises deployment
+## 12. Cloud SaaS and portable deployment
 
-### 12.1 Single codebase requirement
+### 12.1 Unified edge monorepo requirement
 
-Maintain one application codebase and versioned deployment artefacts.
-Use environment configuration and deployment profiles rather than
-separate cloud/on-prem code branches.
+Maintain one monorepo codebase (`hr-platform/`) and versioned deployment artefacts.
+Use Cloudflare Workers bindings and environment configuration rather than
+divergent codebases.
 
-### 12.2 Cloud profile
+### 12.2 Cloudflare SaaS profile (Production)
 
-Expected components:
+Per ADR-0015, the production SaaS deployment runs on Cloudflare's global edge network:
 
--   TLS-terminating load balancer/reverse proxy.
--   One or more Django/Gunicorn web instances.
--   PostgreSQL (managed or dedicated).
--   Redis (managed or dedicated).
--   Background workers.
--   Singleton scheduler/leader-elected scheduler.
--   Object storage (S3/GCS or compatible).
--   Centralised logs, metrics and error monitoring.
--   Backup and restore process.
--   Tenant provisioning and licence/entitlement management.
+-   **Frontend Edge Delivery:** `apps/hr-frontend` powered by Next.js 15 App Router,
+    bundled via `@opennextjs/cloudflare`, served globally on Cloudflare Workers with
+    custom domain binding (e.g. `hr.bscscoreview.com`).
+-   **API Edge Gateway:** `apps/hr-api` powered by Hono on Cloudflare Workers, handling
+    stateless authentication, multi-tenancy enforcement, and route handlers with
+    sub-50ms execution.
+-   **Database Acceleration:** **Cloudflare Hyperdrive** (`hr-db`, ID `d1468c75b19f437b994c969eb1fa2b41`),
+    pooling connections from edge nodes directly to regional Postgres, maintaining
+    active pool connections and accelerating SSL handshakes.
+-   **Serverless Database:** **Neon Lakebase PostgreSQL** (`aws-eu-west-2`, London),
+    providing copy-on-write branching for preview environments, scale-to-zero compute,
+    and Decoupled storage architecture.
+-   **Session & Token Storage:** **Cloudflare KV** (`SESSIONS`, ID `ab360608196c48c5b8958d5e6ce7d8ff`),
+    providing globally replicated, low-latency key-value storage for user sessions and state.
+-   **Async Task Processing:** **Cloudflare Queues** (`hr-jobs-queue`), delivering messages
+    to `apps/hr-jobs` with dead-letter queue routing (`hr-jobs-dlq`) and configurable retries.
+-   **Durable State Orchestration:** **Cloudflare Workflows** (`PerformanceReviewWorkflow`),
+    managing long-running cycle lifecycles, automated reminder steps, and approval gates.
+-   **Object & Evidence Storage:** Cloudflare R2 / S3-compatible Neon Object Storage for
+    performance evidence and document attachments with pre-signed URLs.
+-   **Observability:** Cloudflare Workers Observability and Neon Loki/Grafana telemetry.
 
-Start with a shared database and strict tenant isolation. Provide a path
-to dedicated database or dedicated deployment for customers with
-stronger isolation requirements.
+### 12.3 Portable / Customer-managed profile
 
-### 12.3 On-premises profile
+For customer-managed, air-gapped, or hybrid installations:
 
-Provide a supported Docker Compose deployment for initial
-customer-managed installations, with a documented path to orchestration
-platforms where needed.
-
-Expected components:
-
--   Nginx/reverse proxy and TLS.
--   Django/Gunicorn.
--   PostgreSQL.
--   Redis.
--   Worker process.
--   Scheduler process.
--   Local or customer-managed object storage.
--   Persistent volumes.
--   Backup jobs.
--   Health/readiness checks.
--   Offline or restricted-internet configuration.
-
-Support optional LDAP/Active Directory, local SMTP or approved mail
-relay, local storage and private AI provider configuration. The product
-must remain usable when optional external services are unavailable or
-disabled.
+-   **Schema Portability:** The canonical database schema (`db/schema.sql`) uses standard
+    ANSI PostgreSQL DDL and runs on any standard PostgreSQL 15+ engine.
+-   **Container Runtime:** Node.js / Docker container profile packaging Hono API and
+    Next.js frontend with direct `DATABASE_URL` connection strings when deployed outside
+    the Cloudflare edge.
+-   **Local Development:** `npm run dev` orchestrates all three apps simultaneously on
+    `localhost` (`8787` for API, `8788` for Jobs, and `3000` for Frontend), binding
+    to local or remote Neon instances cleanly.
 
 ### 12.4 Environment configuration
 
-Maintain a documented `.env.example` containing variable names and safe
-placeholders only. Never commit secrets.
+Wrangler configuration files (`wrangler.jsonc`) define infrastructure bindings declaratively:
 
-Configuration should cover:
+-   `apps/hr-api/wrangler.jsonc`: `HYPERDRIVE`, `SESSIONS` (KV), `JOBS_QUEUE`, `REVIEW_WORKFLOW`.
+-   `apps/hr-jobs/wrangler.jsonc`: `HYPERDRIVE`, `SESSIONS` (KV), queue consumers with DLQ, `REVIEW_WORKFLOW`.
+-   `apps/hr-frontend/wrangler.jsonc`: Static assets and OpenNext runtime configuration.
 
--   `DEBUG`, `SECRET_KEY`, allowed hosts and trusted origins.
--   `DATABASE_URL`.
--   Redis/cache/broker settings.
--   Storage backend and credentials.
--   Email backend.
--   LDAP settings.
--   Sentry/observability.
--   AI provider and feature switches.
--   JWT lifetimes and security settings.
--   Tenant/deployment mode.
--   Licence configuration.
--   Scheduler/worker configuration.
-
-Validate required production settings at startup. Fail safely with
-actionable messages; do not silently fall back to insecure defaults.
-
-### 12.5 Deployment reliability
-
--   Run containers as non-root.
--   Use pinned base images and dependency versions.
--   Use multi-stage builds.
--   Separate web, worker and scheduler processes.
--   Ensure only one scheduler leader runs a given schedule.
--   Use PostgreSQL for any multi-process deployment.
--   Use Redis for shared sessions/cache when multiple web workers or
-    instances run.
--   Provide `/health/`, `/ready/` and `/metrics/` with appropriate
-    access controls.
--   Health checks must distinguish process liveness from dependency
-    readiness.
--   Use graceful Gunicorn shutdown and worker timeouts.
--   Define static/media handling explicitly.
--   Persist database and uploaded-file volumes.
--   Document restore testing, not just backup creation.
-
-### 12.6 Migrations and release procedure
-
--   Run migrations as a controlled deployment step, not independently in
-    every web container at startup.
--   Back up before production migrations.
--   Use expand-and-contract migrations for changes requiring
-    compatibility across running versions.
--   Test migration from the current production schema and representative
-    data.
--   Provide rollback or forward-fix instructions.
--   Do not assume every data migration is reversible; document
-    irreversible operations.
--   Keep application and database migration versions visible in
-    deployment diagnostics.
+Secrets (such as database credentials or API keys) are managed via `wrangler secret put`
+or Cloudflare Dashboard environment variables—never committed to source control.
 
 ------------------------------------------------------------------------
 
-## 13. Background processing and scheduling
+## 13. Background processing, queues and workflows
 
-The current stack uses APScheduler with django-apscheduler. Retain it
-for scheduled triggers where suitable, but do not use it as the sole
-engine for large or long-running asynchronous work.
+Cloudflare Queues and Cloudflare Workflows replace legacy Celery/Redis infrastructure,
+eliminating container management, worker scaling bottlenecks, and broker maintenance.
 
-### 13.1 Scheduler responsibilities
+### 13.1 Cloudflare Queues architecture
 
--   Cycle reminders.
--   Due-date reminders.
--   Scheduled cycle state checks.
--   Recurring report triggers.
--   Housekeeping and retention jobs.
--   Periodic integration polling where required.
+The queue system is split into two coordinated Cloudflare Queues:
 
-### 13.2 Task queue recommendation
+-   **Main Processing Queue (`hr-jobs-queue`):**
+    - Handled by `apps/hr-jobs/src/index.ts`.
+    - Consumer settings: `max_batch_size: 10`, `max_batch_timeout: 5s`.
+    - Supported message types (`JobMessage` schema in `packages/shared`):
+      - `score_calculation`: Deterministic recalculation of employee/cycle scores.
+      - `kpi_created`: Real-time audit and notification broadcast.
+      - `notification_dispatch`: Email and in-app alert delivery.
+      - `report_generation`: Heavy PDF or CSV generation.
+-   **Dead Letter Queue (`hr-jobs-dlq`):**
+    - Automatically captures messages that exceed `max_retries: 3`.
+    - Prevents head-of-line blocking and poison pill messages.
+    - Inspectable for reconciliation and manual replay.
 
-Introduce Celery with Redis (or an equivalent supported task queue
-selected by engineering) for:
+### 13.2 Cloudflare Workflows (`PerformanceReviewWorkflow`)
 
--   Bulk imports and exports.
--   PDF generation.
--   Large report generation.
--   Evidence processing.
--   AI jobs.
--   Bulk notifications.
--   Large scorecard recalculation.
--   Integration synchronisation.
+Multi-week review cycles and approval chains cannot rely on transient queues.
+Cloudflare Workflows provide durable, distributed state machine execution:
 
-### 13.3 Job requirements
+-   Defined as `class PerformanceReviewWorkflow extends WorkflowEntrypoint`.
+-   Steps run with automatic retries and durable state persistence (`step.do()`).
+-   Supports multi-day pauses (`step.sleep()`) for review completion deadlines.
+-   Emits structured audit records to PostgreSQL upon completion of each lifecycle stage.
 
-Every asynchronous job must:
+### 13.3 Job safety & idempotency
 
--   Be idempotent where feasible.
--   Carry an explicit tenant context.
--   Record job type, reference, status and timestamps.
--   Have bounded retries and backoff.
--   Handle permanent failure and dead-letter/reconciliation.
--   Avoid logging sensitive document contents or personal data.
--   Be observable and support safe reprocessing.
--   Avoid duplicate notifications or duplicate approvals.
+Every queue job and workflow step must:
+
+-   Be idempotent via unique message keys.
+-   Enforce strict `company_id` tenant scoping.
+-   Maintain explicit status logging in PostgreSQL `audit_logs`.
+-   Execute within sub-request memory and CPU limits.
 
 Do not execute long-running work in HTTP request/response handlers.
 
@@ -1278,144 +1274,103 @@ where this materially reduces attack surface and image size.
 
 ## 15. Frontend and user experience
 
-### 15.1 Preserve the existing approach
+### 15.1 Edge-rendered frontend (`apps/hr-frontend`)
 
-Continue with Django templates and HTMX for partial updates, Alpine.js
-or `_hyperscript` for small behaviours, and existing jQuery only where
-legacy screens require it.
+Per ADR-0015, the frontend is built using **Next.js 15 App Router** and **React 19**,
+compiled into an edge worker bundle via **`@opennextjs/cloudflare`**:
 
-Do not introduce a full SPA solely for the new frameworks.
+-   **Edge Server Components:** Fetch data directly from `apps/hr-api` on the
+    Cloudflare edge network, eliminating client round-trips and rendering HTML instantly.
+-   **Static & Asset Optimization:** Next.js assets and client bundles are served
+    directly from Cloudflare's global CDN cache.
+-   **Responsive Layout:** Accessible, modern interface built with Tailwind CSS.
 
-### 15.2 Frontend requirements
+### 15.2 Role-appropriate views
 
-Provide role-appropriate experiences for:
+Provide tailored experiences for:
 
 -   Platform and company administrators.
 -   HR/performance administrators.
--   Managers.
+-   Managers and department leads.
 -   Employees.
--   Reviewers/calibrators.
--   Executives.
+-   Calibration committees.
+-   Executive leadership.
 
 ### 15.3 Required screens
 
-Common: - Performance dashboard. - Cycle list/detail/configuration. -
-Framework selection. - Participant/assignment management. - KPI
-library. - Objective/target review. - Evidence centre. - Assessment
-workspace. - Approval inbox. - Calibration workspace. - Development
-plan. - Reports and exports.
-
-MBO: - Objective agreement. - Target and measurement setup. - Progress
-update. - Self-assessment. - Supervisor assessment. - MBO summary.
-
-BSC: - Scorecard designer. - Perspective management. - Strategy map. -
-Strategic objective management. - KPI/measure assignment. -
-Cascading/alignment. - Scorecard results and drill-down.
-
-OKR: - Preserve existing screens and flows unless a specific approved
-change is required.
+-   **Performance Dashboard (`/`):** Real-time cycle statuses, company scorecards,
+    and employee review progress.
+-   **Cycle Management (`/cycles`):** Cycle creation, 10-stage lifecycle progression,
+    and framework selection (OKR, MBO, BSC).
+-   **Team Directory (`/employees`):** Department rosters, manager-employee reporting
+    chains, and review assignment statuses.
+-   **Objective & KPI Workspace (`/kpis`):** Measurable targets, actuals, weights,
+    and evidence attachments.
+-   **Assessment & Calibration Workspace (`/reviews`):** Dual employee self-assessment
+    and supervisor evaluation interfaces with deterministic score calculation.
+-   **Evidence Centre:** Document and proof submission interface backed by secure
+    pre-signed object storage.
 
 ### 15.4 Frontend engineering rules
 
--   Compile Tailwind CSS at build time; do not rely on browser Tailwind
-    CDN in production.
--   Use locally managed, pinned Chart.js assets rather than an unpinned
-    CDN dependency.
--   Use CSRF protection for state-changing browser requests.
--   Validate all values server-side.
--   Make HTMX actions respect the same authentication and permission
-    checks as full-page requests.
--   Provide loading, empty, error and success states.
--   Ensure accessible labels, keyboard navigation and sufficient
-    contrast.
--   Do not present AI proposals as approved results.
--   Do not use client-side values as authoritative scores.
--   Keep branding/theme customisation compatible with existing
-    `HorillaColorTheme` behaviour and migrations.
+-   Server components validate all data server-side; client credentials are never leaked.
+-   CSRF protection and secure HTTP-only cookies managed via Cloudflare KV sessions.
+-   Loading, empty, error, and success states for all asynchronous operations.
+-   Accessible labels, keyboard navigation, and WCAG AA contrast compliance.
+-   Authoritative scores are **always** computed server-side by deterministic algorithms;
+    never calculate or round scores in the browser.
 
 ------------------------------------------------------------------------
 
 ## 16. API design and integration
 
-### 16.1 API principles
+### 16.1 Hono REST API Worker (`apps/hr-api`)
 
-Use Django REST Framework and the existing API conventions. Maintain
-versioned endpoints and consistent serializers, permissions, pagination,
-filtering and error formats.
+The primary backend API is implemented in TypeScript using **Hono** on Cloudflare Workers,
+offering minimal memory footprint, zero cold starts, and full TypeScript type safety
+paired with Zod runtime validation.
 
-Illustrative common endpoints:
-
-``` text
-/api/v1/performance/cycles/
-/api/v1/performance/frameworks/
-/api/v1/performance/assignments/
-/api/v1/performance/objectives/
-/api/v1/performance/kpis/
-/api/v1/performance/targets/
-/api/v1/performance/evidence/
-/api/v1/performance/assessments/
-/api/v1/performance/approvals/
-/api/v1/performance/calibration/
-/api/v1/performance/reports/
-```
-
-Framework endpoints:
+#### Implemented Endpoints:
 
 ``` text
-/api/v1/okr/objectives/
-/api/v1/okr/key-results/
-/api/v1/okr/check-ins/
+# Health & Service Discovery
+GET  /                              # API service metadata & endpoint directory
+GET  /health                        # Edge liveness & readiness check
 
-/api/v1/mbo/objectives/
-/api/v1/mbo/agreements/
-/api/v1/mbo/targets/
-/api/v1/mbo/measurements/
-/api/v1/mbo/reviews/
+# KV Session & Auth
+POST /api/v1/session                # Store authenticated session in Cloudflare KV
+GET  /api/v1/session/:id            # Retrieve session metadata from KV
 
-/api/v1/bsc/scorecards/
-/api/v1/bsc/perspectives/
-/api/v1/bsc/strategy-maps/
-/api/v1/bsc/strategic-objectives/
-/api/v1/bsc/measures/
-/api/v1/bsc/initiatives/
+# Employees & Hierarchy (Tenant Scoped)
+GET  /api/v1/employees              # List employees for tenant
+POST /api/v1/employees              # Create employee record
+
+# Performance Cycles & Lifecycle
+GET  /api/v1/cycles                 # List cycles with status
+POST /api/v1/cycles                 # Create new cycle (validates dates & framework)
+PATCH /api/v1/cycles/:id/status     # 10-stage state machine transition
+
+# KPIs & Catalog
+GET  /api/v1/kpis                   # List KPI definitions
+POST /api/v1/kpis                   # Create KPI and enqueue broadcast job
+
+# Asynchronous Scoring & Evaluation
+POST /api/v1/score/calculate        # Enqueue deterministic scoring to hr-jobs-queue
 ```
 
-These are proposed route patterns. Reconcile with existing mobile/API
-contracts before changing routes.
+### 16.2 API security and validation
 
-### 16.2 API security and quality
-
--   Every endpoint must enforce authentication and object/tenant
-    permissions.
--   Never trust company IDs, employee IDs or owner IDs from the request
-    without validation.
--   Use serializers for input validation, not as the only business-rule
-    layer.
--   Use service functions for state-changing operations.
--   Use idempotency for operations that may be retried.
--   Document response codes and validation errors.
--   Apply pagination and bounded filters.
--   Avoid N+1 queries.
--   Rate-limit sensitive endpoints.
--   Add API contract tests.
--   Preserve backward compatibility or version breaking changes.
-
-### 16.3 Integrations
-
-Design integration boundaries for:
-
--   Existing Horilla employee data.
--   LDAP/Active Directory.
--   Email systems.
--   Mobile clients.
--   HRIS/payroll platforms.
--   BI/reporting tools.
--   External data sources for KPI actuals.
--   AI providers.
-
-Use explicit integration adapters and mapping tables. Do not allow
-external systems to bypass business validation or write certified scores
-directly.
+-   **Authentication and Multi-Tenancy Enforcement:** Every `/api/v1/*` endpoint
+    requires a valid signed bearer token; the tenant, user and role come from its
+    claims (section 11.1). A missing or invalid token returns HTTP 401 immediately.
+-   **Zod Runtime Validation:** Request bodies are strictly validated via `@hono/zod-validator`
+    and centralized Zod schemas in `@hr-platform/shared`. Invalid inputs return structured
+    JSON error messages before database queries execute.
+-   **Hyperdrive Connection Pooling:** All database interactions use `c.env.HYPERDRIVE.connectionString`
+    with `postgres.js`, pooling connections across global edge locations.
+-   **Asynchronous Queue Offloading:** Heavy tasks (such as scorecard re-calculation
+    or notification delivery) are offloaded to `c.env.JOBS_QUEUE.send(...)` and handled
+    out-of-band by `apps/hr-jobs`.
 
 ------------------------------------------------------------------------
 
@@ -1851,56 +1806,75 @@ deviations in an Architecture Decision Record (ADR).
 Create an ADR for decisions that materially affect data structures,
 deployment, security, APIs or scoring.
 
-Each ADR should include:
+Key accepted ADRs:
 
--   Number and title.
--   Status: proposed, accepted, superseded or rejected.
--   Context/problem.
--   Decision.
--   Alternatives considered.
--   Consequences and risks.
--   Migration/compatibility implications.
--   Approver and date.
-
-Initial ADRs required:
-
-1.  Modular Django monolith and domain boundaries.
-2.  Framework selection per performance cycle.
-3.  Shared KPI catalogue and versioning.
-4.  Scoring adapter and result contract.
-5.  Tenant isolation strategy.
-6.  Cloud/on-prem deployment profiles.
-7.  Background task queue.
-8.  Evidence storage and document security.
-9.  AI provider and governance model.
-10. PDF rendering replacement.
+1.  **ADR-0001:** Initial baseline and scoping principles.
+2.  **ADR-0002:** Framework selection per performance cycle.
+3.  **ADR-0003:** Shared KPI catalogue and versioning.
+4.  **ADR-0004:** Scoring adapter and deterministic contract.
+5.  **ADR-0005:** Multi-tenancy isolation boundary.
+6.  **ADR-0006:** *(Superseded by ADR-0015)* Cloud SaaS hosting on Docker/Gunicorn.
+7.  **ADR-0007:** *(Superseded by ADR-0015)* Celery/Redis background task queue.
+8.  **ADR-0008:** Evidence storage and document security.
+9.  **ADR-0009:** AI provider and governance model.
+10. **ADR-0010:** PDF rendering replacement.
+11. **ADR-0015:** **Cloudflare SaaS Edge Architecture** *(Accepted)*
+    - Monorepo structure (`hr-platform/`): Next.js 15 App Router, Hono REST API Worker.
+    - Cloudflare Hyperdrive connection pooling to Neon Lakebase PostgreSQL.
+    - Cloudflare Queues (`hr-jobs-queue`, `hr-jobs-dlq`) and Cloudflare Workflows.
+    - Cloudflare KV (`SESSIONS`) for globally distributed session management.
 
 ------------------------------------------------------------------------
 
 ## 27. Developer execution instructions
 
-The engineering team must follow this order:
+The engineering team must follow this execution lifecycle:
 
-1.  Read this BUILD.md and the current repository contribution
-    instructions.
-2.  Inspect the codebase and produce the Phase 0 baseline assessment.
-3.  Run existing tests and record the baseline. Do not conceal known
-    failures.
-4.  Map existing OKR and Horilla models before proposing schema changes.
-5.  Present the proposed model relationship diagram and migration plan
-    for review.
-6.  Agree the common domain contracts and framework boundaries.
-7.  Implement the smallest vertical slice of the common engine.
-8.  Add tests and demonstrate that existing OKR behaviour remains
-    intact.
-9.  Implement MBO as a complete vertical slice.
-10. Implement BSC as a complete vertical slice.
-11. Add unified reporting, calibration and AI capabilities in controlled
-    increments.
-12. Validate cloud and on-premises deployment profiles.
-13. Update documentation and release notes with every meaningful change.
+### 27.1 Cloudflare SaaS Monorepo Workflow (`hr-platform/`)
 
-### 27.1 Work management
+1.  **Workspace Installation:**
+    ```bash
+    cd hr-platform
+    npm install
+    ```
+2.  **Typecheck All Packages:**
+    ```bash
+    npm run typecheck       # Runs tsc -b across shared, api, jobs, frontend
+    ```
+3.  **Start Local Development:**
+    ```bash
+    npm run dev             # Starts concurrently: API (:8787), Jobs (:8788), Frontend (:3000)
+    ```
+4.  **Database Migration & Schema Updates:**
+    - Canonical DDL is in [`hr-platform/db/schema.sql`](file:///c:/Users/paa.barnes/Downloads/07%20Deployments/ScoRePerf/hr-platform/db/schema.sql).
+    - Deploy changes to Neon Postgres:
+      ```bash
+      neon psql --file db/schema.sql
+      ```
+5.  **Deploy to Cloudflare:**
+    ```bash
+    npm run deploy:api      # Deploys hr-api Worker
+    npm run deploy:jobs     # Deploys hr-jobs Queue consumer & Workflows
+    npm run deploy:frontend # Builds OpenNext and deploys Next.js to Cloudflare
+    ```
+6.  **Custom Domain Attachment:**
+    Attach custom domains (e.g. `hr.bscscoreview.com`) to the deployed frontend worker
+    via the Cloudflare API or Dashboard.
+
+### 27.2 Domain Reference Engine (`scoreview_core/`)
+
+The Python/Django reference engine in [`scoreview_core/`](file:///c:/Users/paa.barnes/Downloads/07%20Deployments/ScoRePerf/scoreview_core/)
+serves as the mathematical gold standard for scoring formulas, 10-stage lifecycle transitions,
+and regression test verification:
+
+```bash
+python manage.py test scoreview_core.tests
+```
+
+All 15 unit tests and 41 OKR contract tests must pass with zero regressions whenever
+scoring algorithms are updated.
+
+### 27.3 Work management
 
 Break work into small tickets with:
 

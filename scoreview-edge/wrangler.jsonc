@@ -1,0 +1,57 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "scoreview-edge",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // External Managed PostgreSQL via Cloudflare Hyperdrive
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "placeholder-hyperdrive-id",
+      "localConnectionString": "postgresql://postgres:postgres@localhost:5432/scoreview_db"
+    }
+  ],
+
+  // Cloudflare Queues for async progress recalculation and audit fan-out
+  "queues": {
+    "producers": [
+      {
+        "queue": "scoreview-progress-queue",
+        "binding": "PROGRESS_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "scoreview-progress-queue",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5
+      }
+    ]
+  },
+
+  // Cloudflare Workflows for long-running cycle lifecycle orchestration
+  "workflows": [
+    {
+      "name": "performance-cycle-workflow",
+      "binding": "CYCLE_WORKFLOW",
+      "class_name": "PerformanceCycleWorkflow"
+    }
+  ],
+
+  // Workers KV for zero-latency tenant configuration & branding cache
+  "kv_namespaces": [
+    {
+      "binding": "CONFIG_KV",
+      "id": "placeholder-kv-id"
+    }
+  ],
+
+  // Environment variables
+  "vars": {
+    "ENVIRONMENT": "development",
+    "APP_NAME": "ScoReview Performance Edge"
+  }
+}
+

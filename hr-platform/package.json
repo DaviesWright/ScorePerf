@@ -1,0 +1,26 @@
+{
+  "name": "hr-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare SaaS HR & Performance Platform Monorepo",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"api,jobs,frontend\" -c \"blue,yellow,green\" \"npm run dev:api\" \"npm run dev:jobs\" \"npm run dev:frontend\"",
+    "dev:api": "npm run dev --workspace=apps/hr-api",
+    "dev:jobs": "npm run dev --workspace=apps/hr-jobs",
+    "dev:frontend": "npm run dev --workspace=apps/hr-frontend",
+    "deploy": "npm run deploy:api && npm run deploy:jobs && npm run deploy:frontend",
+    "deploy:api": "npm run deploy --workspace=apps/hr-api",
+    "deploy:jobs": "npm run deploy --workspace=apps/hr-jobs",
+    "deploy:frontend": "npm run deploy --workspace=apps/hr-frontend",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.157.0"
+  }
+}

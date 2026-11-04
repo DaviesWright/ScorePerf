@@ -1,0 +1,45 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "hr-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-03",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "d1468c75b19f437b994c969eb1fa2b41",
+      "localConnectionString": "postgresql://neondb_owner:npg_yEVhg3OA9qKI@ep-steep-bonus-zak8wuuy.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require"
+    }
+  ],
+
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "ab360608196c48c5b8958d5e6ce7d8ff"
+    }
+  ],
+
+  "queues": {
+    "producers": [
+      {
+        "queue": "hr-jobs-queue",
+        "binding": "JOBS_QUEUE"
+      }
+    ]
+  },
+
+  "workflows": [
+    {
+      "name": "performance-review-workflow",
+      "binding": "REVIEW_WORKFLOW",
+      "class_name": "PerformanceReviewWorkflow"
+    }
+  ]
+}
+
