@@ -1362,6 +1362,30 @@ POST /api/v1/kpis                   # Create KPI and enqueue broadcast job
 POST /api/v1/score/calculate        # Enqueue deterministic scoring to hr-jobs-queue
 ```
 
+### 16.1a Stripped-down edition (Leave and Performance only)
+
+Design: `docs/STREAMLINED-LEAVE-PERFORMANCE.md`. One module registry and one frame setting decide what ships;
+nothing is deleted, so the full app returns by configuration.
+
+-   **Module registry** (`apps/hr-frontend/src/config/modules.ts`): `NEXT_PUBLIC_ENABLED_MODULES` lists view keys
+    or the aliases `leave` and `performance`, or `all`; default `leave,performance`. `NEXT_PUBLIC_ENABLED_FEATURES`
+    (`ai_assistant`, `payslip`, or `all`) defaults to none. Both are read at build time. The sidebar, the shell's
+    guarded view setter, the command palette, the quick-create menu and the welcome brief all consult it.
+    `apps/hr-frontend/test/modules.test.ts` fails if a view exists in `ModuleViewKey` but not in the registry or the shell.
+-   **Frame:** `NEXT_PUBLIC_SHELL` is `plain` (default: `PlainShell.tsx`, header, text menu, no decoration) or `full`
+    (the original decorated frame).
+-   **Leave:** simplified screens in `LeaveSimple.tsx` (my leave, request, approvals, team calendar) on
+    `/api/v1/leave/me|requests|requests/:id/cancel|approvals|requests/:id/decision|calendar`. Rules (working
+    days Mon to Fri minus holidays, overlap, balance, who may cancel or decide) live in
+    `packages/shared/src/leave.ts` and are used by both the API and the in-memory demo. Balance is entitlement minus
+    approved minus pending, computed from requests. The browser reaches the API through a same-origin proxy
+    (`/api/leave/*`) that attaches the httpOnly session token. Known gaps: no reporting line, rejection reasons not
+    stored, approvals not in the audit trail.
+-   **Performance:** keeps the original `PerformanceManagementView` inside the plain shell (decision 2026-11-05).
+    A simplified version was started and reverted.
+-   **Sign-in:** the root page requires a session and redirects to `/login` (magic link, section 11.1);
+    `NEXT_PUBLIC_DEMO_LOGIN=1` restores the persona picker for demos.
+
 ### 16.2 API security and validation
 
 -   **Authentication and Multi-Tenancy Enforcement:** Every `/api/v1/*` endpoint
