@@ -17,6 +17,8 @@ import {
 import { authenticate, type TenantContext } from "./auth";
 import { createAuthRoutes } from "./auth-routes";
 import type { MagicLinkDeps } from "./magic-link";
+import { z } from "zod";
+import { canCancel, canDecide, checkDateShape, isDecider, remainingDays, validateRequest } from "@hr-platform/shared";
 
 export interface Env {
   HYPERDRIVE: {
@@ -117,6 +119,11 @@ app.get("/api/v1/session/:id", async (c) => {
 // RBAC for protected routes (runs after `authenticate`, which is mounted above the first /api/v1 route).
 app.use("/api/v1/*", async (c, next) => {
   const { role } = c.get("tenant");
+
+  // Creating or changing appraisal cycles, KPIs and scores is an HR action. (Reads stay open to every signed-in role.)
+  if (c.req.method !== "GET" && /^\/api\/v1\/(cycles|kpis|scores)(\/|$)/.test(c.req.path) && role !== "hr_admin" && role !== "hr_director") {
+    return c.json({ error: "Forbidden", message: "Only HR roles can change appraisal cycles, KPIs and scores." }, 403);
+  }
 
   // Strict RBAC: No one can see payroll/compensation unless authorized
   if (c.req.path.startsWith("/api/v1/payroll")) {
@@ -506,17 +513,202 @@ app.post("/api/v1/scores/calculate", zValidator("json", CalculateScoreSchema), a
 
 // 5. Leave Management
 app.get("/api/v1/leaves", async (c) => {
-  const { companyId } = c.get("tenant");
+  const { companyId, userId, role } = c.get("tenant");
   const sql = getSql(c.env);
+  // Approver roles see the whole company's requests; everyone else sees only their own (reasons can be private).
+  const onlyMine = !isDecider(role);
   const leaves = await sql`
     SELECT lr.*, lt.name as leave_type_name, e.first_name, e.last_name
     FROM leave_requests lr
     JOIN leave_types lt ON lr.leave_type_id = lt.id
     JOIN employees e ON lr.employee_id = e.id
-    WHERE lr.company_id = ${companyId}
+    WHERE lr.company_id = ${companyId} AND (${!onlyMine} OR lr.employee_id = ${userId})
     ORDER BY lr.created_at DESC LIMIT 50
   `;
   return c.json({ count: leaves.length, results: leaves });
+});
+
+// ---- Leave: own requests, balances, approvals (rules in packages/shared/src/leave.ts) ----
+const LeaveRequestBody = z.object({
+  leaveTypeId: z.number().int().positive(),
+  startDate: z.string().max(10),
+  endDate: z.string().max(10),
+  reason: z.string().max(500).default(""),
+});
+const LeaveDecisionBody = z.object({ decision: z.enum(["approve", "reject"]) });
+
+const toLeaveRequest = (r: Record<string, unknown>) => ({
+  id: Number(r.id),
+  employeeId: Number(r.employee_id),
+  employeeName: r.first_name ? `${r.first_name} ${r.last_name}` : undefined,
+  department: r.department ? String(r.department) : undefined,
+  leaveTypeId: Number(r.leave_type_id),
+  leaveType: String(r.leave_type_name),
+  startDate: String(r.start_date),
+  endDate: String(r.end_date),
+  days: Number(r.requested_days),
+  status: String(r.status),
+  reason: String(r.reason ?? ""),
+  decidedBy: r.approved_by ? Number(r.approved_by) : null,
+});
+
+async function leaveBalances(sql: ReturnType<typeof getSql>, companyId: number, userId: number, year: number) {
+  const rows = await sql`
+    SELECT lt.id, lt.name, COALESCE(a.total_days, lt.default_days)::float AS total,
+      COALESCE(SUM(CASE WHEN r.status = 'approved' THEN r.requested_days END), 0)::float AS used,
+      COALESCE(SUM(CASE WHEN r.status = 'pending' THEN r.requested_days END), 0)::float AS pending
+    FROM leave_types lt
+    LEFT JOIN leave_allocations a
+      ON a.leave_type_id = lt.id AND a.employee_id = ${userId} AND a.company_id = ${companyId} AND a.year = ${year}
+    LEFT JOIN leave_requests r
+      ON r.leave_type_id = lt.id AND r.employee_id = ${userId} AND r.company_id = ${companyId}
+      AND r.status IN ('approved', 'pending') AND EXTRACT(YEAR FROM r.start_date) = ${year}
+    WHERE lt.company_id = ${companyId} AND lt.is_active
+    GROUP BY lt.id, lt.name, a.total_days, lt.default_days
+    ORDER BY lt.id
+  `;
+  return rows.map((r) => ({
+    leaveTypeId: Number(r.id),
+    name: String(r.name),
+    total: Number(r.total),
+    used: Number(r.used),
+    pending: Number(r.pending),
+    remaining: remainingDays(Number(r.total), Number(r.used), Number(r.pending)),
+  }));
+}
+
+app.get("/api/v1/leave/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const year = new Date().getUTCFullYear();
+  const [balances, requests] = await Promise.all([
+    leaveBalances(sql, companyId, userId, year),
+    sql`
+      SELECT lr.id, lr.employee_id, lr.leave_type_id, lt.name AS leave_type_name, lr.start_date::text AS start_date,
+        lr.end_date::text AS end_date, lr.requested_days, lr.status, lr.reason, lr.approved_by
+      FROM leave_requests lr
+      JOIN leave_types lt ON lt.id = lr.leave_type_id
+      WHERE lr.company_id = ${companyId} AND lr.employee_id = ${userId}
+      ORDER BY lr.start_date DESC LIMIT 100
+    `,
+  ]);
+  return c.json({ year, balances, requests: requests.map(toLeaveRequest) });
+});
+
+app.post("/api/v1/leave/requests", zValidator("json", LeaveRequestBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  // Dates are validated before any date-typed SQL sees them: a malformed value would otherwise fail in Postgres.
+  const shapeError = checkDateShape(body.startDate, body.endDate);
+  if (shapeError) return c.json({ error: shapeError }, 422);
+
+  const year = Number(body.startDate.slice(0, 4));
+  const balances = await leaveBalances(sql, companyId, userId, year);
+  const balance = balances.find((b) => b.leaveTypeId === body.leaveTypeId);
+  if (!balance) return c.json({ error: "Unknown leave type." }, 400);
+
+  const [holidayRows, overlapRows] = await Promise.all([
+    sql`SELECT holiday_date::text AS d FROM company_holidays WHERE company_id = ${companyId}`,
+    sql`
+      SELECT 1 FROM leave_requests
+      WHERE company_id = ${companyId} AND employee_id = ${userId} AND status IN ('approved', 'pending')
+        AND start_date <= ${body.endDate}::date AND end_date >= ${body.startDate}::date
+      LIMIT 1
+    `,
+  ]);
+
+  const result = validateRequest(body, {
+    today: new Date().toISOString().slice(0, 10),
+    holidays: new Set(holidayRows.map((r) => String(r.d))),
+    remaining: balance.remaining,
+    overlaps: overlapRows.length > 0,
+  });
+  if (!result.ok) return c.json({ error: result.error }, 422);
+
+  const inserted = await sql`
+    INSERT INTO leave_requests (company_id, employee_id, leave_type_id, start_date, end_date, requested_days, status, reason)
+    VALUES (${companyId}, ${userId}, ${body.leaveTypeId}, ${body.startDate}, ${body.endDate}, ${result.days}, 'pending', ${body.reason})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id), days: result.days, status: "pending" }, 201);
+});
+
+async function loadLeaveRequest(sql: ReturnType<typeof getSql>, companyId: number, id: number) {
+  const rows = await sql`SELECT id, employee_id, status FROM leave_requests WHERE id = ${id} AND company_id = ${companyId}`;
+  return rows[0] ? { id: Number(rows[0].id), employeeId: Number(rows[0].employee_id), status: String(rows[0].status) } : null;
+}
+
+app.post("/api/v1/leave/requests/:id/cancel", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const request = await loadLeaveRequest(sql, companyId, id);
+  if (!request) return c.json({ error: "Not found" }, 404);
+  if (request.employeeId !== userId) return c.json({ error: "Forbidden" }, 403);
+  if (!canCancel({ userId, role }, request)) return c.json({ error: "Only pending requests can be cancelled." }, 409);
+  const updated = await sql`
+    UPDATE leave_requests SET status = 'cancelled', updated_at = NOW()
+    WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status = 'pending' RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "Only pending requests can be cancelled." }, 409);
+  return c.json({ id, status: "cancelled" });
+});
+
+app.get("/api/v1/leave/approvals", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT lr.id, lr.employee_id, lr.leave_type_id, lt.name AS leave_type_name, lr.start_date::text AS start_date,
+      lr.end_date::text AS end_date, lr.requested_days, lr.status, lr.reason, lr.approved_by,
+      e.first_name, e.last_name, d.name AS department
+    FROM leave_requests lr
+    JOIN leave_types lt ON lt.id = lr.leave_type_id
+    JOIN employees e ON e.id = lr.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE lr.company_id = ${companyId} AND lr.status = 'pending' AND lr.employee_id <> ${userId}
+    ORDER BY lr.start_date ASC LIMIT 200
+  `;
+  return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
+});
+
+app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecisionBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const request = await loadLeaveRequest(sql, companyId, id);
+  if (!request) return c.json({ error: "Not found" }, 404);
+  if (request.employeeId === userId) return c.json({ error: "You cannot decide your own request." }, 403);
+  if (!canDecide({ userId, role }, request)) return c.json({ error: "This request is no longer pending." }, 409);
+  const status = c.req.valid("json").decision === "approve" ? "approved" : "rejected";
+  const updated = await sql`
+    UPDATE leave_requests SET status = ${status}, approved_by = ${userId}, updated_at = NOW()
+    WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "This request is no longer pending." }, 409);
+  return c.json({ id, status });
+});
+
+app.get("/api/v1/leave/calendar", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT lr.id, lr.employee_id, lr.leave_type_id, lt.name AS leave_type_name, lr.start_date::text AS start_date,
+      lr.end_date::text AS end_date, lr.requested_days, lr.status, lr.reason, lr.approved_by,
+      e.first_name, e.last_name, d.name AS department
+    FROM leave_requests lr
+    JOIN leave_types lt ON lt.id = lr.leave_type_id
+    JOIN employees e ON e.id = lr.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE lr.company_id = ${companyId} AND lr.status = 'approved' AND lr.end_date >= CURRENT_DATE
+    ORDER BY lr.start_date ASC LIMIT 200
+  `;
+  return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
 });
 
 // 6. Attendance & Time Tracking

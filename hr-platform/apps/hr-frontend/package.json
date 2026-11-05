@@ -9,7 +9,8 @@
     "build:worker": "opennextjs-cloudflare build",
     "deploy": "opennextjs-cloudflare deploy",
     "deploy:staging": "npm run build:worker && node scripts/deploy-pages-staging.cjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ../hr-api/scripts/register-ts-resolver.mjs --test test/"
   },
   "dependencies": {
     "@hr-platform/shared": "*",

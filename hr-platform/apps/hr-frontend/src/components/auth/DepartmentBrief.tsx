@@ -4,6 +4,7 @@ import { Icons } from "../../design-system/Icons";
 import { Badge } from "../../design-system/Badge";
 import type { AuthenticatedUser } from "./LoginPage";
 import type { ModuleViewKey } from "../shell/AppSidebar";
+import { isViewEnabled } from "../../config/modules";
 import { DEMO_ATTENTION, DEMO_EVENTS, DEMO_LEAVES, DEMO_STAFF, PROFILE_MISSING } from "../../data/demoData";
 
 interface DepartmentBriefProps {
@@ -65,10 +66,10 @@ export const DepartmentBrief: React.FC<DepartmentBriefProps> = ({ user, hasPhoto
       return !!e.departments?.includes(user.department) || (!!me && !!e.sites?.includes(me.site));
     }).sort((a, b) => a.offsetDays - b.offsetDays || a.time.localeCompare(b.time));
 
-    const attention: { text: string; view?: ModuleViewKey }[] = DEMO_ATTENTION.filter((a) => a.personas.includes(user.persona));
+    const attention: { text: string; view?: ModuleViewKey }[] = DEMO_ATTENTION.filter((a) => a.personas.includes(user.persona) && (!a.view || isViewEnabled(a.view)));
     if (!hasPhoto) attention.push({ text: "Add your professional headshot so colleagues recognise you." });
     const missing = (PROFILE_MISSING[user.id] ?? []).filter((m) => m !== "Photo");
-    if (missing.length > 0) attention.push({ text: `Your profile is missing: ${missing.join(", ")}.`, view: "self_service" });
+    if (missing.length > 0) attention.push({ text: `Your profile is missing: ${missing.join(", ")}.`, ...(isViewEnabled("self_service") ? { view: "self_service" as const } : {}) });
 
     return { base, companyWide, people: colleagues.length + 1, away, events, attention: attention.slice(0, 5) };
   }, [user.id, user.department, user.persona, hasPhoto]);

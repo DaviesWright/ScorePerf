@@ -24,6 +24,17 @@ test("every SESSIONS access in index.ts uses the sess: prefix", () => {
   }
 });
 
+test("writes to cycles, KPIs and scores are limited to HR roles in the RBAC middleware", () => {
+  assert.match(src, /\(cycles\|kpis\|scores\)/);
+  assert.match(src, /role !== "hr_admin" && role !== "hr_director"/);
+});
+
+test("GET /api/v1/leaves limits non-approvers to their own requests", () => {
+  const route = /app\.get\("\/api\/v1\/leaves"[\s\S]*?\n\}\);/.exec(src)?.[0] ?? "";
+  assert.match(route, /isDecider\(role\)/);
+  assert.match(route, /lr\.employee_id = \$\{userId\}/);
+});
+
 test("sign-in routes are mounted outside /api/v1", () => {
   assert.match(src, /app\.route\(\s*"\/auth"/);
 });

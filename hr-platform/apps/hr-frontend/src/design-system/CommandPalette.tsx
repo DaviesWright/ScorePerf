@@ -5,6 +5,7 @@ import { colors, typography, radii, shadows } from "./tokens";
 import { Icons } from "./Icons";
 import { ModuleViewKey } from "../components/shell/AppSidebar";
 import { EmployeeRecord } from "../components/modules/WorkforceDirectoryView";
+import { FeatureKey, isFeatureEnabled, isViewEnabled } from "../config/modules";
 
 export interface CommandItem {
   id: string;
@@ -14,6 +15,10 @@ export interface CommandItem {
   icon: React.ReactNode;
   keywords: string[];
   onSelect: () => void;
+  /** The module this entry opens; hidden when that module is disabled. */
+  view?: ModuleViewKey;
+  /** The optional feature this entry needs; hidden when it is off. */
+  feature?: FeatureKey;
   badge?: string;
   badgeVariant?: "emerald" | "indigo" | "peach";
 }
@@ -72,6 +77,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const baseActions: CommandItem[] = [
     {
       id: "action_payslip",
+      feature: "payslip",
       title: "View Latest Payslip · November 2026 (GH₵28,450.00 Net)",
       subtitle: "Instant payslip inspection & certified GRA / SSNIT breakdown",
       category: "Direct Action",
@@ -86,6 +92,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_omni_agent",
+      feature: "ai_assistant",
       title: "Launch Dede AI Copilot (⌘J)",
       subtitle: "Zero-UI conversational assistant, leave drafting & OCR document parser",
       category: "Direct Action",
@@ -100,6 +107,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_ai_report_builder",
+      view: "reports_analytics",
       title: "AI Report Builder & 60-Report Catalog",
       subtitle: "Instant natural language query e.g. 'Turnover vs last quarter' or full HR catalog",
       category: "Direct Action",
@@ -114,6 +122,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_employee_id_settings",
+      view: "employee_settings",
       title: "Staff ID Auto-Generator & Employee Settings",
       subtitle: "Configure DW-2026-0046 numbering, zero-padding, PFM pension trustees, & contracts",
       category: "Direct Action",
@@ -128,6 +137,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_request_leave",
+      view: "time_and_leave",
       title: "Request Annual Leave (Instant Draft)",
       subtitle: "Book time off, check allowance balance (18 days remaining)",
       category: "Direct Action",
@@ -143,6 +153,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_vibe_check",
+      view: "command_centre",
       title: "Record 10-Second Voice Vibe Check",
       subtitle: "Anonymous pulse feedback with AI waveform sentiment classification",
       category: "Direct Action",
@@ -157,6 +168,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_rewards_wallet",
+      view: "admin_nerve_center",
       title: "Total Rewards Wallet & Apple Card Stack",
       subtitle: "View Base (GH₵145k), Bonus (GH₵25k), Equity (GH₵60k), Healthcare (GH₵3.5k)",
       category: "Personal",
@@ -171,6 +183,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_checkin_progress",
+      view: "performance_pms",
       title: "Supervisor & Employee Check-in (1-on-1 Review)",
       subtitle: "Log goal progression, obstacles, action items and bilateral signoff",
       category: "Direct Action",
@@ -185,6 +198,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_career_gigs",
+      view: "skills_marketplace",
       title: "Browse Internal Gig Board & Skills Navigator",
       subtitle: "Explore high-impact projects matched to verified competencies",
       category: "Direct Action",
@@ -199,6 +213,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "action_continuous_win",
+      view: "skills_marketplace",
       title: "Log Continuous Performance Win",
       subtitle: "Record a weekly accomplishment for bias-free annual synthesis",
       category: "Direct Action",
@@ -214,6 +229,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     // Module Navigation Items
     {
       id: "nav_self_service",
+      view: "self_service",
       title: "My Self-Service & Personal Workspace (ESS)",
       subtitle: "Personal profile, assigned laptop, holiday balance & quick payslip",
       category: "Navigation",
@@ -226,6 +242,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_command_centre",
+      view: "command_centre",
       title: "Workforce Command Centre",
       subtitle: "AI Daily Brief, company vibe pulse & executive KPI oversight",
       category: "Navigation",
@@ -238,6 +255,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_reports_analytics",
+      view: "reports_analytics",
       title: "Strategic Dashboards & 60 HR Reports Catalog",
       subtitle: "Executive, Manager & Compliance packs with 1-click CSV/JSON export & AI diagnosis",
       category: "Navigation",
@@ -252,6 +270,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_workforce_directory",
+      view: "workforce_directory",
       title: "Employee Directory & Workforce Roster",
       subtitle: "45 active staff, departments, management hierarchies & profiles",
       category: "Navigation",
@@ -265,6 +284,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_performance_pms",
+      view: "performance_pms",
       title: "Performance Management (OKR / MBO / BSC)",
       subtitle: "Strict single-framework appraisal cycles & competency reviews",
       category: "Navigation",
@@ -277,6 +297,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_hardware_fleet",
+      view: "asset_management",
       title: "Hardware and Fleet",
       subtitle: "Vehicles, laptops and mobile phones, with assignments",
       category: "Navigation",
@@ -289,6 +310,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_time_leave",
+      view: "time_and_leave",
       title: "Time & Leave Approvals",
       subtitle: "Pending leave requests, team calendar & shift scheduling",
       category: "Navigation",
@@ -301,6 +323,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_lifecycle_portals",
+      view: "lifecycle_portals",
       title: "Lifecycle Portals (Pre-Boarding & Offboarding)",
       subtitle: "Candidate day -14 portal & zero-leak exit flight plan",
       category: "Navigation",
@@ -313,6 +336,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_helpdesk",
+      view: "helpdesk",
       title: "IT Support Helpdesk & Service Desk",
       subtitle: "Incident triage, hardware provisioning & SLA tracking",
       category: "Navigation",
@@ -325,6 +349,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_projects",
+      view: "projects",
       title: "Client Engagements",
       subtitle: "Client project portfolio and delivery progress",
       category: "Navigation",
@@ -337,6 +362,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_disciplinary",
+      view: "disciplinary",
       title: "Disciplinary Management",
       subtitle: "Cases, hearings and case reviews",
       category: "Navigation",
@@ -349,6 +375,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_policies_handbook",
+      view: "policies_handbook",
       title: "Policies & Handbooks",
       subtitle: "Add policies and handbooks, track profile completeness",
       category: "Navigation",
@@ -361,6 +388,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_employee_settings",
+      view: "employee_settings",
       title: "Employee Settings & Policy Governance",
       subtitle: "13 sub-modules: ID Auto-generation, Documents, Contracts, PFM, Dynamic Fields, Multi-Subsidiary",
       category: "Navigation",
@@ -375,6 +403,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_approval_workflows",
+      view: "approval_workflows",
       title: "Approval Workflows & Maker-Checker Engine",
       subtitle: "Multi-tier approval chains, reporting line & admin role routing, comment controls",
       category: "Navigation",
@@ -389,6 +418,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: "nav_governance",
+      view: "governance_import",
       title: "Data Governance & Architecture Audit",
       subtitle: "Master data sync, database schema integrity & regulatory audit",
       category: "Navigation",
@@ -429,6 +459,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   // Filtering logic
   const filteredActions = baseActions.filter((item) => {
+    if (item.view && !isViewEnabled(item.view)) return false;
+    if (item.feature && !isFeatureEnabled(item.feature)) return false;
     if (!query.trim()) return true;
     const q = query.toLowerCase().trim();
     if (item.title.toLowerCase().includes(q)) return true;

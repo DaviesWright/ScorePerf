@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { colors, typography, radii } from "../../design-system/tokens";
 import { Icons } from "../../design-system/Icons";
 import { UserAvatar } from "../common/UserAvatar";
+import { isViewEnabled } from "../../config/modules";
 
 export type ModuleViewKey =
   | "self_service"
@@ -237,6 +238,11 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       ],
     },
   ];
+
+  // Disabled modules are hidden (not removed); groups left empty disappear with them.
+  const visibleNavSections = navSections
+    .map((section) => ({ ...section, items: section.items.filter((item) => isViewEnabled(item.key)) }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <div
@@ -519,7 +525,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
         {/* Navigation Sections */}
         <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
-          {navSections.map((section, sIdx) => (
+          {visibleNavSections.map((section, sIdx) => (
             <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
               {!isEffectiveCollapsed && (
                 <div
