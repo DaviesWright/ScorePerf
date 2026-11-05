@@ -1383,6 +1383,18 @@ nothing is deleted, so the full app returns by configuration.
     stored, approvals not in the audit trail.
 -   **Performance:** keeps the original `PerformanceManagementView` inside the plain shell (decision 2026-11-05).
     A simplified version was started and reverted.
+-   **Objectives (goal setting and approval):** `ObjectivesSimple.tsx` (my objectives, approvals, HR amendments) on
+    `/api/v1/objectives/*`, through the proxy `/api/objectives/*`. Employees draft objectives (title, weight, target,
+    metric, at most 15 per cycle) while the cycle is `configured`, `approved` or `active`; weights must total 100% to
+    submit; a line manager, HR admin or HR director approves or returns the whole set (never their own). Approval
+    stamps `approved_by`, `approved_at` and `locked_at`. **The lock is enforced twice:** every API write guards on
+    status in its `WHERE` clause, and the trigger `trg_objective_lock` refuses UPDATE or DELETE of a locked row
+    in the database itself (progress is the one field that stays editable). The only change path is HR
+    `POST /objectives/:id/amend`: one transaction sets `app.amend = 'on'`, applies the change, re-checks that the
+    owner's weights still total 100% and writes `objective_amendments` (who, why, before, after). HR cannot amend their
+    own objectives or any objective once the cycle is `certified`, `published` or `closed`. Rules live in
+    `packages/shared/src/objectives.ts`; schema in `db/migrations/0002_objective_approval_lock.sql` (mirrored in
+    `db/schema.sql`). Known gaps: no reporting line (any decider may decide any set), return reasons not stored.
 -   **Sign-in:** the root page requires a session and redirects to `/login` (magic link, section 11.1);
     `NEXT_PUBLIC_DEMO_LOGIN=1` restores the persona picker for demos.
 

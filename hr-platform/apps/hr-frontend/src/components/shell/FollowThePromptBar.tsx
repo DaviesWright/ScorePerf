@@ -265,6 +265,11 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "approval_workflows",
     nextSuggestedLabel: "Review Approval Workflows →",
   },
+  objectives: {
+    whatToDoHere: "Add your objectives with weights that total 100%, then submit them for approval. Approved objectives are locked.",
+    nextSuggestedView: "performance_pms",
+    nextSuggestedLabel: "Open Performance →",
+  },
   time_and_leave: {
     whatToDoHere: "Switch between Leave Requests and 'Department Schedules & Shift Rosters' to view Accra/London biometric gate sync and on-call rotas.",
     nextSuggestedView: "self_service",

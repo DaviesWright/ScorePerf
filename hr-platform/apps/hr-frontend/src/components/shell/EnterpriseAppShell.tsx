@@ -15,6 +15,7 @@ import { LifecyclePortalView } from "../modules/LifecyclePortalView";
 import { AssetManagementView } from "../modules/AssetManagementView";
 import { TimeAndLeaveView, LeaveRecord } from "../modules/TimeAndLeaveView";
 import { LeaveScreen } from "../modules/LeaveSimple";
+import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
@@ -199,6 +200,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Employee Directory";
       case "performance_pms":
         return "Appraisal Oversight";
+      case "objectives":
+        return "Objectives";
       case "skills_marketplace":
         return "Skills & Talent Marketplace";
       case "admin_nerve_center":
@@ -415,6 +418,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           {currentView === "asset_management" && (
             <AssetManagementView assets={assets} employees={employees} />
           )}
+
+          {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "time_and_leave" && SHELL_MODE === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
           {currentView === "time_and_leave" && SHELL_MODE !== "plain" && (

@@ -12,6 +12,7 @@ const LABELS: Record<ModuleViewKey, string> = {
   command_centre: "Command Centre",
   time_and_leave: "Leave",
   performance_pms: "Performance",
+  objectives: "Objectives",
   self_service: "My Self-Service",
   reports_analytics: "Reports",
   workforce_directory: "Workforce Directory",

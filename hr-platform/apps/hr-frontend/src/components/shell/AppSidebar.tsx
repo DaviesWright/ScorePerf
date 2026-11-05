@@ -11,6 +11,7 @@ export type ModuleViewKey =
   | "employee_settings"
   | "workforce_directory"
   | "performance_pms"
+  | "objectives"
   | "skills_marketplace"
   | "admin_nerve_center"
   | "lifecycle_portals"

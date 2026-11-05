@@ -35,6 +35,36 @@ test("GET /api/v1/leaves limits non-approvers to their own requests", () => {
   assert.match(route, /lr\.employee_id = \$\{userId\}/);
 });
 
+const routeBody = (path: string) => new RegExp(`app\\.(get|post)\\("${path.replace(/[/:]/g, (m) => `\\${m}`)}"[\\s\\S]*?\\n\\}\\);`).exec(src)?.[0] ?? "";
+
+test("objective writes by the owner are guarded by status in the WHERE clause", () => {
+  for (const route of ["/api/v1/objectives/:id/update", "/api/v1/objectives/:id/delete"]) {
+    const body = routeBody(route);
+    assert.ok(body, `${route} not found`);
+    assert.match(body, /status IN \('draft', 'returned'\)/, `${route} must only touch draft or returned rows`);
+    assert.match(body, /employee_id = \$\{userId\}/, `${route} must be limited to the owner's rows`);
+  }
+  assert.match(routeBody("/api/v1/objectives/:id/progress"), /status = 'approved'/);
+});
+
+test("only the HR-gated amend route lifts the database lock, inside a transaction", () => {
+  assert.equal((src.match(/set_config\('app\.amend'/g) ?? []).length, 1, "app.amend may be set in exactly one place");
+  const amend = routeBody("/api/v1/objectives/:id/amend");
+  assert.match(amend, /isHr\(role\)/);
+  assert.match(amend, /canAmend\(/);
+  assert.match(amend, /sql\.begin\(/);
+  assert.match(amend, /objective_amendments/);
+  assert.match(amend, /checkWeights\(/);
+});
+
+test("approval stamps the lock; only deciders can approve, never their own set", () => {
+  const body = routeBody("/api/v1/objectives/decision");
+  assert.match(body, /isDecider\(role\)/);
+  assert.match(body, /employeeId === userId/);
+  assert.match(body, /locked_at = NOW\(\)/);
+  assert.match(body, /status = 'submitted'/);
+});
+
 test("sign-in routes are mounted outside /api/v1", () => {
   assert.match(src, /app\.route\(\s*"\/auth"/);
 });

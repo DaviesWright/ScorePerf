@@ -14,6 +14,7 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "command_centre",
   "time_and_leave",
   "performance_pms",
+  "objectives",
   "self_service",
   "reports_analytics",
   "workforce_directory",
@@ -33,7 +34,7 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
 export type FeatureKey = "ai_assistant" | "payslip";
 export const ALL_FEATURES: readonly FeatureKey[] = ["ai_assistant", "payslip"];
 
-export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["time_and_leave", "performance_pms"];
+export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["time_and_leave", "performance_pms", "objectives"];
 
 const VIEW_ALIASES: Record<string, ModuleViewKey> = {
   leave: "time_and_leave",

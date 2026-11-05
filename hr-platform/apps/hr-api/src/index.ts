@@ -18,7 +18,25 @@ import { authenticate, type TenantContext } from "./auth";
 import { createAuthRoutes } from "./auth-routes";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
-import { canCancel, canDecide, checkDateShape, isDecider, remainingDays, validateRequest } from "@hr-platform/shared";
+import {
+  canAmend,
+  canCancel,
+  canDecide,
+  canDeleteObjective,
+  canEditObjective,
+  canUpdateProgress,
+  checkDateShape,
+  checkWeights,
+  isDecider,
+  isHr,
+  MAX_OBJECTIVES,
+  objectivesOpen,
+  remainingDays,
+  totalWeight,
+  validateObjective,
+  validateRequest,
+  type ObjectiveStatus,
+} from "@hr-platform/shared";
 
 export interface Env {
   HYPERDRIVE: {
@@ -709,6 +727,346 @@ app.get("/api/v1/leave/calendar", async (c) => {
     ORDER BY lr.start_date ASC LIMIT 200
   `;
   return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
+});
+
+// ---------------------------------------------------------------------------------------------------------
+// Objectives: employees draft, submit; deciders approve or return; HR amends. Approved objectives are
+// locked here (every write is guarded by status in its WHERE clause) and again by the database trigger
+// trg_objective_lock (db/migrations/0002_objective_approval_lock.sql), so SQL run outside the API is refused too.
+// ---------------------------------------------------------------------------------------------------------
+const ObjectiveFields = z.object({
+  title: z.string().max(300),
+  weight: z.number(),
+  target: z.string().max(1000).default(""),
+  metric: z.string().max(1000).default(""),
+});
+const ObjectiveCreateBody = ObjectiveFields.extend({ cycleId: z.number().int().positive() });
+const ObjectiveCycleBody = z.object({ cycleId: z.number().int().positive() });
+const ObjectiveDecisionBody = z.object({
+  cycleId: z.number().int().positive(),
+  employeeId: z.number().int().positive(),
+  decision: z.enum(["approve", "return"]),
+});
+const ObjectiveAmendBody = z.object({
+  reason: z.string().trim().min(5).max(1000),
+  title: z.string().max(300).optional(),
+  weight: z.number().optional(),
+  target: z.string().max(1000).optional(),
+  metric: z.string().max(1000).optional(),
+});
+const ObjectiveProgressBody = z.object({ progress: z.number().int().min(0).max(100) });
+
+type Sql = ReturnType<typeof getSql>;
+
+function toObjective(r: Record<string, unknown>) {
+  return {
+    id: Number(r.id),
+    employeeId: Number(r.employee_id),
+    cycleId: r.cycle_id === null ? null : Number(r.cycle_id),
+    title: String(r.title),
+    weight: Number(r.weight),
+    target: String(r.target),
+    metric: String(r.metric),
+    status: String(r.status) as ObjectiveStatus,
+    progress: Number(r.progress_percentage),
+    approvedBy: r.approved_by === null ? null : Number(r.approved_by),
+    approvedAt: r.approved_at ? new Date(String(r.approved_at)).toISOString() : null,
+    locked: r.locked_at !== null,
+    ...(r.first_name !== undefined ? { employeeName: `${r.first_name} ${r.last_name}`, department: r.department ? String(r.department) : null } : {}),
+  };
+}
+
+const OBJECTIVE_COLUMNS = `id, employee_id, cycle_id, title, weight, target, metric, status, progress_percentage, approved_by, approved_at, locked_at`;
+
+/** The requested cycle, or the newest one that is open for goal setting. */
+async function objectiveCycle(sql: Sql, companyId: number, cycleId: number | null) {
+  const rows = cycleId
+    ? await sql`SELECT id, title, status::text AS status, start_date::text AS start_date, end_date::text AS end_date FROM performance_cycles WHERE id = ${cycleId} AND company_id = ${companyId}`
+    : await sql`
+        SELECT id, title, status::text AS status, start_date::text AS start_date, end_date::text AS end_date FROM performance_cycles
+        WHERE company_id = ${companyId} AND status IN ('configured', 'approved', 'active') ORDER BY start_date DESC, id DESC LIMIT 1
+      `;
+  if (!rows[0]) return null;
+  const r = rows[0];
+  return { id: Number(r.id), title: String(r.title), status: String(r.status), startDate: String(r.start_date), endDate: String(r.end_date), open: objectivesOpen(String(r.status)) };
+}
+
+function queryCycleId(raw: string | undefined): number | null {
+  const n = Number(raw);
+  return raw !== undefined && Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+async function loadObjective(sql: Sql, companyId: number, id: number) {
+  const rows = await sql`
+    SELECT o.id, o.employee_id, o.cycle_id, o.title, o.weight, o.target, o.metric, o.status, o.progress_percentage,
+      o.approved_by, o.approved_at, o.locked_at, c.status::text AS cycle_status
+    FROM employee_objectives o LEFT JOIN performance_cycles c ON c.id = o.cycle_id
+    WHERE o.id = ${id} AND o.company_id = ${companyId}
+  `;
+  return rows[0] ?? null;
+}
+
+const objectiveId = (raw: string): number | null => {
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+};
+
+app.get("/api/v1/objectives/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, queryCycleId(c.req.query("cycleId")));
+  if (!cycle) return c.json({ cycle: null, objectives: [], total: 0 });
+  const rows = await sql`
+    SELECT ${sql.unsafe(OBJECTIVE_COLUMNS)} FROM employee_objectives
+    WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycle.id} ORDER BY id
+  `;
+  const objectives = rows.map(toObjective);
+  return c.json({ cycle, objectives, total: totalWeight(objectives.map((o) => o.weight)) });
+});
+
+app.post("/api/v1/objectives", zValidator("json", ObjectiveCreateBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, body.cycleId);
+  if (!cycle) return c.json({ error: "Not found" }, 404);
+  if (!cycle.open) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const invalid = validateObjective(body);
+  if (invalid) return c.json({ error: invalid }, 422);
+  const count = await sql`SELECT count(*)::int AS n FROM employee_objectives WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycle.id}`;
+  if (Number(count[0].n) >= MAX_OBJECTIVES) return c.json({ error: `You can set at most ${MAX_OBJECTIVES} objectives per cycle.` }, 422);
+  const inserted = await sql`
+    INSERT INTO employee_objectives (company_id, cycle_id, employee_id, title, status, weight, target, metric, start_date, end_date)
+    VALUES (${companyId}, ${cycle.id}, ${userId}, ${body.title.trim()}, 'draft', ${body.weight}, ${body.target}, ${body.metric}, ${cycle.startDate}::date, ${cycle.endDate}::date)
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id), status: "draft" }, 201);
+});
+
+app.post("/api/v1/objectives/submit", zValidator("json", ObjectiveCycleBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const { cycleId } = c.req.valid("json");
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, cycleId);
+  if (!cycle) return c.json({ error: "Not found" }, 404);
+  if (!cycle.open) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const all = await sql`SELECT weight, status FROM employee_objectives WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycleId}`;
+  const weightError = checkWeights(all.map((r) => Number(r.weight)));
+  if (weightError) return c.json({ error: weightError }, 422);
+  const updated = await sql`
+    UPDATE employee_objectives SET status = 'submitted', updated_at = NOW()
+    WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycleId} AND status IN ('draft', 'returned') RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "There is nothing new to submit." }, 409);
+  return c.json({ submitted: updated.length });
+});
+
+app.get("/api/v1/objectives/pending", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, queryCycleId(c.req.query("cycleId")));
+  if (!cycle) return c.json({ cycle: null, results: [] });
+  const rows = await sql`
+    SELECT o.id, o.employee_id, o.cycle_id, o.title, o.weight, o.target, o.metric, o.status, o.progress_percentage,
+      o.approved_by, o.approved_at, o.locked_at, e.first_name, e.last_name, d.name AS department
+    FROM employee_objectives o
+    JOIN employees e ON e.id = o.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE o.company_id = ${companyId} AND o.cycle_id = ${cycle.id} AND o.status = 'submitted' AND o.employee_id <> ${userId}
+    ORDER BY o.employee_id, o.id LIMIT 500
+  `;
+  return c.json({ cycle, results: rows.map(toObjective) });
+});
+
+app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const { cycleId, employeeId, decision } = c.req.valid("json");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  if (employeeId === userId) return c.json({ error: "You cannot decide your own objectives." }, 403);
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, cycleId);
+  if (!cycle) return c.json({ error: "Not found" }, 404);
+  if (!cycle.open) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const updated =
+    decision === "approve"
+      ? await sql`
+          UPDATE employee_objectives SET status = 'approved', approved_by = ${userId}, approved_at = NOW(), locked_at = NOW(), updated_at = NOW()
+          WHERE company_id = ${companyId} AND employee_id = ${employeeId} AND cycle_id = ${cycleId} AND status = 'submitted' RETURNING id
+        `
+      : await sql`
+          UPDATE employee_objectives SET status = 'returned', updated_at = NOW()
+          WHERE company_id = ${companyId} AND employee_id = ${employeeId} AND cycle_id = ${cycleId} AND status = 'submitted' RETURNING id
+        `;
+  if (updated.length === 0) return c.json({ error: "Nothing is waiting for a decision." }, 409);
+  return c.json({ decided: updated.length, status: decision === "approve" ? "approved" : "returned" });
+});
+
+// HR's view of every objective in a cycle, so an approved one can be picked for amendment.
+app.get("/api/v1/objectives/all", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHr(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, queryCycleId(c.req.query("cycleId")));
+  if (!cycle) return c.json({ cycle: null, results: [] });
+  const rows = await sql`
+    SELECT o.id, o.employee_id, o.cycle_id, o.title, o.weight, o.target, o.metric, o.status, o.progress_percentage,
+      o.approved_by, o.approved_at, o.locked_at, e.first_name, e.last_name, d.name AS department
+    FROM employee_objectives o
+    JOIN employees e ON e.id = o.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE o.company_id = ${companyId} AND o.cycle_id = ${cycle.id}
+    ORDER BY e.last_name, e.first_name, o.id LIMIT 1000
+  `;
+  return c.json({ cycle, results: rows.map(toObjective) });
+});
+
+app.get("/api/v1/objectives/amendments", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHr(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const cycleId = queryCycleId(c.req.query("cycleId"));
+  const rows = await sql`
+    SELECT a.id, a.objective_id, a.reason, a.before_values, a.after_values, a.created_at, o.title AS objective_title,
+      e.first_name AS owner_first, e.last_name AS owner_last, h.first_name AS by_first, h.last_name AS by_last
+    FROM objective_amendments a
+    LEFT JOIN employee_objectives o ON o.id = a.objective_id
+    LEFT JOIN employees e ON e.id = o.employee_id
+    LEFT JOIN employees h ON h.id = a.amended_by
+    WHERE a.company_id = ${companyId} AND (${cycleId}::int IS NULL OR o.cycle_id = ${cycleId})
+    ORDER BY a.created_at DESC LIMIT 200
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      objectiveId: r.objective_id === null ? null : Number(r.objective_id),
+      objectiveTitle: r.objective_title ? String(r.objective_title) : null,
+      owner: r.owner_first ? `${r.owner_first} ${r.owner_last}` : null,
+      amendedBy: r.by_first ? `${r.by_first} ${r.by_last}` : null,
+      reason: String(r.reason),
+      before: r.before_values,
+      after: r.after_values,
+      createdAt: new Date(String(r.created_at)).toISOString(),
+    })),
+  });
+});
+
+app.post("/api/v1/objectives/:id/update", zValidator("json", ObjectiveFields), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const row = await loadObjective(sql, companyId, id);
+  if (!row) return c.json({ error: "Not found" }, 404);
+  if (Number(row.employee_id) !== userId) return c.json({ error: "Forbidden" }, 403);
+  const current = { id, employeeId: userId, status: String(row.status) as ObjectiveStatus, weight: Number(row.weight) };
+  if (!canEditObjective({ userId, role }, current)) {
+    return c.json({ error: current.status === "approved" ? "Approved objectives are locked. Ask HR to amend it." : "Submitted objectives cannot be edited." }, 409);
+  }
+  if (row.cycle_status === null || !objectivesOpen(String(row.cycle_status))) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const invalid = validateObjective(body);
+  if (invalid) return c.json({ error: invalid }, 422);
+  const updated = await sql`
+    UPDATE employee_objectives SET title = ${body.title.trim()}, weight = ${body.weight}, target = ${body.target}, metric = ${body.metric},
+      status = 'draft', updated_at = NOW()
+    WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status IN ('draft', 'returned') RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "This objective can no longer be edited." }, 409);
+  return c.json({ id, status: "draft" });
+});
+
+app.post("/api/v1/objectives/:id/delete", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const row = await loadObjective(sql, companyId, id);
+  if (!row) return c.json({ error: "Not found" }, 404);
+  if (Number(row.employee_id) !== userId) return c.json({ error: "Forbidden" }, 403);
+  const current = { id, employeeId: userId, status: String(row.status) as ObjectiveStatus, weight: Number(row.weight) };
+  if (!canDeleteObjective({ userId, role }, current)) {
+    return c.json({ error: current.status === "approved" ? "Approved objectives are locked and cannot be deleted." : "Submitted objectives cannot be deleted." }, 409);
+  }
+  if (row.cycle_status === null || !objectivesOpen(String(row.cycle_status))) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const deleted = await sql`
+    DELETE FROM employee_objectives WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status IN ('draft', 'returned') RETURNING id
+  `;
+  if (deleted.length === 0) return c.json({ error: "This objective can no longer be deleted." }, 409);
+  return c.json({ id, deleted: true });
+});
+
+app.post("/api/v1/objectives/:id/progress", zValidator("json", ObjectiveProgressBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const row = await loadObjective(sql, companyId, id);
+  if (!row) return c.json({ error: "Not found" }, 404);
+  if (Number(row.employee_id) !== userId) return c.json({ error: "Forbidden" }, 403);
+  const current = { id, employeeId: userId, status: String(row.status) as ObjectiveStatus, weight: Number(row.weight) };
+  if (!canUpdateProgress({ userId, role }, current)) return c.json({ error: "Progress can be recorded once an objective is approved." }, 409);
+  const { progress } = c.req.valid("json");
+  await sql`UPDATE employee_objectives SET progress_percentage = ${progress}, updated_at = NOW() WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status = 'approved'`;
+  return c.json({ id, progress });
+});
+
+class AmendRejected extends Error {
+  constructor(message: string, readonly httpStatus: 409 | 422) {
+    super(message);
+  }
+}
+
+// The only way to change an approved objective. One transaction: the app.amend flag lifts the database lock for
+// this transaction alone, the change and its audit row commit together, and the owner's weights must still total
+// 100 or everything rolls back.
+app.post("/api/v1/objectives/:id/amend", zValidator("json", ObjectiveAmendBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHr(role)) return c.json({ error: "Forbidden" }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const row = await loadObjective(sql, companyId, id);
+  if (!row) return c.json({ error: "Not found" }, 404);
+  const current = { id, employeeId: Number(row.employee_id), status: String(row.status) as ObjectiveStatus, weight: Number(row.weight) };
+  if (current.employeeId === userId) return c.json({ error: "You cannot amend your own objective." }, 403);
+  if (!canAmend({ userId, role }, current, String(row.cycle_status ?? "closed"))) {
+    return c.json({ error: current.status !== "approved" ? "Only approved objectives are amended; others are edited by their owner." : "This cycle is closed to changes." }, 409);
+  }
+  const next = {
+    title: body.title ?? String(row.title),
+    weight: body.weight ?? Number(row.weight),
+    target: body.target ?? String(row.target),
+    metric: body.metric ?? String(row.metric),
+  };
+  const before = { title: String(row.title), weight: Number(row.weight), target: String(row.target), metric: String(row.metric) };
+  if (JSON.stringify(before) === JSON.stringify({ ...next, title: next.title.trim() })) return c.json({ error: "Nothing was changed." }, 422);
+  const invalid = validateObjective(next);
+  if (invalid) return c.json({ error: invalid }, 422);
+  const after = { ...next, title: next.title.trim() };
+
+  try {
+    await sql.begin(async (tx) => {
+      await tx`SELECT set_config('app.amend', 'on', true)`;
+      const updated = await tx`
+        UPDATE employee_objectives SET title = ${after.title}, weight = ${after.weight}, target = ${after.target}, metric = ${after.metric}, updated_at = NOW()
+        WHERE id = ${id} AND company_id = ${companyId} AND status = 'approved' RETURNING employee_id, cycle_id
+      `;
+      if (updated.length === 0) throw new AmendRejected("This objective is no longer approved.", 409);
+      const weights = await tx`SELECT weight FROM employee_objectives WHERE company_id = ${companyId} AND employee_id = ${updated[0].employee_id} AND cycle_id = ${updated[0].cycle_id}`;
+      const weightError = checkWeights(weights.map((r) => Number(r.weight)));
+      if (weightError) throw new AmendRejected(weightError, 422);
+      await tx`
+        INSERT INTO objective_amendments (company_id, objective_id, amended_by, reason, before_values, after_values)
+        VALUES (${companyId}, ${id}, ${userId}, ${body.reason}, ${tx.json(before)}, ${tx.json(after)})
+      `;
+    });
+  } catch (err) {
+    if (err instanceof AmendRejected) return c.json({ error: err.message }, err.httpStatus);
+    throw err;
+  }
+  return c.json({ id, amended: true });
 });
 
 // 6. Attendance & Time Tracking
