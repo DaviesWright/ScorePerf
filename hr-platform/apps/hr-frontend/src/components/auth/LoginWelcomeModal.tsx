@@ -142,56 +142,33 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
             alignItems: "center",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <button
-              onClick={() => {
-                onClose();
+          <button
+            onClick={() => {
+              onClose();
+              if (onStartFollowPrompt) {
+                onStartFollowPrompt();
+              } else {
                 onOpenOmniAgent();
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: "none",
-                border: `1px solid ${colors.indigoBorder}`,
-                backgroundColor: colors.indigoSubtle,
-                color: colors.indigoPrimary,
-                padding: "0.5rem 0.85rem",
-                borderRadius: radii.md,
-                fontSize: typography.sizes.xs,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              <Icons.Sparkles size={14} color={colors.indigoAction} />
-              <span>Ask Dede AI Copilot (⌘J)</span>
-            </button>
-
-            {onStartFollowPrompt && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onStartFollowPrompt();
-                }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                  border: "1px solid #6ee7b7",
-                  backgroundColor: "#ecfdf5",
-                  color: "#065f46",
-                  padding: "0.5rem 0.85rem",
-                  borderRadius: radii.md,
-                  fontSize: typography.sizes.xs,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                <Icons.Compass size={14} color="#059669" />
-                <span>Start &quot;Follow the Prompt&quot; Guide</span>
-              </button>
-            )}
-          </div>
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              background: "none",
+              border: `1px solid ${colors.indigoBorder}`,
+              backgroundColor: colors.indigoSubtle,
+              color: colors.indigoPrimary,
+              padding: "0.5rem 0.85rem",
+              borderRadius: radii.md,
+              fontSize: typography.sizes.xs,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            <Icons.Sparkles size={14} color={colors.indigoAction} />
+            <span>Open Dede AI &amp; Guided Prompts (⌘J)</span>
+          </button>
 
           <Button
             variant="primary"

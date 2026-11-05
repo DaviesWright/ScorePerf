@@ -18,7 +18,7 @@ export interface PromptStep {
   outcome: string;
 }
 
-const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
+export const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
   roleTitle: string;
   welcomeSummary: string;
   steps: PromptStep[];
@@ -249,7 +249,7 @@ const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
   },
 };
 
-const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; nextSuggestedView: ModuleViewKey; nextSuggestedLabel: string }> = {
+export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; nextSuggestedView: ModuleViewKey; nextSuggestedLabel: string }> = {
   self_service: {
     whatToDoHere: "Click any of the 8 ESS Shortcut Cards to request leave, view your Total Rewards Wallet, log remote work, or generate an AI verification letter.",
     nextSuggestedView: "performance_pms",

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { colors } from "../../design-system/tokens";
 import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
-import { FollowThePromptBar } from "./FollowThePromptBar";
 import { CommandPalette } from "../../design-system/CommandPalette";
 import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
 import { CommandCentreView } from "../modules/CommandCentreView";
@@ -15,6 +14,7 @@ import { AdminNerveCenterView } from "../modules/AdminNerveCenterView";
 import { LifecyclePortalView } from "../modules/LifecyclePortalView";
 import { AssetManagementView } from "../modules/AssetManagementView";
 import { TimeAndLeaveView, LeaveRecord } from "../modules/TimeAndLeaveView";
+import { LeaveScreen } from "../modules/LeaveSimple";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
@@ -25,6 +25,8 @@ import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
+import { SHELL_MODE, firstEnabledView, isViewEnabled } from "../../config/modules";
+import { PlainShell } from "./PlainShell";
 import { clearHeadshot, loadHeadshot, processHeadshot, saveHeadshot } from "../../utils/headshot";
 import { PayslipModal } from "../modals/PayslipModal";
 import { RbacGuard } from "../common/RbacGuard";
@@ -53,7 +55,11 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   apiOnline,
   initialUser = null,
 }) => {
-  const [currentView, setCurrentView] = useState<ModuleViewKey>("command_centre");
+  const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(firstEnabledView());
+  // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
+  const setCurrentView = (view: ModuleViewKey) => {
+    if (isViewEnabled(view)) setCurrentViewRaw(view);
+  };
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
@@ -82,11 +88,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isOmniAgentOpen, setIsOmniAgentOpen] = useState(false);
+  const [omniInitialTab, setOmniInitialTab] = useState<"prompts" | "chat">("prompts");
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
-  const [isFollowPromptExpanded, setIsFollowPromptExpanded] = useState(true);
-  const [isFollowPromptDrawerOpen, setIsFollowPromptDrawerOpen] = useState(false);
 
   // Authentication & Session State
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
@@ -231,6 +236,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         setCurrentView("asset_management");
         break;
       case "request_leave":
+        if (!isViewEnabled("time_and_leave")) break;
         setShowLeaveModalDirectly(true);
         setCurrentView("time_and_leave");
         break;
@@ -303,109 +309,14 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        backgroundColor: colors.bgApp,
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      }}
-    >
-      {/* Post-Login Welcome Briefing Modal */}
-      <LoginWelcomeModal
-        isOpen={isWelcomeModalOpen}
-        onClose={() => setIsWelcomeModalOpen(false)}
-        user={currentUser}
-        photoUrl={photoUrl}
-        onUploadPhoto={handleUploadPhoto}
-        onNavigate={setCurrentView}
-        onOpenOmniAgent={() => setIsOmniAgentOpen(true)}
-        onStartFollowPrompt={() => {
-          setIsFollowPromptExpanded(true);
-          setIsFollowPromptDrawerOpen(true);
-        }}
-      />
-
-      {/* Omni-Agent Zero-UI AI Copilot Drawer */}
-      <OmniAgentDrawer
-        isOpen={isOmniAgentOpen}
-        onClose={() => setIsOmniAgentOpen(false)}
-        onExecuteWorkflow={handleOmniWorkflow}
-      />
-
-      {/* Interactive Official Payslip Modal (Triggered via Cmd+K 'Payslip', ESS or Header) */}
-      <PayslipModal
-        isOpen={isPayslipModalOpen}
-        onClose={() => setIsPayslipModalOpen(false)}
-        employeeName={currentUser.name}
-        employeeRole={currentUser.role}
-      />
-
-      {/* Global Command Palette */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onSelectView={setCurrentView}
-        employees={employees}
-        onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
-        onOpenPayslip={() => setIsPayslipModalOpen(true)}
-        onOpenOmniAgent={() => setIsOmniAgentOpen(true)}
-        onQuickAction={handleQuickAction}
-      />
-
-      {/* Collapsible Left Navigation Sidebar with Persona Switcher */}
-      <AppSidebar
-        currentView={currentView}
-        onSelectView={setCurrentView}
-        persona={persona}
-        onSelectPersona={setPersona}
-        onOpenOmniAgent={() => setIsOmniAgentOpen(true)}
-        currentUser={currentUser}
-        photoUrl={photoUrl}
-        onSignOut={handleSignOut}
-        counts={{
-          employees: employees.length,
-          cycles: cycles.length,
-          assets: assets.length,
-          leaves: leaves.filter((l) => l.status === "PENDING").length,
-          tickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
-          projects: projects.length,
-        }}
-      />
-
-      {/* Main App Canvas */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
-        <AppHeader
-          breadcrumb={getBreadcrumb()}
-          apiOnline={apiOnline}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenOmniAgent={() => setIsOmniAgentOpen(true)}
-          onQuickAction={handleQuickAction}
-          onOpenPayslip={() => setIsPayslipModalOpen(true)}
-          user={currentUser}
-          photoUrl={photoUrl}
-          onUploadPhoto={handleUploadPhoto}
-          onRemovePhoto={handleRemovePhoto}
-          onNavigate={setCurrentView}
-          onSignOut={handleSignOut}
-          isFollowPromptActive={isFollowPromptExpanded}
-          onToggleFollowPrompt={() => setIsFollowPromptExpanded((prev) => !prev)}
-          onOpenFollowPromptDrawer={() => setIsFollowPromptDrawerOpen(true)}
-        />
-
-        <FollowThePromptBar
-          persona={persona}
-          currentView={currentView}
-          onNavigate={setCurrentView}
-          isExpanded={isFollowPromptExpanded}
-          onToggleExpand={() => setIsFollowPromptExpanded((prev) => !prev)}
-          isDrawerOpen={isFollowPromptDrawerOpen}
-          onCloseDrawer={() => setIsFollowPromptDrawerOpen(false)}
-          onOpenDrawer={() => setIsFollowPromptDrawerOpen(true)}
-        />
-
-        <main style={{ flex: 1 }}>
+  // The module screen itself, shared by both frames.
+  const viewContent = (
+    <>
+          {!isViewEnabled(currentView) && (
+            <div role="alert" style={{ padding: "2rem" }}>
+              This module is not enabled for this deployment.
+            </div>
+          )}
           {currentView === "self_service" && (
             <EmployeeSelfServiceView
               currentEmployee={{
@@ -505,7 +416,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             <AssetManagementView assets={assets} employees={employees} />
           )}
 
-          {currentView === "time_and_leave" && (
+          {currentView === "time_and_leave" && SHELL_MODE === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "time_and_leave" && SHELL_MODE !== "plain" && (
             <TimeAndLeaveView
               initialLeaves={leaves}
               showNewLeaveModal={showLeaveModalDirectly}
@@ -578,6 +490,124 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           )}
 
           {currentView === "policies_handbook" && <PoliciesHandbookView />}
+    </>
+  );
+
+  if (SHELL_MODE === "plain") {
+    return (
+      <PlainShell user={currentUser} currentView={currentView} onNavigate={setCurrentView} onSignOut={handleSignOut}>
+        {viewContent}
+      </PlainShell>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        backgroundColor: colors.bgApp,
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      {/* Post-Login Welcome Briefing Modal */}
+      <LoginWelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        user={currentUser}
+        photoUrl={photoUrl}
+        onUploadPhoto={handleUploadPhoto}
+        onNavigate={setCurrentView}
+        onOpenOmniAgent={() => {
+          setOmniInitialTab("prompts");
+          setIsOmniAgentOpen(true);
+        }}
+        onStartFollowPrompt={() => {
+          setOmniInitialTab("prompts");
+          setIsOmniAgentOpen(true);
+        }}
+      />
+
+      {/* Unified Dede AI & Follow the Prompt Floating Sidebar */}
+      <OmniAgentDrawer
+        isOpen={isOmniAgentOpen}
+        onClose={() => setIsOmniAgentOpen(false)}
+        onOpen={(tab) => {
+          setOmniInitialTab(tab || "prompts");
+          setIsOmniAgentOpen(true);
+        }}
+        initialTab={omniInitialTab}
+        persona={persona}
+        currentView={currentView}
+        onNavigate={setCurrentView}
+        onExecuteWorkflow={handleOmniWorkflow}
+      />
+
+      {/* Interactive Official Payslip Modal (Triggered via Cmd+K 'Payslip', ESS or Header) */}
+      <PayslipModal
+        isOpen={isPayslipModalOpen}
+        onClose={() => setIsPayslipModalOpen(false)}
+        employeeName={currentUser.name}
+        employeeRole={currentUser.role}
+      />
+
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onSelectView={setCurrentView}
+        employees={employees}
+        onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
+        onOpenPayslip={() => setIsPayslipModalOpen(true)}
+        onOpenOmniAgent={() => {
+          setOmniInitialTab("chat");
+          setIsOmniAgentOpen(true);
+        }}
+        onQuickAction={handleQuickAction}
+      />
+
+      {/* Collapsible Left Navigation Sidebar with Persona Switcher */}
+      <AppSidebar
+        currentView={currentView}
+        onSelectView={setCurrentView}
+        persona={persona}
+        onSelectPersona={setPersona}
+        onOpenOmniAgent={() => {
+          setOmniInitialTab("prompts");
+          setIsOmniAgentOpen((prev) => !prev);
+        }}
+        currentUser={currentUser}
+        photoUrl={photoUrl}
+        onSignOut={handleSignOut}
+        counts={{
+          employees: employees.length,
+          cycles: cycles.length,
+          assets: assets.length,
+          leaves: leaves.filter((l) => l.status === "PENDING").length,
+          tickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
+          projects: projects.length,
+        }}
+      />
+
+      {/* Main App Canvas */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
+        <AppHeader
+          breadcrumb={getBreadcrumb()}
+          apiOnline={apiOnline}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onOpenOmniAgent={() => setIsOmniAgentOpen((prev) => !prev)}
+          onQuickAction={handleQuickAction}
+          onOpenPayslip={() => setIsPayslipModalOpen(true)}
+          user={currentUser}
+          photoUrl={photoUrl}
+          onUploadPhoto={handleUploadPhoto}
+          onRemovePhoto={handleRemovePhoto}
+          onNavigate={setCurrentView}
+          onSignOut={handleSignOut}
+        />
+
+        <main style={{ flex: 1 }}>
+          {viewContent}
         </main>
       </div>
     </div>

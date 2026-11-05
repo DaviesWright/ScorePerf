@@ -3,6 +3,7 @@ import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
+import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
 import type { ModuleViewKey } from "./AppSidebar";
 
 interface AppHeaderProps {
@@ -136,48 +137,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Omni-Agent & Notifications */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        {/* Follow the Prompt Guided Navigator Button */}
-        <button
-          onClick={() => {
-            if (isFollowPromptActive && onOpenFollowPromptDrawer) {
-              onOpenFollowPromptDrawer();
-            } else if (onToggleFollowPrompt) {
-              onToggleFollowPrompt();
-            }
-          }}
-          title="Follow the Prompt — Interactive Guided System Tour & Next Steps"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.4rem",
-            backgroundColor: isFollowPromptActive ? "#ecfdf5" : colors.surfaceSubtle,
-            border: `1px solid ${isFollowPromptActive ? "#6ee7b7" : colors.border}`,
-            borderRadius: radii.md,
-            padding: "0.35rem 0.65rem",
-            fontSize: "11px",
-            fontWeight: 700,
-            cursor: "pointer",
-            color: isFollowPromptActive ? "#065f46" : colors.indigoPrimary,
-            transition: "all 0.15s ease",
-          }}
-        >
-          <Icons.Compass size={14} color={isFollowPromptActive ? "#059669" : colors.indigoAction} />
-          <span>Follow the Prompt</span>
-          <span
-            style={{
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              backgroundColor: isFollowPromptActive ? "#10b981" : "#94a3b8",
-            }}
-          />
-        </button>
-
-        {/* Dede AI Copilot Trigger */}
+        {/* Unified Dede AI & Follow the Prompt Floating Sidebar Trigger */}
         <Button
           variant="outline"
           size="sm"
           onClick={onOpenOmniAgent}
+          title="Open Dede AI & Follow the Prompt Guided Sidebar (⌘J)"
           style={{
             borderColor: colors.indigoBorder,
             backgroundColor: colors.indigoSubtle,
@@ -186,7 +151,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <Icons.Sparkles size={14} color={colors.indigoAction} />
-            <span style={{ fontWeight: 600 }}>Dede AI</span>
+            <span style={{ fontWeight: 600 }}>Dede AI • Guide</span>
             <span
               style={{
                 fontSize: "10px",
@@ -324,12 +289,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               }}
             >
               {[
-                { label: "View Latest Payslip", action: "payslip", icon: Icons.FileText, highlight: true },
-                { label: "New Employee Record", action: "new_employee", icon: Icons.Users },
-                { label: "New Appraisal Cycle", action: "new_cycle", icon: Icons.Target },
-                { label: "Log Leave Request", action: "request_leave", icon: Icons.Calendar },
-                { label: "Report IT Ticket", action: "new_ticket", icon: Icons.LifeBuoy },
-              ].map((item) => {
+                { label: "View Latest Payslip", action: "payslip", icon: Icons.FileText, highlight: true, feature: "payslip" as const },
+                { label: "New Employee Record", action: "new_employee", icon: Icons.Users, view: "workforce_directory" as const },
+                { label: "New Appraisal Cycle", action: "new_cycle", icon: Icons.Target, view: "performance_pms" as const },
+                { label: "Log Leave Request", action: "request_leave", icon: Icons.Calendar, view: "time_and_leave" as const },
+                { label: "Report IT Ticket", action: "new_ticket", icon: Icons.LifeBuoy, view: "helpdesk" as const },
+              ]
+                .filter((item) => {
+                  if ("feature" in item && item.feature && !isFeatureEnabled(item.feature)) return false;
+                  if ("view" in item && item.view && !isViewEnabled(item.view)) return false;
+                  return true;
+                })
+                .map((item) => {
                 const ItemIcon = item.icon;
                 return (
                   <button
