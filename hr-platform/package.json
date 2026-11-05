@@ -16,6 +16,7 @@
     "deploy:api": "npm run deploy --workspace=apps/hr-api",
     "deploy:jobs": "npm run deploy --workspace=apps/hr-jobs",
     "deploy:frontend": "npm run deploy --workspace=apps/hr-frontend",
+    "deploy:staging": "npm run deploy:staging --workspace=apps/hr-frontend",
     "typecheck": "tsc -b"
   },
   "devDependencies": {
