@@ -265,6 +265,11 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "approval_workflows",
     nextSuggestedLabel: "Review Approval Workflows →",
   },
+  assets: {
+    whatToDoHere: "Assign, return and register company equipment. Everyone can see what is assigned to them.",
+    nextSuggestedView: "dashboard",
+    nextSuggestedLabel: "Back to Dashboard →",
+  },
   dashboard: {
     whatToDoHere: "Start here: leave on the calendar, objectives awaiting approval, and your own status for this cycle.",
     nextSuggestedView: "time_and_leave",

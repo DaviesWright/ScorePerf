@@ -17,6 +17,7 @@ import { TimeAndLeaveView, LeaveRecord } from "../modules/TimeAndLeaveView";
 import { LeaveScreen } from "../modules/LeaveSimple";
 import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { DashboardScreen } from "../modules/DashboardSimple";
+import { AssetsScreen } from "../modules/AssetsSimple";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
@@ -205,6 +206,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Objectives";
       case "dashboard":
         return "Dashboard";
+      case "assets":
+        return "Assets";
       case "skills_marketplace":
         return "Skills & Talent Marketplace";
       case "admin_nerve_center":
@@ -423,6 +426,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           )}
 
           {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} />}
+
+          {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 

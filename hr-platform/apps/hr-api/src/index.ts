@@ -1334,7 +1334,7 @@ app.post("/api/v1/objectives/:id/progress", zValidator("json", ObjectiveProgress
 });
 
 class AmendRejected extends Error {
-  constructor(message: string, readonly httpStatus: 409 | 422) {
+  constructor(message: string, readonly httpStatus: 404 | 409 | 422) {
     super(message);
   }
 }
@@ -1438,25 +1438,148 @@ app.get("/api/v1/payroll/payslips", async (c) => {
 });
 
 // 9. Asset Management
+// Assets. asset_allocations is the assignment ledger: an open assignment has return_date NULL, and the unique index
+// asset_allocations_one_open allows at most one. Writes are HR only. Assigning or returning locks the asset row.
+const AssetCondition = z.enum(["new", "good", "fair", "poor"]);
+const AssetCreateBody = z.object({
+  name: z.string().trim().min(2).max(255),
+  assetCode: z.string().trim().min(2).max(50),
+  categoryId: z.number().int().positive().nullable().optional(),
+  serialNumber: z.string().trim().max(100).nullable().optional(),
+  condition: AssetCondition.default("good"),
+});
+const AssetAssignBody = z.object({ employeeId: z.number().int().positive(), condition: AssetCondition });
+const AssetReturnBody = z.object({ condition: AssetCondition, notes: z.string().max(1000).default("") });
+
+// HR view: every asset with its current holder (open assignment only, one row per asset).
 app.get("/api/v1/assets", async (c) => {
-  const { companyId } = c.get("tenant");
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
   const sql = getSql(c.env);
   const assets = await sql`
-    SELECT 
-      ca.*, 
-      ac.name as category_name,
-      e.id as employee_id,
-      e.first_name,
-      e.last_name,
-      e.email as employee_email
+    SELECT ca.id, ca.asset_code, ca.name, ca.serial_number, ca.status, ca.asset_condition,
+      ac.name AS category_name, e.id AS employee_id, e.first_name, e.last_name
     FROM company_assets ca
-    LEFT JOIN asset_categories ac ON ca.category_id = ac.id
-    LEFT JOIN asset_allocations aa ON ca.id = aa.asset_id
-    LEFT JOIN employees e ON aa.employee_id = e.id
+    LEFT JOIN asset_categories ac ON ac.id = ca.category_id
+    LEFT JOIN asset_allocations aa ON aa.asset_id = ca.id AND aa.return_date IS NULL
+    LEFT JOIN employees e ON e.id = aa.employee_id
     WHERE ca.company_id = ${companyId}
-    ORDER BY ca.id ASC LIMIT 100
+    ORDER BY ca.id ASC LIMIT 500
   `;
   return c.json({ count: assets.length, results: assets });
+});
+
+// Anyone: the assets assigned to me right now.
+app.get("/api/v1/assets/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT ca.id, ca.asset_code, ca.name, aa.allocated_date::text AS allocated_date
+    FROM asset_allocations aa
+    JOIN company_assets ca ON ca.id = aa.asset_id
+    WHERE aa.company_id = ${companyId} AND aa.employee_id = ${userId} AND aa.return_date IS NULL
+    ORDER BY aa.allocated_date
+  `;
+  return c.json({ results: rows.map((r) => ({ id: Number(r.id), assetCode: String(r.asset_code), name: String(r.name), allocatedDate: String(r.allocated_date) })) });
+});
+
+app.post("/api/v1/assets", zValidator("json", AssetCreateBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can register assets." }, 403);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const dup = await sql`SELECT 1 FROM company_assets WHERE company_id = ${companyId} AND asset_code = ${body.assetCode} LIMIT 1`;
+  if (dup.length > 0) return c.json({ error: "An asset with this code already exists." }, 409);
+  const inserted = await sql`
+    INSERT INTO company_assets (company_id, category_id, name, asset_code, serial_number, status, asset_condition)
+    VALUES (${companyId}, ${body.categoryId ?? null}, ${body.name}, ${body.assetCode}, ${body.serialNumber ?? null}, 'available', ${body.condition})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id), status: "available" }, 201);
+});
+
+app.post("/api/v1/assets/:id/assign", zValidator("json", AssetAssignBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can assign assets." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const employee = await sql`SELECT 1 FROM employees WHERE id = ${body.employeeId} AND company_id = ${companyId} AND is_active`;
+  if (employee.length === 0) return c.json({ error: "No active employee with that id." }, 422);
+  try {
+    await sql.begin(async (tx) => {
+      const [asset] = await tx`SELECT status FROM company_assets WHERE id = ${id} AND company_id = ${companyId} FOR UPDATE`;
+      if (!asset) throw new AmendRejected("Not found.", 404);
+      if (asset.status !== "available") throw new AmendRejected(`This asset is ${asset.status}, not available.`, 409);
+      await tx`
+        INSERT INTO asset_allocations (company_id, asset_id, employee_id, allocated_date, condition_on_allocation, assigned_by)
+        VALUES (${companyId}, ${id}, ${body.employeeId}, CURRENT_DATE, ${body.condition}, ${userId})
+      `;
+      await tx`UPDATE company_assets SET status = 'allocated', asset_condition = ${body.condition} WHERE id = ${id}`;
+    });
+  } catch (err) {
+    if (err instanceof AmendRejected) return c.json({ error: err.message }, err.httpStatus);
+    throw err;
+  }
+  return c.json({ id, status: "allocated" }, 201);
+});
+
+// Return: condition decides the next status. new or good goes back to stock; fair or poor goes to maintenance.
+app.post("/api/v1/assets/:id/return", zValidator("json", AssetReturnBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can record returns." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const nextStatus = body.condition === "new" || body.condition === "good" ? "available" : "maintenance";
+  const sql = getSql(c.env);
+  try {
+    await sql.begin(async (tx) => {
+      const [asset] = await tx`SELECT status FROM company_assets WHERE id = ${id} AND company_id = ${companyId} FOR UPDATE`;
+      if (!asset) throw new AmendRejected("Not found.", 404);
+      const open = await tx`SELECT id FROM asset_allocations WHERE asset_id = ${id} AND company_id = ${companyId} AND return_date IS NULL FOR UPDATE`;
+      if (open.length === 0) throw new AmendRejected("This asset is not assigned to anyone.", 409);
+      await tx`
+        UPDATE asset_allocations SET return_date = CURRENT_DATE, condition_on_return = ${body.condition}, return_notes = ${body.notes}
+        WHERE id = ${open[0].id}
+      `;
+      await tx`UPDATE company_assets SET status = ${nextStatus}, asset_condition = ${body.condition} WHERE id = ${id}`;
+    });
+  } catch (err) {
+    if (err instanceof AmendRejected) return c.json({ error: err.message }, err.httpStatus);
+    throw err;
+  }
+  return c.json({ id, status: nextStatus });
+});
+
+// HR: every assignment of one asset, newest first.
+app.get("/api/v1/assets/:id/history", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT aa.id, aa.allocated_date::text AS allocated_date, aa.return_date::text AS return_date,
+      aa.condition_on_allocation, aa.condition_on_return, aa.return_notes,
+      e.first_name, e.last_name
+    FROM asset_allocations aa
+    LEFT JOIN employees e ON e.id = aa.employee_id
+    WHERE aa.company_id = ${companyId} AND aa.asset_id = ${id}
+    ORDER BY aa.allocated_date DESC, aa.id DESC
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      employeeName: r.first_name ? `${r.first_name} ${r.last_name}` : null,
+      allocatedDate: String(r.allocated_date),
+      returnDate: r.return_date ? String(r.return_date) : null,
+      conditionOnAllocation: r.condition_on_allocation ? String(r.condition_on_allocation) : null,
+      conditionOnReturn: r.condition_on_return ? String(r.condition_on_return) : null,
+      returnNotes: r.return_notes ? String(r.return_notes) : null,
+    })),
+  });
 });
 
 // 10. Helpdesk Support Tickets

@@ -514,10 +514,14 @@ CREATE TABLE IF NOT EXISTS company_assets (
     name VARCHAR(255) NOT NULL,
     asset_code VARCHAR(100) UNIQUE NOT NULL,
     serial_number VARCHAR(100) DEFAULT '',
-    status VARCHAR(50) DEFAULT 'available' NOT NULL,
+    status VARCHAR(50) DEFAULT 'available' NOT NULL
+        CONSTRAINT company_assets_status_check CHECK (status IN ('available', 'allocated', 'maintenance', 'retired', 'lost')),
+    asset_condition VARCHAR(20) DEFAULT 'good' NOT NULL -- migration 0007: new, good, fair or poor
+        CONSTRAINT company_assets_condition_check CHECK (asset_condition IN ('new', 'good', 'fair', 'poor')),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
+-- Assignment ledger. An open assignment has return_date NULL; migration 0007 allows at most one per asset.
 CREATE TABLE IF NOT EXISTS asset_allocations (
     id SERIAL PRIMARY KEY,
     company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -526,8 +530,15 @@ CREATE TABLE IF NOT EXISTS asset_allocations (
     allocated_date DATE NOT NULL,
     return_date DATE,
     condition_on_allocation VARCHAR(255) DEFAULT 'Good',
+    assigned_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    condition_on_return VARCHAR(20)
+        CONSTRAINT asset_allocations_condition_return_check CHECK (condition_on_return IS NULL OR condition_on_return IN ('new', 'good', 'fair', 'poor')),
+    return_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS asset_allocations_one_open
+    ON asset_allocations (asset_id) WHERE return_date IS NULL;
 
 -- 13. Helpdesk & Support
 CREATE TABLE IF NOT EXISTS helpdesk_categories (
