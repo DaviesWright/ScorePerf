@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // on the server and forwards it as a Bearer token. Only the listed paths are reachable; state-changing calls must
 // come from this site.
 
-const ALLOWED = /^(home|holidays|holidays\/\d{1,9}\/delete|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/overdue|assets\/\d{1,9}\/(assign|return|history)|employees\/\d{1,9}\/offboard)$/;
+const ALLOWED = /^(home|holidays|holidays\/\d{1,9}\/delete|leave\/types|leave\/types\/\d{1,9}\/update|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/overdue|assets\/\d{1,9}\/(assign|return|history)|employees\/\d{1,9}\/offboard)$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");

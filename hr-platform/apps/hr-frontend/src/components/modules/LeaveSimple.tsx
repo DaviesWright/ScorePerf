@@ -7,7 +7,7 @@ import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, t
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
 
-type Tab = "mine" | "request" | "approvals" | "calendar" | "holidays";
+type Tab = "mine" | "request" | "approvals" | "calendar" | "company" | "holidays" | "types";
 
 interface LeaveSimpleProps {
   api: LeaveApi;
@@ -90,8 +90,11 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
   const tabs: { key: Tab; label: string }[] = [
     { key: "mine", label: "My leave" },
     { key: "request", label: "Request leave" },
-    ...(decider ? ([{ key: "approvals", label: "Approvals" }, { key: "calendar", label: "Team calendar" }] as { key: Tab; label: string }[]) : []),
-    ...(user.role === "hr_admin" || user.role === "hr_director" ? ([{ key: "holidays", label: "Holidays" }] as { key: Tab; label: string }[]) : []),
+    { key: "calendar", label: "Team and company leave" },
+    ...(decider ? ([{ key: "approvals", label: "Approvals" }] as { key: Tab; label: string }[]) : []),
+    ...(user.role === "hr_admin" || user.role === "hr_director"
+      ? ([{ key: "holidays", label: "Holidays" }, { key: "types", label: "Leave types" }] as { key: Tab; label: string }[])
+      : []),
   ];
 
   return (
@@ -127,8 +130,9 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
         />
       )}
       {tab === "approvals" && decider && <Approvals api={api} />}
-      {tab === "calendar" && decider && <Calendar api={api} />}
+      {tab === "calendar" && <TeamLeavePage />}
       {tab === "holidays" && (user.role === "hr_admin" || user.role === "hr_director") && <Holidays />}
+      {tab === "types" && (user.role === "hr_admin" || user.role === "hr_director") && <LeaveTypes />}
     </div>
   );
 };
@@ -487,6 +491,200 @@ function Holidays() {
         <label style={S.field}>Date *<input required type="date" value={date} onChange={(e) => setDate(e.target.value)} style={S.input} /></label>
         <button type="submit" style={S.primary} disabled={busy}>{busy ? "Saving…" : "Add holiday"}</button>
       </form>
+    </>
+  );
+}
+
+// Leave types. HR sets the name, the days each person gets by default, and whether unused days carry forward.
+// Changing the days changes every balance that has no per-person allocation.
+interface LeaveTypeRow {
+  id: number;
+  name: string;
+  defaultDays: number;
+  isCarryForward: boolean;
+  isActive: boolean;
+}
+
+function LeaveTypes() {
+  const [rows, setRows] = useState<LeaveTypeRow[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [draft, setDraft] = useState({ name: "", defaultDays: "10", isCarryForward: false });
+  const [editing, setEditing] = useState<LeaveTypeRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/hr/leave/types", { cache: "no-store" })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error ?? "Could not load leave types.");
+        if (!cancelled) setRows(body.results ?? []);
+      })
+      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : "Could not load leave types."));
+    return () => {
+      cancelled = true;
+    };
+  }, [tick]);
+
+  const send = async (url: string, payload: unknown, done: string) => {
+    setBusy(true);
+    setError("");
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Could not save.");
+    setEditing(null);
+    setTick((n) => n + 1);
+    return done;
+  };
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Leave types</h2>
+      <p style={S.note}>A change to days applies to everyone who has no individual allocation.</p>
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+      {rows.length > 0 && (
+        <table style={S.table}>
+          <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>Leave types</caption>
+          <thead>
+            <tr>{["Name", "Days", "Carry forward", "Status", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((t) => (
+              <tr key={t.id}>
+                <td style={S.td}><strong>{t.name}</strong></td>
+                <td style={S.td}>{t.defaultDays}</td>
+                <td style={S.td}>{t.isCarryForward ? "Yes" : "No"}</td>
+                <td style={S.td}>{t.isActive ? "Active" : "Inactive"}</td>
+                <td style={S.td}>
+                  <button type="button" style={S.btn} onClick={() => setEditing({ ...t })} aria-label={`Edit ${t.name}`}>Edit</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {editing && (
+        <form style={{ ...S.field, maxWidth: "420px", marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); send(`/api/hr/leave/types/${editing.id}/update`, { name: editing.name, defaultDays: editing.defaultDays, isCarryForward: editing.isCarryForward, isActive: editing.isActive }, "Saved."); }}>
+          <h3 style={{ margin: "0 0 0.5rem", fontSize: "16px" }}>Edit {editing.name}</h3>
+          <label style={S.field}>Name<input required minLength={2} maxLength={100} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} style={S.input} /></label>
+          <label style={S.field}>Days per person<input type="number" min={0} max={365} value={editing.defaultDays} onChange={(e) => setEditing({ ...editing, defaultDays: Number(e.target.value) })} style={S.input} /></label>
+          <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <input type="checkbox" checked={editing.isCarryForward} onChange={(e) => setEditing({ ...editing, isCarryForward: e.target.checked })} />
+            Unused days carry forward
+          </label>
+          <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <input type="checkbox" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
+            Active
+          </label>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button type="submit" style={S.primary} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+            <button type="button" style={S.btn} onClick={() => setEditing(null)}>Cancel</button>
+          </div>
+        </form>
+      )}
+
+      <form style={{ maxWidth: "420px", marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); send("/api/hr/leave/types", { name: draft.name, defaultDays: Number(draft.defaultDays), isCarryForward: draft.isCarryForward }, "Added."); setDraft({ name: "", defaultDays: "10", isCarryForward: false }); }}>
+        <h3 style={{ margin: "0 0 0.5rem", fontSize: "16px" }}>Add a leave type</h3>
+        <label style={S.field}>Name *<input required minLength={2} maxLength={100} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>Days per person *<input required type="number" min={0} max={365} value={draft.defaultDays} onChange={(e) => setDraft({ ...draft, defaultDays: e.target.value })} style={S.input} /></label>
+        <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+          <input type="checkbox" checked={draft.isCarryForward} onChange={(e) => setDraft({ ...draft, isCarryForward: e.target.checked })} />
+          Unused days carry forward
+        </label>
+        <button type="submit" style={S.primary} disabled={busy}>Add leave type</button>
+      </form>
+    </>
+  );
+}
+
+// Leave by date range. "team": approved leave of everyone in your department. "company": HR only, approved and pending,
+// with department and status. The range defaults to today to 60 days ahead and is capped at a year by the API.
+interface RosterRow {
+  id: number;
+  employeeName: string;
+  department?: string | null;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  halfDayPeriod: string | null;
+  status?: string;
+}
+
+// One date range shared by the department panel and the company-wide panel, which sit together on the same page.
+function TeamLeavePage() {
+  const today = new Date().toISOString().slice(0, 10);
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10));
+  return (
+    <>
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
+        <label style={S.field}>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={S.input} /></label>
+        <label style={S.field}>To<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} style={S.input} /></label>
+      </div>
+      <LeaveRoster scope="team" from={from} to={to} />
+      <div style={{ marginTop: "1.5rem" }}>
+        <LeaveRoster scope="company" from={from} to={to} />
+      </div>
+    </>
+  );
+}
+
+function LeaveRoster({ scope, from, to }: { scope: "team" | "company"; from: string; to: string }) {
+  const [rows, setRows] = useState<RosterRow[] | null>(null);
+  const [department, setDepartment] = useState<string | null>(null);
+  const [canSeePending, setCanSeePending] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setError("");
+    fetch(`/api/leave/${scope}?from=${from}&to=${to}`, { cache: "no-store" })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error ?? "Could not load leave.");
+        if (!cancelled) {
+          setRows(body.results ?? []);
+          setDepartment(body.department ?? null);
+          setCanSeePending(Boolean(body.canSeePending));
+        }
+      })
+      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : "Could not load leave."));
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, from, to]);
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>{scope === "team" ? (department ? `My department: ${department}` : "My department") : "Company-wide"}</h2>
+      <p style={S.note}>{scope === "team" ? "Approved leave of people in your department." : canSeePending ? "Approved and pending leave across the company." : "Approved leave across the company."}</p>
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+      {rows === null && !error && <p role="status">Loading…</p>}
+      {rows && rows.length === 0 && <p style={S.note}>No leave in this period.</p>}
+      {rows && rows.length > 0 && (
+        <table style={S.table}>
+          <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{scope === "team" ? "My team leave" : "Company leave"}</caption>
+          <thead>
+            <tr>{(scope === "team" ? ["Employee", "Type", "Dates", "Days"] : ["Employee", "Department", "Type", "Dates", "Days", "Status"]).map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td style={S.td}><strong>{r.employeeName}</strong></td>
+                {scope === "company" && <td style={S.td}>{r.department ?? "-"}</td>}
+                <td style={S.td}>{r.leaveType}{r.halfDayPeriod ? ` (${r.halfDayPeriod})` : ""}</td>
+                <td style={S.td}>{range(r)}</td>
+                <td style={S.td}>{r.days}</td>
+                {scope === "company" && <td style={S.td}><Status value={r.status ?? ""} /></td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </>
   );
 }

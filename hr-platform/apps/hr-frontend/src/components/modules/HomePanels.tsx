@@ -165,12 +165,12 @@ export const HomePanels: React.FC<{ realSession: boolean }> = ({ realSession }) 
             </form>
           )}
 
-          <h2 style={S.h2}>Birthdays in the next 14 days</h2>
+          <h2 style={S.h2}>Birthdays in the next 7 days</h2>
           {data.birthdays.length === 0 ? (
-            <p style={S.note}>No birthdays in the next 14 days.</p>
+            <p style={S.note}>No birthdays in the next 7 days.</p>
           ) : (
             <table style={S.table}>
-              <Caption>Birthdays in the next 14 days</Caption>
+              <Caption>Birthdays in the next 7 days</Caption>
               <thead>
                 <tr>{["Employee", "Job title", "Department", "Date"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
               </thead>

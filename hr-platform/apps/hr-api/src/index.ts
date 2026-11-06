@@ -733,6 +733,74 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
   return c.json({ id, status });
 });
 
+// Leave types: HR sets the name, the default days each person gets, and whether unused days carry forward. A change to
+// default_days changes every balance that has no per-person allocation (leaveBalances falls back to default_days).
+const LeaveTypeBody = z.object({
+  name: z.string().trim().min(2).max(100),
+  defaultDays: z.number().int().min(0).max(365),
+  isCarryForward: z.boolean().default(false),
+});
+const LeaveTypeUpdateBody = z.object({
+  name: z.string().trim().min(2).max(100).optional(),
+  defaultDays: z.number().int().min(0).max(365).optional(),
+  isCarryForward: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+});
+
+app.get("/api/v1/leave/types", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT id, name, default_days, is_carry_forward, is_active FROM leave_types WHERE company_id = ${companyId} ORDER BY id
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      name: String(r.name),
+      defaultDays: Number(r.default_days),
+      isCarryForward: Boolean(r.is_carry_forward),
+      isActive: Boolean(r.is_active),
+    })),
+  });
+});
+
+app.post("/api/v1/leave/types", zValidator("json", LeaveTypeBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can add leave types." }, 403);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const dup = await sql`SELECT 1 FROM leave_types WHERE company_id = ${companyId} AND lower(name) = lower(${body.name}) LIMIT 1`;
+  if (dup.length > 0) return c.json({ error: "A leave type with that name already exists." }, 409);
+  const inserted = await sql`
+    INSERT INTO leave_types (company_id, name, default_days, is_carry_forward) VALUES (${companyId}, ${body.name}, ${body.defaultDays}, ${body.isCarryForward})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id) }, 201);
+});
+
+app.post("/api/v1/leave/types/:id/update", zValidator("json", LeaveTypeUpdateBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change leave types." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const [current] = await sql`SELECT id, name, default_days, is_carry_forward, is_active FROM leave_types WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!current) return c.json({ error: "Not found" }, 404);
+  const name = body.name ?? String(current.name);
+  if (name.toLowerCase() !== String(current.name).toLowerCase()) {
+    const dup = await sql`SELECT 1 FROM leave_types WHERE company_id = ${companyId} AND lower(name) = lower(${name}) AND id <> ${id} LIMIT 1`;
+    if (dup.length > 0) return c.json({ error: "A leave type with that name already exists." }, 409);
+  }
+  await sql`
+    UPDATE leave_types SET name = ${name}, default_days = ${body.defaultDays ?? Number(current.default_days)},
+      is_carry_forward = ${body.isCarryForward ?? Boolean(current.is_carry_forward)}, is_active = ${body.isActive ?? Boolean(current.is_active)}
+    WHERE id = ${id} AND company_id = ${companyId}
+  `;
+  return c.json({ id, updated: true });
+});
+
 // Company holidays: everyone reads; HR adds and removes. Used when working days are counted.
 app.get("/api/v1/holidays", async (c) => {
   const { companyId } = c.get("tenant");
@@ -1110,7 +1178,7 @@ app.get("/api/v1/home", async (c) => {
     `,
   ]);
 
-  // Birthdays: next occurrence of each date of birth, within 14 days. Computed here because the staff list is small.
+  // Birthdays: next occurrence of each date of birth, within 7 days. Computed here because the staff list is small.
   const now = new Date();
   const year = now.getUTCFullYear();
   const todayMs = Date.UTC(year, now.getUTCMonth(), now.getUTCDate());
@@ -1129,7 +1197,7 @@ app.get("/api/v1/home", async (c) => {
         daysUntil,
       };
     })
-    .filter((b) => b.daysUntil <= 14)
+    .filter((b) => b.daysUntil <= 7)
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
   return c.json({
@@ -1428,6 +1496,77 @@ app.post("/api/v1/objectives/:id/amend", zValidator("json", ObjectiveAmendBody),
     throw err;
   }
   return c.json({ id, amended: true });
+});
+
+// Leave views by date range. Default: today to 60 days ahead. Ranges are capped at a year.
+function leaveWindow(c: { req: { query: (k: string) => string | undefined } }): { from: string; to: string } | { error: string } {
+  const today = new Date().toISOString().slice(0, 10);
+  const from = c.req.query("from") ?? today;
+  const to = c.req.query("to") ?? new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
+  const shape = checkDateShape(from, to);
+  return shape ? { error: shape } : { from, to };
+}
+
+// My department: approved leave of everyone in the same department as the signed-in user.
+app.get("/api/v1/leave/team", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const win = leaveWindow(c);
+  if ("error" in win) return c.json({ error: win.error }, 422);
+  const sql = getSql(c.env);
+  const [me] = await sql`
+    SELECT e.department_id, d.name AS department FROM employees e
+    LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+    WHERE e.id = ${userId} AND e.company_id = ${companyId}
+  `;
+  if (!me || me.department_id === null) return c.json({ department: null, from: win.from, to: win.to, results: [] });
+  const rows = await sql`
+    SELECT lr.id, lr.start_date::text AS start_date, lr.end_date::text AS end_date, lr.requested_days::float8 AS days,
+      lr.half_day_period, lt.name AS leave_type, e.first_name, e.last_name
+    FROM leave_requests lr
+    JOIN employees e ON e.id = lr.employee_id
+    JOIN leave_types lt ON lt.id = lr.leave_type_id
+    WHERE lr.company_id = ${companyId} AND e.department_id = ${me.department_id} AND lr.status = 'approved'
+      AND lr.start_date <= ${win.to}::date AND lr.end_date >= ${win.from}::date
+    ORDER BY lr.start_date, e.last_name
+  `;
+  return c.json({ department: String(me.department), from: win.from, to: win.to, results: rows.map(leaveRow) });
+});
+
+// Company-wide leave, visible to every signed-in user, so a task can be planned around a colleague's absence in
+// another department. Everyone sees approved leave; pending requests are shown to HR only.
+app.get("/api/v1/leave/company", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  const win = leaveWindow(c);
+  if ("error" in win) return c.json({ error: win.error }, 422);
+  const sql = getSql(c.env);
+  const statuses = isHrRole(role) ? ["approved", "pending"] : ["approved"];
+  const rows = await sql`
+    SELECT lr.id, lr.start_date::text AS start_date, lr.end_date::text AS end_date, lr.requested_days::float8 AS days,
+      lr.half_day_period, lr.status, lt.name AS leave_type, e.first_name, e.last_name, d.name AS department
+    FROM leave_requests lr
+    JOIN employees e ON e.id = lr.employee_id
+    JOIN leave_types lt ON lt.id = lr.leave_type_id
+    LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+    WHERE lr.company_id = ${companyId} AND lr.status = ANY(${statuses})
+      AND lr.start_date <= ${win.to}::date AND lr.end_date >= ${win.from}::date
+    ORDER BY d.name NULLS LAST, lr.start_date, e.last_name
+  `;
+  return c.json({
+    from: win.from,
+    to: win.to,
+    canSeePending: isHrRole(role),
+    results: rows.map((r) => ({ ...leaveRow(r), status: String(r.status), department: r.department ? String(r.department) : null })),
+  });
+});
+
+const leaveRow = (r: Record<string, unknown>) => ({
+  id: Number(r.id),
+  employeeName: `${r.first_name} ${r.last_name}`,
+  leaveType: String(r.leave_type),
+  startDate: String(r.start_date),
+  endDate: String(r.end_date),
+  days: Number(r.days),
+  halfDayPeriod: r.half_day_period ? String(r.half_day_period) : null,
 });
 
 // 6. Attendance & Time Tracking

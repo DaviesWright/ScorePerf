@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // reads it on the server and forwards the call to the API as a Bearer token. Only the leave endpoints are
 // reachable, and state-changing calls must come from this site.
 
-const ALLOWED = /^(me|requests|approvals|calendar|requests\/\d{1,9}\/(cancel|decision))$/;
+const ALLOWED = /^(me|requests|approvals|calendar|team|company|requests\/\d{1,9}\/(cancel|decision))$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
@@ -28,7 +28,7 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   const hasBody = req.method !== "GET";
   let upstream: Response;
   try {
-    upstream = await fetch(`${API_BASE}/api/v1/leave/${path}`, {
+    upstream = await fetch(`${API_BASE}/api/v1/leave/${path}${req.nextUrl.search}`, {
       method: req.method,
       headers: { Authorization: `Bearer ${token}`, ...(hasBody ? { "Content-Type": "application/json" } : {}) },
       body: hasBody ? await req.text() : undefined,
