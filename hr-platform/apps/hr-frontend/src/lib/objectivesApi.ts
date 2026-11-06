@@ -207,7 +207,10 @@ export function createMemoryObjectivesApi(actor: { userId: number; role: AccessR
     },
     decide: (_cycleId, employeeId, decision) => {
       const set = rows.filter((o) => o.employeeId === employeeId && o.status === "submitted");
-      if (set.length === 0 || !canDecideObjectives(actor, employeeId, "submitted")) return fail("Nothing is waiting for a decision.");
+      // Demo has no reporting lines: a line manager is treated as the solid manager of the demo staff.
+      if (set.length === 0 || !canDecideObjectives(actor, employeeId, "submitted", actor.role === "line_manager")) {
+        return fail("Nothing is waiting for a decision.");
+      }
       set.forEach((o) => {
         o.status = decision === "approve" ? "approved" : "returned";
         o.locked = decision === "approve";

@@ -59,13 +59,14 @@ test("only the owner can edit or delete, and only in draft or returned", () => {
   assert.equal(canDeleteObjective(owner, obj("draft")), true);
 });
 
-test("deciders decide submitted sets of other people only", () => {
-  assert.equal(canDecideObjectives(manager, 5, "submitted"), true);
-  assert.equal(canDecideObjectives(hr, 5, "submitted"), true);
-  assert.equal(canDecideObjectives(owner, 5, "submitted"), false); // employee role
-  assert.equal(canDecideObjectives({ userId: 5, role: "line_manager" }, 5, "submitted"), false); // own set
-  assert.equal(canDecideObjectives(manager, 5, "draft"), false);
-  assert.equal(canDecideObjectives(manager, 5, "approved"), false);
+test("HR decides submitted sets of other people; a line manager only their solid reports", () => {
+  assert.equal(canDecideObjectives(hr, 5, "submitted", false), true);
+  assert.equal(canDecideObjectives(manager, 5, "submitted", true), true, "solid manager");
+  assert.equal(canDecideObjectives(manager, 5, "submitted", false), false, "not the solid manager");
+  assert.equal(canDecideObjectives(owner, 5, "submitted", true), false, "employee role");
+  assert.equal(canDecideObjectives({ userId: 5, role: "line_manager" }, 5, "submitted", true), false, "own set");
+  assert.equal(canDecideObjectives(hr, 5, "draft", false), false);
+  assert.equal(canDecideObjectives(manager, 5, "approved", true), false);
 });
 
 test("amendment: HR only, approved objective of someone else, cycle not frozen", () => {

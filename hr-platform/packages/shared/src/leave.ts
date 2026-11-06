@@ -91,9 +91,14 @@ export function validateRequest(input: RequestInput, ctx: ValidationContext): Va
 
 const DECIDERS: readonly AccessRole[] = ["line_manager", "hr_admin", "hr_director"];
 
-/** Without a reporting line in the data (employees has no manager column), any decider role may decide, never on their own request. */
-export function canDecide(actor: Actor, request: LeaveRequestRow): boolean {
-  return DECIDERS.includes(actor.role) && actor.userId !== request.employeeId && request.status === "pending";
+/**
+ * HR decides any pending request of someone else. A line manager decides only the requests of people whose solid
+ * (approving) line is to them. Nobody decides their own request. `solidManagerOfEmployee` comes from reporting_lines.
+ */
+export function canDecide(actor: Actor, request: LeaveRequestRow, solidManagerOfEmployee: boolean): boolean {
+  if (actor.userId === request.employeeId || request.status !== "pending") return false;
+  if (actor.role === "hr_admin" || actor.role === "hr_director") return true;
+  return actor.role === "line_manager" && solidManagerOfEmployee;
 }
 
 export function canCancel(actor: Actor, request: LeaveRequestRow): boolean {

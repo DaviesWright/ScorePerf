@@ -67,9 +67,15 @@ export const canDeleteObjective = canEditObjective;
 
 export const canSubmitObjectives = (actor: Actor, ownerId: number): boolean => actor.userId === ownerId;
 
-/** A decider may decide a submitted set, never their own. */
-export const canDecideObjectives = (actor: Actor, ownerId: number, status: ObjectiveStatus): boolean =>
-  DECIDER_ROLES.includes(actor.role) && actor.userId !== ownerId && status === "submitted";
+/**
+ * HR decides any submitted set of someone else. A line manager decides only the sets of their solid reports.
+ * Nobody decides their own set.
+ */
+export const canDecideObjectives = (actor: Actor, ownerId: number, status: ObjectiveStatus, solidManagerOfOwner: boolean): boolean => {
+  if (actor.userId === ownerId || status !== "submitted") return false;
+  if (actor.role === "hr_admin" || actor.role === "hr_director") return true;
+  return actor.role === "line_manager" && solidManagerOfOwner;
+};
 
 /** HR may amend an approved objective of someone else while the cycle is not frozen. */
 export function canAmend(actor: Actor, o: ObjectiveRow, cycleStage: CycleStage): boolean {

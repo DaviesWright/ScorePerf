@@ -22,6 +22,7 @@ import {
   canAmend,
   canCancel,
   canDecide,
+  canDecideObjectives,
   canDeleteObjective,
   canEditObjective,
   canUpdateProgress,
@@ -33,6 +34,8 @@ import {
   objectivesOpen,
   remainingDays,
   totalWeight,
+  parseReportingLinesCsv,
+  parseStrategyCsv,
   validateObjective,
   validateRequest,
   type ObjectiveStatus,
@@ -674,6 +677,15 @@ app.post("/api/v1/leave/requests/:id/cancel", async (c) => {
   return c.json({ id, status: "cancelled" });
 });
 
+/** True when `managerId` holds the solid (approving) reporting line of `employeeId`. */
+async function isSolidManager(sql: ReturnType<typeof getSql>, companyId: number, managerId: number, employeeId: number): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM reporting_lines
+    WHERE company_id = ${companyId} AND employee_id = ${employeeId} AND manager_id = ${managerId} AND kind = 'solid' LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
 app.get("/api/v1/leave/approvals", async (c) => {
   const { companyId, userId, role } = c.get("tenant");
   if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
@@ -687,6 +699,8 @@ app.get("/api/v1/leave/approvals", async (c) => {
     JOIN employees e ON e.id = lr.employee_id
     LEFT JOIN departments d ON d.id = e.department_id
     WHERE lr.company_id = ${companyId} AND lr.status = 'pending' AND lr.employee_id <> ${userId}
+      AND (${isHrRole(role)}::boolean OR lr.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
     ORDER BY lr.start_date ASC LIMIT 200
   `;
   return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
@@ -701,7 +715,8 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
   const request = await loadLeaveRequest(sql, companyId, id);
   if (!request) return c.json({ error: "Not found" }, 404);
   if (request.employeeId === userId) return c.json({ error: "You cannot decide your own request." }, 403);
-  if (!canDecide({ userId, role }, request)) return c.json({ error: "This request is no longer pending." }, 409);
+  const solid = await isSolidManager(sql, companyId, userId, request.employeeId);
+  if (!canDecide({ userId, role }, request, solid)) return c.json({ error: "You can only decide requests from your solid reports, or HR can decide." }, 403);
   const status = c.req.valid("json").decision === "approve" ? "approved" : "rejected";
   const updated = await sql`
     UPDATE leave_requests SET status = ${status}, approved_by = ${userId}, updated_at = NOW()
@@ -874,6 +889,8 @@ app.get("/api/v1/objectives/pending", async (c) => {
     JOIN employees e ON e.id = o.employee_id
     LEFT JOIN departments d ON d.id = e.department_id
     WHERE o.company_id = ${companyId} AND o.cycle_id = ${cycle.id} AND o.status = 'submitted' AND o.employee_id <> ${userId}
+      AND (${isHrRole(role)}::boolean OR o.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
     ORDER BY o.employee_id, o.id LIMIT 500
   `;
   return c.json({ cycle, results: rows.map(toObjective) });
@@ -888,6 +905,10 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
   const cycle = await objectiveCycle(sql, companyId, cycleId);
   if (!cycle) return c.json({ error: "Not found" }, 404);
   if (!cycle.open) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
+  const solid = await isSolidManager(sql, companyId, userId, employeeId);
+  if (!canDecideObjectives({ userId, role }, employeeId, "submitted", solid)) {
+    return c.json({ error: "You can only decide objectives of your solid reports, or HR can decide." }, 403);
+  }
   const updated =
     decision === "approve"
       ? await sql`
@@ -900,6 +921,128 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
         `;
   if (updated.length === 0) return c.json({ error: "Nothing is waiting for a decision." }, 409);
   return c.json({ decided: updated.length, status: decision === "approve" ? "approved" : "returned" });
+});
+
+// Reporting lines: HR loads a CSV of (employee, manager, solid|dotted). A load replaces all lines in one transaction.
+// Every email must match an active employee in this company; unknown emails are reported by line.
+const ReportingImportBody = z.object({ csv: z.string().min(1).max(120_000) });
+const isHrRole = (role: string) => role === "hr_admin" || role === "hr_director";
+
+app.post("/api/v1/reporting-lines/import", zValidator("json", ReportingImportBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can load reporting lines." }, 403);
+  const parsed = parseReportingLinesCsv(c.req.valid("json").csv);
+  if (parsed.errors.length > 0) return c.json({ error: "The file has errors.", errors: parsed.errors }, 422);
+  const sql = getSql(c.env);
+  const people = await sql`SELECT id, lower(email) AS email FROM employees WHERE company_id = ${companyId} AND is_active`;
+  const idByEmail = new Map(people.map((p) => [String(p.email), Number(p.id)]));
+  const errors = parsed.rows.flatMap((r) => {
+    const out: { line: number; message: string }[] = [];
+    if (!idByEmail.has(r.employeeEmail)) out.push({ line: r.line, message: `No active employee with email ${r.employeeEmail}.` });
+    if (!idByEmail.has(r.managerEmail)) out.push({ line: r.line, message: `No active employee with email ${r.managerEmail}.` });
+    return out;
+  });
+  if (errors.length > 0) return c.json({ error: "Some emails are not in the company.", errors }, 422);
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM reporting_lines WHERE company_id = ${companyId}`;
+    for (const r of parsed.rows) {
+      await tx`
+        INSERT INTO reporting_lines (company_id, employee_id, manager_id, kind)
+        VALUES (${companyId}, ${idByEmail.get(r.employeeEmail)!}, ${idByEmail.get(r.managerEmail)!}, ${r.kind})
+      `;
+    }
+  });
+  return c.json({ loaded: parsed.rows.length }, 201);
+});
+
+// HR view: every reporting line with names.
+app.get("/api/v1/reporting-lines", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT rl.kind, e.id AS employee_id, e.first_name AS e_first, e.last_name AS e_last,
+      m.id AS manager_id, m.first_name AS m_first, m.last_name AS m_last
+    FROM reporting_lines rl
+    JOIN employees e ON e.id = rl.employee_id
+    JOIN employees m ON m.id = rl.manager_id
+    WHERE rl.company_id = ${companyId}
+    ORDER BY e.last_name, e.first_name, rl.kind
+  `;
+  return c.json({
+    lines: rows.map((r) => ({
+      kind: String(r.kind),
+      employeeId: Number(r.employee_id),
+      employeeName: `${r.e_first} ${r.e_last}`,
+      managerId: Number(r.manager_id),
+      managerName: `${r.m_first} ${r.m_last}`,
+    })),
+  });
+});
+
+// Anyone: my managers (solid and dotted) and my reports (solid and dotted).
+app.get("/api/v1/reporting-lines/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT rl.kind, rl.employee_id, rl.manager_id,
+      e.first_name AS e_first, e.last_name AS e_last, m.first_name AS m_first, m.last_name AS m_last
+    FROM reporting_lines rl
+    JOIN employees e ON e.id = rl.employee_id
+    JOIN employees m ON m.id = rl.manager_id
+    WHERE rl.company_id = ${companyId} AND (rl.employee_id = ${userId} OR rl.manager_id = ${userId})
+  `;
+  const person = (id: number, first: unknown, last: unknown) => ({ id, name: `${first} ${last}` });
+  const managers = rows
+    .filter((r) => Number(r.employee_id) === userId)
+    .map((r) => ({ kind: String(r.kind), ...person(Number(r.manager_id), r.m_first, r.m_last) }));
+  const reports = rows
+    .filter((r) => Number(r.manager_id) === userId)
+    .map((r) => ({ kind: String(r.kind), ...person(Number(r.employee_id), r.e_first, r.e_last) }));
+  return c.json({ managers, reports });
+});
+
+// Corporate strategy: HR loads a CSV (validated by parseStrategyCsv). A load replaces the whole strategy in one
+// transaction. Anyone can read it; only HR admins and directors load it.
+const StrategyImportBody = z.object({ csv: z.string().min(1).max(60_000) });
+
+app.get("/api/v1/strategy", async (c) => {
+  const { companyId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT id, perspective, objective, measure, target::float8 AS target, owner, weight::float8 AS weight, loaded_at
+    FROM corporate_strategy_goals WHERE company_id = ${companyId} ORDER BY perspective, id
+  `;
+  return c.json({
+    loadedAt: rows[0] ? new Date(String(rows[0].loaded_at)).toISOString() : null,
+    goals: rows.map((r) => ({
+      id: Number(r.id),
+      perspective: String(r.perspective),
+      objective: String(r.objective),
+      measure: String(r.measure),
+      target: Number(r.target),
+      owner: r.owner ? String(r.owner) : null,
+      weight: r.weight === null ? null : Number(r.weight),
+    })),
+  });
+});
+
+app.post("/api/v1/strategy/import", zValidator("json", StrategyImportBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (role !== "hr_admin" && role !== "hr_director") return c.json({ error: "Only HR can load the corporate strategy." }, 403);
+  const parsed = parseStrategyCsv(c.req.valid("json").csv);
+  if (parsed.errors.length > 0) return c.json({ error: "The file has errors.", errors: parsed.errors }, 422);
+  const sql = getSql(c.env);
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM corporate_strategy_goals WHERE company_id = ${companyId}`;
+    for (const g of parsed.rows) {
+      await tx`
+        INSERT INTO corporate_strategy_goals (company_id, perspective, objective, measure, target, owner, weight, loaded_by)
+        VALUES (${companyId}, ${g.perspective}, ${g.objective}, ${g.measure}, ${g.target}, ${g.owner}, ${g.weight}, ${userId})
+      `;
+    }
+  });
+  return c.json({ loaded: parsed.rows.length }, 201);
 });
 
 // Home page content for everyone: active announcements, birthdays in the next 14 days, and the staff directory.

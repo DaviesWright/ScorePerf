@@ -68,13 +68,19 @@ test("remaining = total minus approved minus pending", () => {
 
 const pending: LeaveRequestRow = { id: 1, employeeId: 9, status: "pending" };
 
-test("deciders: line manager, HR admin and HR director, never on their own request, only while pending", () => {
-  for (const role of ["line_manager", "hr_admin", "hr_director"] as const) {
-    assert.equal(canDecide({ userId: 2, role }, pending), true, role);
-    assert.equal(canDecide({ userId: 9, role }, pending), false, `${role} self`);
+test("HR decides any pending request of someone else", () => {
+  for (const role of ["hr_admin", "hr_director"] as const) {
+    assert.equal(canDecide({ userId: 2, role }, pending, false), true, role);
+    assert.equal(canDecide({ userId: 9, role }, pending, false), false, `${role} self`);
   }
-  assert.equal(canDecide({ userId: 2, role: "employee" }, pending), false);
-  assert.equal(canDecide({ userId: 2, role: "hr_admin" }, { ...pending, status: "approved" }), false);
+  assert.equal(canDecide({ userId: 2, role: "hr_admin" }, { ...pending, status: "approved" }, true), false);
+});
+
+test("a line manager decides only a solid report, never their own request", () => {
+  assert.equal(canDecide({ userId: 2, role: "line_manager" }, pending, true), true, "solid manager");
+  assert.equal(canDecide({ userId: 2, role: "line_manager" }, pending, false), false, "not the solid manager");
+  assert.equal(canDecide({ userId: 9, role: "line_manager" }, pending, true), false, "self");
+  assert.equal(canDecide({ userId: 2, role: "employee" }, pending, true), false, "employee");
 });
 
 test("only the owner can cancel, and only while pending", () => {

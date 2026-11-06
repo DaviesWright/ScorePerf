@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS employees (
         CONSTRAINT employees_access_role_check CHECK (access_role IN ('employee', 'line_manager', 'hr_admin', 'hr_director')),
     is_active BOOLEAN DEFAULT true NOT NULL,
     date_of_birth DATE, -- db/migrations/0003_announcements_and_birthdays.sql; birthdays show only when set
+    office VARCHAR(20) -- db/migrations/0004_employee_office.sql: London, Accra or Windhoek
+        CONSTRAINT employees_office_check CHECK (office IS NULL OR office IN ('London', 'Accra', 'Windhoek')),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, email)
@@ -192,6 +194,38 @@ CREATE TABLE IF NOT EXISTS employee_objectives (
     CONSTRAINT employee_objectives_approved_stamp_check
         CHECK (status <> 'approved' OR (approved_by IS NOT NULL AND approved_at IS NOT NULL AND locked_at IS NOT NULL))
 );
+
+-- Reporting lines (migration 0006): one solid line per employee decides approvals; dotted lines give visibility.
+CREATE TABLE IF NOT EXISTS reporting_lines (
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    manager_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    kind VARCHAR(10) NOT NULL CHECK (kind IN ('solid', 'dotted')),
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    PRIMARY KEY (employee_id, manager_id),
+    CONSTRAINT reporting_lines_not_self CHECK (employee_id <> manager_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS reporting_lines_one_solid
+    ON reporting_lines (employee_id) WHERE kind = 'solid';
+
+CREATE INDEX IF NOT EXISTS idx_reporting_lines_manager ON reporting_lines (manager_id);
+
+-- Corporate strategy goals loaded from CSV by HR (migration 0005). A load replaces the company's whole strategy.
+CREATE TABLE IF NOT EXISTS corporate_strategy_goals (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    perspective VARCHAR(100) NOT NULL,
+    objective VARCHAR(255) NOT NULL,
+    measure VARCHAR(255) NOT NULL,
+    target NUMERIC(14, 2) NOT NULL CHECK (target >= 0),
+    owner VARCHAR(100),
+    weight NUMERIC(5, 2) CHECK (weight IS NULL OR (weight > 0 AND weight <= 100)),
+    loaded_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    loaded_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_corporate_strategy_company ON corporate_strategy_goals(company_id);
 
 -- Staff announcements, posted by hr_admin (migration 0003). Visible from published_on through expires_on.
 CREATE TABLE IF NOT EXISTS announcements (
