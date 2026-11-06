@@ -1553,6 +1553,67 @@ app.post("/api/v1/assets/:id/return", zValidator("json", AssetReturnBody), async
   return c.json({ id, status: nextStatus });
 });
 
+// HR: open assignments held longer than `days` (default 365). Visibility only; nothing is enforced automatically.
+app.get("/api/v1/assets/overdue", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const raw = Number(c.req.query("days") ?? 365);
+  const days = Number.isSafeInteger(raw) && raw >= 0 && raw <= 3650 ? raw : 365;
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT ca.id AS asset_id, ca.asset_code, ca.name, aa.allocated_date::text AS allocated_date,
+      (CURRENT_DATE - aa.allocated_date)::int AS days_held, e.id AS employee_id, e.first_name, e.last_name
+    FROM asset_allocations aa
+    JOIN company_assets ca ON ca.id = aa.asset_id
+    JOIN employees e ON e.id = aa.employee_id
+    WHERE aa.company_id = ${companyId} AND aa.return_date IS NULL AND aa.allocated_date <= CURRENT_DATE - ${days}::int
+    ORDER BY aa.allocated_date ASC
+  `;
+  return c.json({
+    days,
+    results: rows.map((r) => ({
+      assetId: Number(r.asset_id),
+      assetCode: String(r.asset_code),
+      name: String(r.name),
+      allocatedDate: String(r.allocated_date),
+      daysHeld: Number(r.days_held),
+      employeeId: Number(r.employee_id),
+      employeeName: `${r.first_name} ${r.last_name}`,
+    })),
+  });
+});
+
+// HR: offboard an employee. Refused while they still hold an open assignment; the list of assets is returned so HR
+// can recover them first. Deactivates the account (is_active = false); the record is kept.
+app.post("/api/v1/employees/:id/offboard", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can offboard employees." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  if (id === userId) return c.json({ error: "You cannot offboard your own account." }, 403);
+  const sql = getSql(c.env);
+  const [person] = await sql`SELECT id, is_active FROM employees WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!person) return c.json({ error: "Not found" }, 404);
+  if (!person.is_active) return c.json({ error: "This employee is already offboarded." }, 409);
+  const held = await sql`
+    SELECT ca.id, ca.asset_code, ca.name
+    FROM asset_allocations aa JOIN company_assets ca ON ca.id = aa.asset_id
+    WHERE aa.company_id = ${companyId} AND aa.employee_id = ${id} AND aa.return_date IS NULL
+    ORDER BY ca.asset_code
+  `;
+  if (held.length > 0) {
+    return c.json(
+      {
+        error: `${held.length} asset(s) must be returned before offboarding.`,
+        openAssets: held.map((a) => ({ id: Number(a.id), assetCode: String(a.asset_code), name: String(a.name) })),
+      },
+      409,
+    );
+  }
+  await sql`UPDATE employees SET is_active = false, updated_at = NOW() WHERE id = ${id} AND company_id = ${companyId}`;
+  return c.json({ id, offboarded: true });
+});
+
 // HR: every assignment of one asset, newest first.
 app.get("/api/v1/assets/:id/history", async (c) => {
   const { companyId, role } = c.get("tenant");

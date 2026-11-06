@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // on the server and forwards it as a Bearer token. Only the listed paths are reachable; state-changing calls must
 // come from this site.
 
-const ALLOWED = /^(home|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/\d{1,9}\/(assign|return|history))$/;
+const ALLOWED = /^(home|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/overdue|assets\/\d{1,9}\/(assign|return|history)|employees\/\d{1,9}\/offboard)$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
@@ -28,7 +28,7 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
   const hasBody = req.method !== "GET";
   let upstream: Response;
   try {
-    upstream = await fetch(`${API_BASE}/api/v1/${path}`, {
+    upstream = await fetch(`${API_BASE}/api/v1/${path}${req.nextUrl.search}`, {
       method: req.method,
       headers: { Authorization: `Bearer ${token}`, ...(hasBody ? { "Content-Type": "application/json" } : {}) },
       body: hasBody ? await req.text() : undefined,

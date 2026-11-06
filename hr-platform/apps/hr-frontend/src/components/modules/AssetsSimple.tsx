@@ -98,6 +98,10 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
   const [returnCondition, setReturnCondition] = useState<Condition>("good");
   const [returnNotes, setReturnNotes] = useState("");
   const [reg, setReg] = useState({ name: "", assetCode: "", serialNumber: "", condition: "good" as Condition });
+  const [overdueDays, setOverdueDays] = useState(365);
+  const [overdue, setOverdue] = useState<{ assetCode: string; name: string; employeeName: string; daysHeld: number }[]>([]);
+  const [leaver, setLeaver] = useState("");
+  const [leaverBlock, setLeaverBlock] = useState<{ assetCode: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -123,6 +127,17 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
       cancelled = true;
     };
   }, [realSession, isHr, reloadKey]);
+
+  useEffect(() => {
+    if (!realSession || !isHr) return;
+    let cancelled = false;
+    call<{ results: { assetCode: string; name: string; employeeName: string; daysHeld: number }[] }>("GET", `assets/overdue?days=${overdueDays}`).then((r) => {
+      if (!cancelled && r.ok) setOverdue(r.data.results ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realSession, isHr, overdueDays, reloadKey]);
 
   useEffect(() => {
     if (!realSession || !isHr || !selected) return;
@@ -270,6 +285,69 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
               )}
             </section>
           )}
+
+          <section style={S.panel} aria-label="Overdue assignments">
+            <h2 style={{ ...S.h2, marginTop: 0 }}>Overdue assignments</h2>
+            <label style={{ ...S.field, maxWidth: "260px" }}>
+              Held for at least (days)
+              <input type="number" min={0} max={3650} value={overdueDays} onChange={(e) => setOverdueDays(Math.max(0, Math.min(3650, Number(e.target.value) || 0)))} style={S.input} />
+            </label>
+            {overdue.length === 0 ? (
+              <p style={S.note}>Nothing held that long.</p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={S.table}>
+                  <Caption>Overdue assignments</Caption>
+                  <thead>
+                    <tr>{["Code", "Name", "Holder", "Days held"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {overdue.map((o) => (
+                      <tr key={o.assetCode}>
+                        <td style={S.td}><strong>{o.assetCode}</strong></td>
+                        <td style={S.td}>{o.name}</td>
+                        <td style={S.td}>{o.employeeName}</td>
+                        <td style={S.td}>{o.daysHeld}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <section style={S.panel} aria-label="Offboard an employee">
+            <h2 style={{ ...S.h2, marginTop: 0 }}>Offboard an employee</h2>
+            <p style={S.note}>Offboarding is refused while the person still holds assets. Return them first.</p>
+            <form style={{ maxWidth: "420px" }} onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              setLeaverBlock([]);
+              const r = await call<{ error?: string; openAssets?: { assetCode: string; name: string }[] }>("POST", `employees/${leaver}/offboard`, {});
+              setBusy(false);
+              if (r.ok) {
+                setMessage("Employee offboarded.");
+                setLeaver("");
+                setReloadKey((n) => n + 1);
+              } else {
+                setFormError(r.data.error ?? "Could not offboard.");
+                setLeaverBlock(r.data.openAssets ?? []);
+              }
+            }}>
+              <label style={S.field}>Employee *
+                <select required value={leaver} onChange={(e) => setLeaver(e.target.value)} style={S.input}>
+                  <option value="">Choose…</option>
+                  {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </label>
+              {leaverBlock.length > 0 && (
+                <ul style={{ color: "#9f1239", margin: "0 0 0.75rem", paddingLeft: "1.25rem" }}>
+                  {leaverBlock.map((a) => <li key={a.assetCode}>{a.assetCode}: {a.name}</li>)}
+                </ul>
+              )}
+              <button type="submit" style={S.primary} disabled={busy || !leaver}>{busy ? "Checking…" : "Offboard"}</button>
+            </form>
+          </section>
 
           <section style={S.panel} aria-label="Register an asset">
             <h2 style={{ ...S.h2, marginTop: 0 }}>Register an asset</h2>
