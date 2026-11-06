@@ -7,7 +7,7 @@ import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, t
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
 
-type Tab = "mine" | "request" | "approvals" | "calendar" | "company" | "holidays" | "types";
+type Tab = "mine" | "request" | "approvals" | "calendar" | "company" | "trips" | "holidays" | "types";
 
 interface LeaveSimpleProps {
   api: LeaveApi;
@@ -91,6 +91,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
     { key: "mine", label: "My leave" },
     { key: "request", label: "Request leave" },
     { key: "calendar", label: "Team and company leave" },
+    { key: "trips", label: "Business trips" },
     ...(decider ? ([{ key: "approvals", label: "Approvals" }] as { key: Tab; label: string }[]) : []),
     ...(user.role === "hr_admin" || user.role === "hr_director"
       ? ([{ key: "holidays", label: "Holidays" }, { key: "types", label: "Leave types" }] as { key: Tab; label: string }[])
@@ -131,6 +132,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
       )}
       {tab === "approvals" && decider && <Approvals api={api} />}
       {tab === "calendar" && <TeamLeavePage />}
+      {tab === "trips" && <TripsPanel canDecide={decider} />}
       {tab === "holidays" && (user.role === "hr_admin" || user.role === "hr_director") && <Holidays />}
       {tab === "types" && (user.role === "hr_admin" || user.role === "hr_director") && <LeaveTypes />}
     </div>
@@ -495,6 +497,162 @@ function Holidays() {
   );
 }
 
+// Business trips: request one, see your own, and (for managers and HR) decide the pending ones. An approved trip shows
+// on the team and company views as "Travel". Trips do not use leave balances.
+interface TripMine {
+  id: number;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  decisionComment: string | null;
+}
+interface TripPending {
+  id: number;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  employeeName: string;
+  department: string | null;
+}
+
+function TripsPanel({ canDecide }: { canDecide: boolean }) {
+  const [mine, setMine] = useState<TripMine[]>([]);
+  const [pending, setPending] = useState<TripPending[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [draft, setDraft] = useState({ destination: "", purpose: "", startDate: "", endDate: "" });
+  const [rejecting, setRejecting] = useState<number | null>(null);
+  const [reason, setReason] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/leave/trips/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => !cancelled && setMine(b.results ?? []))
+      .catch(() => !cancelled && setError("Could not load your trips."));
+    if (canDecide) {
+      fetch("/api/leave/trips/pending", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((b) => !cancelled && setPending(b.results ?? []))
+        .catch(() => !cancelled && setError("Could not load trips to approve."));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [canDecide, tick]);
+
+  const request = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const r = await fetch("/api/leave/trips", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(draft) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Could not request the trip.");
+    setDraft({ destination: "", purpose: "", startDate: "", endDate: "" });
+    setTick((n) => n + 1);
+  };
+
+  const decide = async (id: number, decision: "approve" | "reject", comment?: string) => {
+    setBusy(true);
+    setError("");
+    const r = await fetch(`/api/leave/trips/${id}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision, comment }) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Could not record the decision.");
+    setRejecting(null);
+    setReason("");
+    setTick((n) => n + 1);
+  };
+
+  const cancel = async (id: number) => {
+    setBusy(true);
+    const r = await fetch(`/api/leave/trips/${id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    setBusy(false);
+    if (!r.ok) return setError("Only pending trips can be cancelled.");
+    setTick((n) => n + 1);
+  };
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Request a business trip</h2>
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+      <form onSubmit={request} style={{ maxWidth: "520px" }}>
+        <label style={S.field}>Destination *<input required minLength={2} maxLength={200} value={draft.destination} onChange={(e) => setDraft({ ...draft, destination: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>Purpose<textarea maxLength={1000} rows={2} value={draft.purpose} onChange={(e) => setDraft({ ...draft, purpose: e.target.value })} style={{ ...S.input, minHeight: "70px" }} /></label>
+        <label style={S.field}>Start date *<input required type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>End date *<input required type="date" value={draft.endDate} min={draft.startDate || undefined} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} style={S.input} /></label>
+        <button type="submit" style={S.primary} disabled={busy}>{busy ? "Sending…" : "Request trip"}</button>
+      </form>
+
+      <h2 style={S.h2}>My trips</h2>
+      {mine.length === 0 ? (
+        <p style={S.note}>You have no trips yet.</p>
+      ) : (
+        <table style={S.table}>
+          <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>My trips</caption>
+          <thead>
+            <tr>{["Destination", "Dates", "Status", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {mine.map((t) => (
+              <tr key={t.id}>
+                <td style={S.td}>{t.destination}</td>
+                <td style={S.td}>{t.startDate === t.endDate ? fmt(t.startDate) : `${fmt(t.startDate)} to ${fmt(t.endDate)}`}</td>
+                <td style={S.td}><Status value={t.status} />{t.decisionComment ? <div style={{ color: C.muted }}>{t.decisionComment}</div> : null}</td>
+                <td style={S.td}>{t.status === "pending" && <button type="button" style={S.btn} disabled={busy} onClick={() => cancel(t.id)}>Cancel</button>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {canDecide && (
+        <>
+          <h2 style={S.h2}>Trips to approve</h2>
+          {pending.length === 0 ? (
+            <p style={S.note}>No trips are waiting for approval.</p>
+          ) : (
+            <table style={S.table}>
+              <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>Trips to approve</caption>
+              <thead>
+                <tr>{["Employee", "Destination", "Dates", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {pending.map((t) => (
+                  <tr key={t.id}>
+                    <td style={S.td}><strong>{t.employeeName}</strong>{t.department ? <div style={{ color: C.muted }}>{t.department}</div> : null}</td>
+                    <td style={S.td}>{t.destination}</td>
+                    <td style={S.td}>{t.startDate === t.endDate ? fmt(t.startDate) : `${fmt(t.startDate)} to ${fmt(t.endDate)}`}</td>
+                    <td style={S.td}>
+                      {rejecting === t.id ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: "220px" }}>
+                          <textarea rows={2} maxLength={1000} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} style={S.input} />
+                          <div style={{ display: "flex", gap: "0.4rem" }}>
+                            <button type="button" style={{ ...S.btn, borderColor: C.danger, color: C.danger }} disabled={busy || reason.trim().length < 3} onClick={() => decide(t.id, "reject", reason.trim())}>Confirm reject</button>
+                            <button type="button" style={S.btn} onClick={() => { setRejecting(null); setReason(""); }}>Keep pending</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                          <button type="button" style={S.primary} disabled={busy} onClick={() => decide(t.id, "approve")}>Approve</button>
+                          <button type="button" style={S.btn} disabled={busy} onClick={() => setRejecting(t.id)}>Reject</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 // Leave types. HR sets the name, the days each person gets by default, and whether unused days carry forward.
 // Changing the days changes every balance that has no per-person allocation.
 interface LeaveTypeRow {
@@ -609,7 +767,7 @@ interface RosterRow {
   leaveType: string;
   startDate: string;
   endDate: string;
-  days: number;
+  days: number | null;
   halfDayPeriod: string | null;
   status?: string;
 }
@@ -678,7 +836,7 @@ function LeaveRoster({ scope, from, to }: { scope: "team" | "company"; from: str
                 {scope === "company" && <td style={S.td}>{r.department ?? "-"}</td>}
                 <td style={S.td}>{r.leaveType}{r.halfDayPeriod ? ` (${r.halfDayPeriod})` : ""}</td>
                 <td style={S.td}>{range(r)}</td>
-                <td style={S.td}>{r.days}</td>
+                <td style={S.td}>{r.days ?? "-"}</td>
                 {scope === "company" && <td style={S.td}><Status value={r.status ?? ""} /></td>}
               </tr>
             ))}

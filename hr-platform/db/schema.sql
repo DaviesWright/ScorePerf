@@ -227,6 +227,38 @@ CREATE TABLE IF NOT EXISTS corporate_strategy_goals (
 
 CREATE INDEX IF NOT EXISTS idx_corporate_strategy_company ON corporate_strategy_goals(company_id);
 
+-- In-app notifications (migration 0011): leave and trip events to the solid manager and HR.
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    kind VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications (recipient_id, read_at, created_at);
+
+-- Business trips (migration 0010): requested like leave, decided by the solid manager or HR, shown as "Travel".
+CREATE TABLE IF NOT EXISTS business_trips (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    destination VARCHAR(200) NOT NULL,
+    purpose TEXT NOT NULL DEFAULT '',
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    decided_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ,
+    decision_comment TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    CONSTRAINT business_trips_dates_check CHECK (end_date >= start_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_trips_company_dates ON business_trips (company_id, start_date, end_date);
+
 -- Staff announcements, posted by hr_admin (migration 0003). Visible from published_on through expires_on.
 CREATE TABLE IF NOT EXISTS announcements (
     id SERIAL PRIMARY KEY,

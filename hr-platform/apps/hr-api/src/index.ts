@@ -654,8 +654,39 @@ app.post("/api/v1/leave/requests", zValidator("json", LeaveRequestBody), async (
     VALUES (${companyId}, ${userId}, ${body.leaveTypeId}, ${body.startDate}, ${body.endDate}, ${result.days}, 'pending', ${body.reason}, ${body.halfDay ?? null})
     RETURNING id
   `;
+  const requester = await personName(sql, companyId, userId);
+  await notifyManagerAndHr(sql, companyId, userId, userId, "leave_requested",
+    `${requester} requested ${balance.name} leave, ${body.startDate} to ${body.endDate} (${result.days} day${result.days === 1 ? "" : "s"}).`);
   return c.json({ id: Number(inserted[0].id), days: result.days, status: "pending" }, 201);
 });
+
+// Notifications for leave and trips go to the employee's solid manager and to HR. The actor is never notified of
+// their own action. Recipients are computed in one statement.
+async function notifyManagerAndHr(
+  sql: ReturnType<typeof getSql>,
+  companyId: number,
+  employeeId: number,
+  actorId: number,
+  kind: string,
+  message: string,
+): Promise<void> {
+  await sql`
+    INSERT INTO notifications (company_id, recipient_id, kind, message)
+    SELECT ${companyId}, r.id, ${kind}, ${message} FROM (
+      SELECT rl.manager_id AS id FROM reporting_lines rl
+      WHERE rl.company_id = ${companyId} AND rl.employee_id = ${employeeId} AND rl.kind = 'solid'
+      UNION
+      SELECT e.id FROM employees e
+      WHERE e.company_id = ${companyId} AND e.is_active AND e.access_role IN ('hr_admin', 'hr_director')
+    ) r
+    WHERE r.id <> ${actorId}
+  `;
+}
+
+async function personName(sql: ReturnType<typeof getSql>, companyId: number, id: number): Promise<string> {
+  const [row] = await sql`SELECT first_name, last_name FROM employees WHERE id = ${id} AND company_id = ${companyId}`;
+  return row ? `${row.first_name} ${row.last_name}` : "Someone";
+}
 
 async function loadLeaveRequest(sql: ReturnType<typeof getSql>, companyId: number, id: number) {
   const rows = await sql`SELECT id, employee_id, status FROM leave_requests WHERE id = ${id} AND company_id = ${companyId}`;
@@ -676,6 +707,8 @@ app.post("/api/v1/leave/requests/:id/cancel", async (c) => {
     WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status = 'pending' RETURNING id
   `;
   if (updated.length === 0) return c.json({ error: "Only pending requests can be cancelled." }, 409);
+  await notifyManagerAndHr(sql, companyId, userId, userId, "leave_cancelled",
+    `${await personName(sql, companyId, userId)} cancelled a pending leave request.`);
   return c.json({ id, status: "cancelled" });
 });
 
@@ -730,6 +763,8 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
     WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' RETURNING id
   `;
   if (updated.length === 0) return c.json({ error: "This request is no longer pending." }, 409);
+  await notifyManagerAndHr(sql, companyId, request.employeeId, userId, "leave_decided",
+    `${await personName(sql, companyId, userId)} ${status} a leave request for ${await personName(sql, companyId, request.employeeId)}.`);
   return c.json({ id, status });
 });
 
@@ -1028,6 +1063,52 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
         `;
   if (updated.length === 0) return c.json({ error: "Nothing is waiting for a decision." }, 409);
   return c.json({ decided: updated.length, status: decision === "approve" ? "approved" : "returned" });
+});
+
+// My notifications: newest first, with the unread count. Each user only ever sees and marks their own.
+app.get("/api/v1/notifications", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT id, kind, message, created_at, read_at FROM notifications
+    WHERE company_id = ${companyId} AND recipient_id = ${userId}
+    ORDER BY created_at DESC LIMIT 50
+  `;
+  const [count] = await sql`
+    SELECT count(*)::int AS n FROM notifications WHERE company_id = ${companyId} AND recipient_id = ${userId} AND read_at IS NULL
+  `;
+  return c.json({
+    unread: Number(count.n),
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      kind: String(r.kind),
+      message: String(r.message),
+      createdAt: new Date(String(r.created_at)).toISOString(),
+      read: r.read_at !== null,
+    })),
+  });
+});
+
+app.post("/api/v1/notifications/:id/read", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const updated = await sql`
+    UPDATE notifications SET read_at = NOW()
+    WHERE id = ${id} AND company_id = ${companyId} AND recipient_id = ${userId} AND read_at IS NULL RETURNING id
+  `;
+  return c.json({ id, marked: updated.length });
+});
+
+app.post("/api/v1/notifications/read-all", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const updated = await sql`
+    UPDATE notifications SET read_at = NOW()
+    WHERE company_id = ${companyId} AND recipient_id = ${userId} AND read_at IS NULL RETURNING id
+  `;
+  return c.json({ marked: updated.length });
 });
 
 // Reporting lines: HR loads a CSV of (employee, manager, solid|dotted). A load replaces all lines in one transaction.
@@ -1498,6 +1579,134 @@ app.post("/api/v1/objectives/:id/amend", zValidator("json", ObjectiveAmendBody),
   return c.json({ id, amended: true });
 });
 
+// Business trips. Requested like leave and decided by the same rule (solid manager or HR, never your own). Approved
+// trips appear on the team and company leave views as "Travel". They do not use leave balances.
+const TripBody = z.object({
+  destination: z.string().trim().min(2).max(200),
+  purpose: z.string().trim().max(1000).default(""),
+  startDate: z.string().max(10),
+  endDate: z.string().max(10),
+});
+const TripDecisionBody = z.object({ decision: z.enum(["approve", "reject"]), comment: z.string().trim().max(1000).optional() });
+
+const tripRow = (r: Record<string, unknown>) => ({
+  id: -Number(r.id), // negative so it cannot clash with a leave request id on the same screen
+  employeeName: `${r.first_name} ${r.last_name}`,
+  leaveType: "Travel",
+  startDate: String(r.start_date),
+  endDate: String(r.end_date),
+  days: null,
+  halfDayPeriod: null,
+  destination: String(r.destination),
+});
+
+app.post("/api/v1/leave/trips", zValidator("json", TripBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const body = c.req.valid("json");
+  const shape = checkDateShape(body.startDate, body.endDate);
+  if (shape) return c.json({ error: shape }, 422);
+  const today = new Date().toISOString().slice(0, 10);
+  if (body.startDate < today) return c.json({ error: "A trip cannot start in the past." }, 422);
+  const sql = getSql(c.env);
+  const inserted = await sql`
+    INSERT INTO business_trips (company_id, employee_id, destination, purpose, start_date, end_date)
+    VALUES (${companyId}, ${userId}, ${body.destination}, ${body.purpose}, ${body.startDate}::date, ${body.endDate}::date)
+    RETURNING id
+  `;
+  await notifyManagerAndHr(sql, companyId, userId, userId, "trip_requested",
+    `${await personName(sql, companyId, userId)} requested a business trip to ${body.destination}, ${body.startDate} to ${body.endDate}.`);
+  return c.json({ id: Number(inserted[0].id), status: "pending" }, 201);
+});
+
+app.get("/api/v1/leave/trips/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT id, destination, purpose, start_date::text AS start_date, end_date::text AS end_date, status, decision_comment
+    FROM business_trips WHERE company_id = ${companyId} AND employee_id = ${userId} ORDER BY start_date DESC LIMIT 50
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      destination: String(r.destination),
+      purpose: String(r.purpose),
+      startDate: String(r.start_date),
+      endDate: String(r.end_date),
+      status: String(r.status),
+      decisionComment: r.decision_comment ? String(r.decision_comment) : null,
+    })),
+  });
+});
+
+// Pending trips the signed-in user may decide: HR sees all; a line manager sees their solid reports' trips.
+app.get("/api/v1/leave/trips/pending", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT t.id, t.destination, t.start_date::text AS start_date, t.end_date::text AS end_date, e.first_name, e.last_name, d.name AS department
+    FROM business_trips t
+    JOIN employees e ON e.id = t.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+    WHERE t.company_id = ${companyId} AND t.status = 'pending' AND t.employee_id <> ${userId}
+      AND (${isHrRole(role)}::boolean OR t.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
+    ORDER BY t.start_date LIMIT 200
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      destination: String(r.destination),
+      startDate: String(r.start_date),
+      endDate: String(r.end_date),
+      employeeName: `${r.first_name} ${r.last_name}`,
+      department: r.department ? String(r.department) : null,
+    })),
+  });
+});
+
+app.post("/api/v1/leave/trips/:id/decision", zValidator("json", TripDecisionBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  if (body.decision === "reject" && (body.comment ?? "").length < 3) {
+    return c.json({ error: "A rejection needs a reason of at least 3 characters." }, 422);
+  }
+  const sql = getSql(c.env);
+  const [trip] = await sql`SELECT id, employee_id, status FROM business_trips WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!trip) return c.json({ error: "Not found" }, 404);
+  const row = { id, employeeId: Number(trip.employee_id), status: String(trip.status) };
+  const solid = await isSolidManager(sql, companyId, userId, row.employeeId);
+  if (!canDecide({ userId, role }, row, solid)) {
+    return c.json({ error: "You can only decide trips of your solid reports, or HR can decide." }, 403);
+  }
+  const status = body.decision === "approve" ? "approved" : "rejected";
+  const updated = await sql`
+    UPDATE business_trips SET status = ${status}, decided_by = ${userId}, decided_at = NOW(), decision_comment = ${body.comment ?? null}
+    WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "This trip is no longer pending." }, 409);
+  await notifyManagerAndHr(sql, companyId, trip.employee_id as number, userId, "trip_decided",
+    `${await personName(sql, companyId, userId)} ${status} a business trip for ${await personName(sql, companyId, Number(trip.employee_id))}.`);
+  return c.json({ id, status });
+});
+
+app.post("/api/v1/leave/trips/:id/cancel", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const updated = await sql`
+    UPDATE business_trips SET status = 'cancelled'
+    WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status = 'pending' RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "Only your own pending trips can be cancelled." }, 409);
+  await notifyManagerAndHr(sql, companyId, userId, userId, "trip_cancelled",
+    `${await personName(sql, companyId, userId)} cancelled a pending business trip.`);
+  return c.json({ id, status: "cancelled" });
+});
+
 // Leave views by date range. Default: today to 60 days ahead. Ranges are capped at a year.
 function leaveWindow(c: { req: { query: (k: string) => string | undefined } }): { from: string; to: string } | { error: string } {
   const today = new Date().toISOString().slice(0, 10);
@@ -1529,7 +1738,14 @@ app.get("/api/v1/leave/team", async (c) => {
       AND lr.start_date <= ${win.to}::date AND lr.end_date >= ${win.from}::date
     ORDER BY lr.start_date, e.last_name
   `;
-  return c.json({ department: String(me.department), from: win.from, to: win.to, results: rows.map(leaveRow) });
+  const trips = await sql`
+    SELECT t.id, t.destination, t.start_date::text AS start_date, t.end_date::text AS end_date, e.first_name, e.last_name
+    FROM business_trips t JOIN employees e ON e.id = t.employee_id
+    WHERE t.company_id = ${companyId} AND e.department_id = ${me.department_id} AND t.status = 'approved'
+      AND t.start_date <= ${win.to}::date AND t.end_date >= ${win.from}::date
+  `;
+  const results = [...rows.map(leaveRow), ...trips.map(tripRow)].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  return c.json({ department: String(me.department), from: win.from, to: win.to, results });
 });
 
 // Company-wide leave, visible to every signed-in user, so a task can be planned around a colleague's absence in
@@ -1555,7 +1771,18 @@ app.get("/api/v1/leave/company", async (c) => {
     from: win.from,
     to: win.to,
     canSeePending: isHrRole(role),
-    results: rows.map((r) => ({ ...leaveRow(r), status: String(r.status), department: r.department ? String(r.department) : null })),
+    results: [
+      ...rows.map((r) => ({ ...leaveRow(r), status: String(r.status), department: r.department ? String(r.department) : null })),
+      ...(await sql`
+        SELECT t.id, t.destination, t.status, t.start_date::text AS start_date, t.end_date::text AS end_date,
+          e.first_name, e.last_name, d.name AS department
+        FROM business_trips t
+        JOIN employees e ON e.id = t.employee_id
+        LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+        WHERE t.company_id = ${companyId} AND t.status = ANY(${statuses})
+          AND t.start_date <= ${win.to}::date AND t.end_date >= ${win.from}::date
+      `).map((t) => ({ ...tripRow(t), status: String(t.status), department: t.department ? String(t.department) : null })),
+    ].sort((a, b) => a.startDate.localeCompare(b.startDate)),
   });
 });
 

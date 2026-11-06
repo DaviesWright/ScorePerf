@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import type { AccessRole } from "@hr-platform/shared";
-import { HomePanels } from "./HomePanels";
+import { HomePanels, NotificationsPanel } from "./HomePanels";
+import { OrgPosition } from "./OrgPosition";
 
 // Plain dashboard: figures for everyone, approval queues and upcoming leave for deciders. Live data only; the
 // demo login has no API behind it, so it says so instead of showing made-up numbers.
@@ -96,6 +97,8 @@ export const DashboardScreen: React.FC<{ user: { id: string; persona: AccessRole
       </div>
 
       {!realSession && <p role="status" style={{ ...S.note, marginTop: "1rem" }}>Sign in to see live figures. The demo login has no data behind this screen.</p>}
+      <NotificationsPanel realSession={realSession} />
+      <OrgPosition realSession={realSession} />
       <HomePanels realSession={realSession} />
       {realSession && loading && <p role="status">Loading…</p>}
       {realSession && error && <p role="alert" style={{ color: C.danger }}>{error}</p>}

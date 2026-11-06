@@ -18,6 +18,13 @@
     }
   ],
 
+  "r2_buckets": [
+    {
+      "binding": "DOCS",
+      "bucket_name": "scoreview-docs"
+    }
+  ],
+
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
