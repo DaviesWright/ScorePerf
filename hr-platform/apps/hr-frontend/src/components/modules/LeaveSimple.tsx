@@ -215,6 +215,8 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
   const [typeId, setTypeId] = useState<number | "">("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [half, setHalf] = useState(false);
+  const [halfPeriod, setHalfPeriod] = useState<"morning" | "afternoon">("morning");
   const [reason, setReason] = useState("");
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -231,7 +233,13 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
     if (typeId === "") return;
     setSubmitting(true);
     setFormError("");
-    const r = await api.create({ leaveTypeId: typeId, startDate: start, endDate: end, reason: reason.trim() });
+    const r = await api.create({
+      leaveTypeId: typeId,
+      startDate: start,
+      endDate: half ? start : end,
+      reason: reason.trim(),
+      ...(half ? { halfDay: halfPeriod } : {}),
+    });
     setSubmitting(false);
     if (r.ok) onDone();
     else setFormError(r.error);
@@ -255,11 +263,31 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
             Start date *
             <input required type="date" value={start} onChange={(e) => setStart(e.target.value)} style={S.input} />
           </label>
-          <label style={S.field}>
-            End date *
-            <input required type="date" value={end} min={start || undefined} onChange={(e) => setEnd(e.target.value)} style={S.input} />
+          <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <input type="checkbox" checked={half} onChange={(e) => setHalf(e.target.checked)} />
+            Half day (one working day, counted as 0.5)
           </label>
-          {estimate !== null && balance && (
+          {half && (
+            <label style={S.field}>
+              Which half *
+              <select value={halfPeriod} onChange={(e) => setHalfPeriod(e.target.value as "morning" | "afternoon")} style={S.input}>
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+              </select>
+            </label>
+          )}
+          {!half && (
+            <label style={S.field}>
+              End date *
+              <input required type="date" value={end} min={start || undefined} onChange={(e) => setEnd(e.target.value)} style={S.input} />
+            </label>
+          )}
+          {half && start && balance && (
+            <p style={{ ...S.note, marginBottom: "1rem" }} aria-live="polite">
+              Half day: 0.5 days. Balance after: {balance.remaining - 0.5} days.
+            </p>
+          )}
+          {!half && estimate !== null && balance && (
             <p style={{ ...S.note, marginBottom: "1rem" }} aria-live="polite">
               About {estimate} working {estimate === 1 ? "day" : "days"} (weekends excluded; public holidays are taken off when you submit). Balance after: {balance.remaining - estimate} days.
             </p>

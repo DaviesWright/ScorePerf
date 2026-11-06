@@ -555,6 +555,7 @@ const LeaveRequestBody = z.object({
   startDate: z.string().max(10),
   endDate: z.string().max(10),
   reason: z.string().max(500).default(""),
+  halfDay: z.enum(["morning", "afternoon"]).optional(),
 });
 const LeaveDecisionBody = z.object({ decision: z.enum(["approve", "reject"]), comment: z.string().trim().max(1000).optional() });
 const HolidayBody = z.object({ name: z.string().trim().min(2).max(255), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
@@ -649,8 +650,8 @@ app.post("/api/v1/leave/requests", zValidator("json", LeaveRequestBody), async (
   if (!result.ok) return c.json({ error: result.error }, 422);
 
   const inserted = await sql`
-    INSERT INTO leave_requests (company_id, employee_id, leave_type_id, start_date, end_date, requested_days, status, reason)
-    VALUES (${companyId}, ${userId}, ${body.leaveTypeId}, ${body.startDate}, ${body.endDate}, ${result.days}, 'pending', ${body.reason})
+    INSERT INTO leave_requests (company_id, employee_id, leave_type_id, start_date, end_date, requested_days, status, reason, half_day_period)
+    VALUES (${companyId}, ${userId}, ${body.leaveTypeId}, ${body.startDate}, ${body.endDate}, ${result.days}, 'pending', ${body.reason}, ${body.halfDay ?? null})
     RETURNING id
   `;
   return c.json({ id: Number(inserted[0].id), days: result.days, status: "pending" }, 201);

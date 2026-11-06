@@ -33,6 +33,7 @@ export interface NewLeaveRequest {
   startDate: string;
   endDate: string;
   reason: string;
+  halfDay?: "morning" | "afternoon";
 }
 
 export type Result = { ok: true } | { ok: false; error: string };

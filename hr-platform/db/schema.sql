@@ -447,6 +447,8 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     approved_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
     decision_comment TEXT, -- migration 0008: reason given with a decision (required for rejection)
     decided_at TIMESTAMPTZ, -- migration 0008
+    half_day_period VARCHAR(10) -- migration 0009: morning or afternoon for a half-day request; NULL otherwise
+        CONSTRAINT leave_requests_half_day_check CHECK (half_day_period IS NULL OR half_day_period IN ('morning', 'afternoon')),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

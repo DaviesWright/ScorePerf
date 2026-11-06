@@ -88,3 +88,15 @@ test("only the owner can cancel, and only while pending", () => {
   assert.equal(canCancel({ userId: 2, role: "hr_director" }, pending), false);
   assert.equal(canCancel({ userId: 9, role: "employee" }, { ...pending, status: "approved" }), false);
 });
+
+test("half day: one working day counts as 0.5; weekends and multi-day ranges are refused", () => {
+  const half = { leaveTypeId: 1, reason: "Dentist", halfDay: "morning" as const };
+  const ok = validateRequest({ ...half, startDate: "2026-11-09", endDate: "2026-11-09" }, ctx());
+  assert.deepEqual(ok, { ok: true, days: 0.5 });
+  const weekend = validateRequest({ ...half, startDate: "2026-11-07", endDate: "2026-11-07" }, ctx());
+  assert.equal(weekend.ok, false);
+  const range = validateRequest({ ...half, startDate: "2026-11-09", endDate: "2026-11-10" }, ctx());
+  assert.equal(range.ok, false);
+  const holiday = validateRequest({ ...half, startDate: "2026-11-09", endDate: "2026-11-09" }, ctx({ holidays: new Set(["2026-11-09"]) }));
+  assert.equal(holiday.ok, false);
+});

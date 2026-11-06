@@ -22,7 +22,11 @@ export interface RequestInput {
   startDate: string;
   endDate: string;
   reason: string;
+  /** Set for a half-day request: the request covers one working day, counted as 0.5. */
+  halfDay?: "morning" | "afternoon";
 }
+
+export const HALF_DAY_DAYS = 0.5;
 
 export interface ValidationContext {
   /** Today's date, ISO. */
@@ -82,8 +86,16 @@ export function validateRequest(input: RequestInput, ctx: ValidationContext): Va
   if (input.startDate < ctx.today) return { ok: false, error: "The start date cannot be in the past." };
   if (input.reason.length > MAX_REASON) return { ok: false, error: `The reason must be ${MAX_REASON} characters or fewer.` };
 
-  const days = countWorkingDays(input.startDate, input.endDate, ctx.holidays);
-  if (days === 0) return { ok: false, error: "Those dates contain no working days." };
+  let days: number;
+  if (input.halfDay) {
+    // A half day is one working day: same start and end date, and that date must be a working day.
+    if (input.startDate !== input.endDate) return { ok: false, error: "A half-day request covers one date. Set the end date to the start date." };
+    if (countWorkingDays(input.startDate, input.endDate, ctx.holidays) === 0) return { ok: false, error: "That date is not a working day." };
+    days = HALF_DAY_DAYS;
+  } else {
+    days = countWorkingDays(input.startDate, input.endDate, ctx.holidays);
+    if (days === 0) return { ok: false, error: "Those dates contain no working days." };
+  }
   if (ctx.overlaps) return { ok: false, error: "These dates overlap a pending or approved request." };
   if (days > ctx.remaining) return { ok: false, error: `You requested ${days} days but only ${ctx.remaining} remain for this leave type.` };
   return { ok: true, days };
