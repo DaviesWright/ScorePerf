@@ -57,13 +57,15 @@ async function handleJob(job: JobMessage, env: Env): Promise<void> {
   switch (job.type) {
     case "score_calculation": {
       console.log(`[Queue Worker] Calculating score for employee ${job.employeeId} in cycle ${job.cycleId}`);
-      // Query employee's key result progress
+      // Weighted progress over approved objectives in this cycle only. Drafts, submitted and returned objectives
+      // are not agreed yet and must not count. Weights total 100 per approved set, so the result is a percentage.
       const results = await sql`
-        SELECT AVG(progress_percentage) as avg_progress
+        SELECT SUM(progress_percentage * weight) / NULLIF(SUM(weight), 0) AS avg_progress
         FROM employee_objectives
         WHERE employee_id = ${job.employeeId} AND company_id = ${job.companyId}
+          AND cycle_id = ${job.cycleId} AND status = 'approved'
       `;
-      const avg = results[0]?.avg_progress || 0;
+      const avg = Number(results[0]?.avg_progress ?? 0);
       console.log(`[Queue Worker] Computed score: ${avg}`);
       break;
     }

@@ -902,6 +902,185 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
   return c.json({ decided: updated.length, status: decision === "approve" ? "approved" : "returned" });
 });
 
+// Home page content for everyone: active announcements, birthdays in the next 14 days, and the staff directory.
+const AnnouncementBody = z.object({
+  title: z.string().trim().min(3).max(200),
+  body: z.string().max(5000).default(""),
+  expiresOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+});
+
+app.get("/api/v1/home", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  const sql = getSql(c.env);
+  const [announcements, people] = await Promise.all([
+    sql`
+      SELECT id, title, body, published_on::text AS published_on, expires_on::text AS expires_on
+      FROM announcements
+      WHERE company_id = ${companyId} AND published_on <= CURRENT_DATE AND (expires_on IS NULL OR expires_on >= CURRENT_DATE)
+      ORDER BY published_on DESC, id DESC LIMIT 20
+    `,
+    sql`
+      SELECT e.id, e.first_name, e.last_name, e.email, e.role AS job_title, e.date_of_birth::text AS dob, d.name AS department
+      FROM employees e
+      LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+      WHERE e.company_id = ${companyId} AND e.is_active
+      ORDER BY e.last_name, e.first_name LIMIT 500
+    `,
+  ]);
+
+  // Birthdays: next occurrence of each date of birth, within 14 days. Computed here because the staff list is small.
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const todayMs = Date.UTC(year, now.getUTCMonth(), now.getUTCDate());
+  const birthdays = people
+    .filter((p) => p.dob)
+    .map((p) => {
+      const [, m, d] = String(p.dob).split("-").map(Number);
+      let next = Date.UTC(year, m - 1, d);
+      if (next < todayMs) next = Date.UTC(year + 1, m - 1, d);
+      const daysUntil = Math.round((next - todayMs) / 86_400_000);
+      return {
+        employeeName: `${p.first_name} ${p.last_name}`,
+        department: p.department ? String(p.department) : null,
+        jobTitle: String(p.job_title),
+        date: new Date(next).toISOString().slice(0, 10),
+        daysUntil,
+      };
+    })
+    .filter((b) => b.daysUntil <= 14)
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+
+  return c.json({
+    today: now.toISOString().slice(0, 10),
+    canPost: role === "hr_admin",
+    announcements: announcements.map((a) => ({
+      id: Number(a.id),
+      title: String(a.title),
+      body: String(a.body),
+      publishedOn: String(a.published_on),
+      expiresOn: a.expires_on ? String(a.expires_on) : null,
+    })),
+    birthdays,
+    directory: people.map((p) => ({
+      id: Number(p.id),
+      name: `${p.first_name} ${p.last_name}`,
+      email: String(p.email),
+      jobTitle: String(p.job_title),
+      department: p.department ? String(p.department) : null,
+    })),
+  });
+});
+
+// Only HR admins post and archive announcements. Archiving ends an announcement today rather than deleting it.
+app.post("/api/v1/announcements", zValidator("json", AnnouncementBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (role !== "hr_admin") return c.json({ error: "Only HR admins can post announcements." }, 403);
+  const body = c.req.valid("json");
+  const today = new Date().toISOString().slice(0, 10);
+  if (body.expiresOn && body.expiresOn < today) return c.json({ error: "The expiry date cannot be in the past." }, 422);
+  const sql = getSql(c.env);
+  const inserted = await sql`
+    INSERT INTO announcements (company_id, title, body, expires_on, created_by)
+    VALUES (${companyId}, ${body.title}, ${body.body}, ${body.expiresOn ?? null}, ${userId})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id) }, 201);
+});
+
+app.post("/api/v1/announcements/:id/archive", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (role !== "hr_admin") return c.json({ error: "Only HR admins can archive announcements." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const updated = await sql`
+    UPDATE announcements SET expires_on = CURRENT_DATE
+    WHERE id = ${id} AND company_id = ${companyId} AND published_on <= CURRENT_DATE AND (expires_on IS NULL OR expires_on > CURRENT_DATE)
+    RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "Not found or already ended." }, 409);
+  return c.json({ id, archived: true });
+});
+
+// Dashboard: company-wide counts for everyone; approval queues and who is away only for deciders.
+app.get("/api/v1/dashboard", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const decider = isDecider(role);
+  const sql = getSql(c.env);
+  const [away, myPending, cycleRows, approvalCounts, upcoming] = await Promise.all([
+    sql`SELECT count(*)::int AS n FROM leave_requests WHERE company_id = ${companyId} AND status = 'approved' AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`,
+    sql`SELECT count(*)::int AS n FROM leave_requests WHERE company_id = ${companyId} AND employee_id = ${userId} AND status = 'pending'`,
+    sql`
+      SELECT id, title, status::text AS status FROM performance_cycles
+      WHERE company_id = ${companyId} AND status IN ('configured', 'approved', 'active')
+      ORDER BY start_date DESC, id DESC LIMIT 1
+    `,
+    decider
+      ? sql`
+          SELECT
+            (SELECT count(*)::int FROM leave_requests WHERE company_id = ${companyId} AND status = 'pending' AND employee_id <> ${userId}) AS leave_pending,
+            (SELECT count(DISTINCT employee_id)::int FROM employee_objectives WHERE company_id = ${companyId} AND status = 'submitted' AND employee_id <> ${userId}) AS people_waiting
+        `
+      : Promise.resolve(null),
+    decider
+      ? sql`
+          SELECT lr.start_date::text AS start_date, lr.end_date::text AS end_date, lt.name AS leave_type,
+            e.first_name, e.last_name, d.name AS department
+          FROM leave_requests lr
+          JOIN leave_types lt ON lt.id = lr.leave_type_id
+          JOIN employees e ON e.id = lr.employee_id
+          LEFT JOIN departments d ON d.id = e.department_id
+          WHERE lr.company_id = ${companyId} AND lr.status = 'approved'
+            AND lr.start_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 14
+          ORDER BY lr.start_date LIMIT 10
+        `
+      : Promise.resolve(null),
+  ]);
+
+  // Objective counts for the open cycle, company-wide and for the signed-in user.
+  let cycle = null;
+  let company = null;
+  let mine = null;
+  if (cycleRows[0]) {
+    const cid = Number(cycleRows[0].id);
+    const byStatus = await sql`
+      SELECT employee_id, status, count(*)::int AS n FROM employee_objectives
+      WHERE company_id = ${companyId} AND cycle_id = ${cid} GROUP BY employee_id, status
+    `;
+    const tally = (rows: Record<string, unknown>[]) => {
+      const total = rows.reduce((s, r) => s + Number(r.n), 0);
+      const approved = rows.filter((r) => r.status === "approved").reduce((s, r) => s + Number(r.n), 0);
+      return { total, approved, approvedPct: total === 0 ? null : Math.round((approved / total) * 100) };
+    };
+    cycle = { id: cid, title: String(cycleRows[0].title), status: String(cycleRows[0].status), open: objectivesOpen(String(cycleRows[0].status)) };
+    company = tally([...byStatus]);
+    const own = byStatus.filter((r) => Number(r.employee_id) === userId);
+    mine = {
+      ...tally(own),
+      awaiting: own.filter((r) => r.status !== "approved").reduce((s, r) => s + Number(r.n), 0),
+    };
+  }
+
+  return c.json({
+    onLeaveToday: Number(away[0].n),
+    myPendingLeave: Number(myPending[0].n),
+    cycle,
+    objectives: { company, mine },
+    approvals: approvalCounts
+      ? { leavePending: Number(approvalCounts[0].leave_pending), peopleWaiting: Number(approvalCounts[0].people_waiting) }
+      : null,
+    upcomingLeave: upcoming
+      ? upcoming.map((r) => ({
+          startDate: String(r.start_date),
+          endDate: String(r.end_date),
+          leaveType: String(r.leave_type),
+          employeeName: `${r.first_name} ${r.last_name}`,
+          department: r.department ? String(r.department) : null,
+        }))
+      : null,
+  });
+});
+
 // HR's view of every objective in a cycle, so an approved one can be picked for amendment.
 app.get("/api/v1/objectives/all", async (c) => {
   const { companyId, role } = c.get("tenant");

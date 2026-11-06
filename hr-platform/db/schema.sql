@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS employees (
     access_role VARCHAR(20) DEFAULT 'employee' NOT NULL
         CONSTRAINT employees_access_role_check CHECK (access_role IN ('employee', 'line_manager', 'hr_admin', 'hr_director')),
     is_active BOOLEAN DEFAULT true NOT NULL,
+    date_of_birth DATE, -- db/migrations/0003_announcements_and_birthdays.sql; birthdays show only when set
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, email)
@@ -191,6 +192,21 @@ CREATE TABLE IF NOT EXISTS employee_objectives (
     CONSTRAINT employee_objectives_approved_stamp_check
         CHECK (status <> 'approved' OR (approved_by IS NOT NULL AND approved_at IS NOT NULL AND locked_at IS NOT NULL))
 );
+
+-- Staff announcements, posted by hr_admin (migration 0003). Visible from published_on through expires_on.
+CREATE TABLE IF NOT EXISTS announcements (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    published_on DATE NOT NULL DEFAULT CURRENT_DATE,
+    expires_on DATE,
+    created_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    CONSTRAINT announcements_dates_check CHECK (expires_on IS NULL OR expires_on >= published_on)
+);
+
+CREATE INDEX IF NOT EXISTS idx_announcements_company_dates ON announcements(company_id, published_on, expires_on);
 
 CREATE TABLE IF NOT EXISTS objective_amendments (
     id SERIAL PRIMARY KEY,

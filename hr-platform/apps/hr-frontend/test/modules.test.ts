@@ -51,7 +51,7 @@ test("with no env set, the running config matches the default", () => {
   assert.equal(isViewEnabled("performance_pms"), true);
   assert.equal(isViewEnabled("helpdesk"), false);
   assert.equal(isFeatureEnabled("ai_assistant"), false);
-  assert.equal(firstEnabledView(), "time_and_leave");
+  assert.equal(firstEnabledView(), "dashboard");
 });
 
 test("the registry lists exactly the views in the ModuleViewKey type", () => {

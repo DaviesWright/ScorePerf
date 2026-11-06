@@ -11,6 +11,7 @@ import type { ModuleViewKey } from "../components/shell/AppSidebar";
 
 /** Every view, in the order the default landing page is chosen from. Must list every ModuleViewKey. */
 export const ALL_VIEWS: readonly ModuleViewKey[] = [
+  "dashboard",
   "command_centre",
   "time_and_leave",
   "performance_pms",
@@ -34,7 +35,7 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
 export type FeatureKey = "ai_assistant" | "payslip";
 export const ALL_FEATURES: readonly FeatureKey[] = ["ai_assistant", "payslip"];
 
-export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["time_and_leave", "performance_pms", "objectives"];
+export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["dashboard", "time_and_leave", "performance_pms", "objectives"];
 
 const VIEW_ALIASES: Record<string, ModuleViewKey> = {
   leave: "time_and_leave",

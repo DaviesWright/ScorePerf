@@ -9,6 +9,7 @@ import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
 // Selected by NEXT_PUBLIC_SHELL (default "plain"); "full" keeps the original frame.
 
 const LABELS: Record<ModuleViewKey, string> = {
+  dashboard: "Dashboard",
   command_centre: "Command Centre",
   time_and_leave: "Leave",
   performance_pms: "Performance",

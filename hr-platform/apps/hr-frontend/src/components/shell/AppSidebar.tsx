@@ -10,6 +10,7 @@ export type ModuleViewKey =
   | "reports_analytics"
   | "employee_settings"
   | "workforce_directory"
+  | "dashboard"
   | "performance_pms"
   | "objectives"
   | "skills_marketplace"

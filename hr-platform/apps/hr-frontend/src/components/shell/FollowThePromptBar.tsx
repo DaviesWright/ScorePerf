@@ -265,6 +265,11 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "approval_workflows",
     nextSuggestedLabel: "Review Approval Workflows →",
   },
+  dashboard: {
+    whatToDoHere: "Start here: leave on the calendar, objectives awaiting approval, and your own status for this cycle.",
+    nextSuggestedView: "time_and_leave",
+    nextSuggestedLabel: "Go to Leave →",
+  },
   objectives: {
     whatToDoHere: "Add your objectives with weights that total 100%, then submit them for approval. Approved objectives are locked.",
     nextSuggestedView: "performance_pms",
