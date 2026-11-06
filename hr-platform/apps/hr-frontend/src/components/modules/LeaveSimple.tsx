@@ -7,7 +7,7 @@ import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, t
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
 
-type Tab = "mine" | "request" | "approvals" | "calendar" | "company" | "trips" | "holidays" | "types";
+type Tab = "mine" | "request" | "approvals" | "calendar" | "company" | "trips" | "plan" | "holidays" | "types";
 
 interface LeaveSimpleProps {
   api: LeaveApi;
@@ -92,6 +92,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
     { key: "request", label: "Request leave" },
     { key: "calendar", label: "Team and company leave" },
     { key: "trips", label: "Business trips" },
+    { key: "plan", label: "Annual plan" },
     ...(decider ? ([{ key: "approvals", label: "Approvals" }] as { key: Tab; label: string }[]) : []),
     ...(user.role === "hr_admin" || user.role === "hr_director"
       ? ([{ key: "holidays", label: "Holidays" }, { key: "types", label: "Leave types" }] as { key: Tab; label: string }[])
@@ -133,6 +134,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
       {tab === "approvals" && decider && <Approvals api={api} />}
       {tab === "calendar" && <TeamLeavePage />}
       {tab === "trips" && <TripsPanel canDecide={decider} />}
+      {tab === "plan" && <PlanPanel isHr={user.role === "hr_admin" || user.role === "hr_director"} />}
       {tab === "holidays" && (user.role === "hr_admin" || user.role === "hr_director") && <Holidays />}
       {tab === "types" && (user.role === "hr_admin" || user.role === "hr_director") && <LeaveTypes />}
     </div>
@@ -646,6 +648,190 @@ function TripsPanel({ canDecide }: { canDecide: boolean }) {
                 ))}
               </tbody>
             </table>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+// Annual leave plan. Plan absences at least six weeks ahead. HR approves no later than six weeks before the start.
+// An entry still unapproved at that point goes back to the manager.
+interface PlanEntry {
+  id: number;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  status: string;
+  deadline: string;
+  decisionComment: string | null;
+}
+interface PlanWaiting {
+  id: number;
+  employeeName: string;
+  department: string | null;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  deadline: string;
+}
+
+function PlanPanel({ isHr }: { isHr: boolean }) {
+  const thisYear = new Date().getUTCFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [entries, setEntries] = useState<PlanEntry[]>([]);
+  const [types, setTypes] = useState<{ leaveTypeId: number; name: string }[]>([]);
+  const [waiting, setWaiting] = useState<PlanWaiting[]>([]);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [draft, setDraft] = useState({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
+  const [returning, setReturning] = useState<number | null>(null);
+  const [returnReason, setReturnReason] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/leave/plan/me?year=${year}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => !cancelled && setEntries(b.results ?? []))
+      .catch(() => !cancelled && setError("Could not load your plan."));
+    fetch("/api/leave/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => !cancelled && setTypes((b.balances ?? []).map((x: { leaveTypeId: number; name: string }) => ({ leaveTypeId: x.leaveTypeId, name: x.name }))))
+      .catch(() => undefined);
+    if (isHr) {
+      fetch("/api/leave/plan/pending", { cache: "no-store" })
+        .then((r) => r.json())
+        .then((b) => !cancelled && setWaiting(b.results ?? []))
+        .catch(() => !cancelled && setError("Could not load plans to approve."));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [year, isHr, tick]);
+
+  const act = async (url: string, payload: unknown, done: string) => {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Something went wrong.");
+    setMessage(done);
+    setTick((n) => n + 1);
+  };
+
+  const add = (e: React.FormEvent) => {
+    e.preventDefault();
+    act("/api/leave/plan", { leaveTypeId: Number(draft.leaveTypeId), startDate: draft.startDate, endDate: draft.endDate, reason: draft.reason }, "Added to your plan as a draft. Submit it when ready.");
+    setDraft({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
+  };
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Annual leave plan</h2>
+      <p style={S.note}>Plan absences at least six weeks ahead. HR approves each one no later than six weeks before it starts. Anything still unapproved then goes back to your manager.</p>
+      <label style={{ ...S.field, maxWidth: "200px" }}>Plan year
+        <select value={year} onChange={(e) => setYear(Number(e.target.value))} style={S.input}>
+          {[thisYear, thisYear + 1].map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </label>
+      {message && <p role="status" style={{ color: C.ok, fontWeight: 600 }}>{message}</p>}
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+
+      <form onSubmit={add} style={{ maxWidth: "520px" }}>
+        <h3 style={{ margin: "0 0 0.5rem", fontSize: "16px" }}>Add a planned absence</h3>
+        <label style={S.field}>Leave type *
+          <select required value={draft.leaveTypeId} onChange={(e) => setDraft({ ...draft, leaveTypeId: e.target.value })} style={S.input}>
+            <option value="">Choose…</option>
+            {types.map((t) => <option key={t.leaveTypeId} value={t.leaveTypeId}>{t.name}</option>)}
+          </select>
+        </label>
+        <label style={S.field}>Start date *<input required type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>End date *<input required type="date" value={draft.endDate} min={draft.startDate || undefined} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>Reason (optional)<input maxLength={500} value={draft.reason} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} style={S.input} /></label>
+        <button type="submit" style={S.primary} disabled={busy}>{busy ? "Saving…" : "Add to plan"}</button>
+      </form>
+
+      <h2 style={S.h2}>My plan for {year}</h2>
+      {entries.length === 0 ? (
+        <p style={S.note}>Nothing planned for {year} yet.</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={S.table}>
+            <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>My annual plan</caption>
+            <thead>
+              <tr>{["Type", "Dates", "Days", "Status", "Approve by", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {entries.map((p) => (
+                <tr key={p.id}>
+                  <td style={S.td}>{p.leaveType}</td>
+                  <td style={S.td}>{range(p)}</td>
+                  <td style={S.td}>{p.days}</td>
+                  <td style={S.td}>
+                    <strong style={{ color: p.status === "approved" ? C.ok : p.status === "returned" ? C.danger : C.text }}>{p.status}</strong>
+                    {p.decisionComment ? <div style={{ color: C.muted }}>{p.decisionComment}</div> : null}
+                  </td>
+                  <td style={S.td}>{fmt(p.deadline)}</td>
+                  <td style={S.td}>
+                    {(p.status === "draft" || p.status === "returned") && (
+                      <button type="button" style={S.btn} disabled={busy} onClick={() => act(`/api/leave/plan/${p.id}/submit`, {}, "Submitted for HR approval.")}>Submit</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isHr && (
+        <>
+          <h2 style={S.h2}>Plans waiting for HR</h2>
+          <button type="button" style={{ ...S.btn, marginBottom: "0.5rem" }} disabled={busy} onClick={() => act("/api/leave/plan/sweep", {}, "Sweep done: unapproved entries past their deadline are back with managers.")}>Run deadline sweep</button>
+          {waiting.length === 0 ? (
+            <p style={S.note}>Nothing is waiting.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={S.table}>
+                <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>Plans waiting for HR</caption>
+                <thead>
+                  <tr>{["Employee", "Type", "Dates", "Days", "Approve by", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {waiting.map((w) => (
+                    <tr key={w.id}>
+                      <td style={S.td}><strong>{w.employeeName}</strong>{w.department ? <div style={{ color: C.muted }}>{w.department}</div> : null}</td>
+                      <td style={S.td}>{w.leaveType}</td>
+                      <td style={S.td}>{range(w)}</td>
+                      <td style={S.td}>{w.days}</td>
+                      <td style={S.td}>{fmt(w.deadline)}</td>
+                      <td style={S.td}>
+                        {returning === w.id ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: "220px" }}>
+                            <textarea rows={2} maxLength={1000} placeholder="Reason for returning (required)" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} style={S.input} />
+                            <div style={{ display: "flex", gap: "0.4rem" }}>
+                              <button type="button" style={{ ...S.btn, borderColor: C.danger, color: C.danger }} disabled={busy || returnReason.trim().length < 3} onClick={() => { act(`/api/leave/plan/${w.id}/decision`, { decision: "reject", comment: returnReason.trim() }, "Returned to the employee."); setReturning(null); setReturnReason(""); }}>Confirm return</button>
+                              <button type="button" style={S.btn} onClick={() => { setReturning(null); setReturnReason(""); }}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                            <button type="button" style={S.primary} disabled={busy} onClick={() => act(`/api/leave/plan/${w.id}/decision`, { decision: "approve" }, "Plan entry approved.")}>Approve</button>
+                            <button type="button" style={S.btn} disabled={busy} onClick={() => setReturning(w.id)}>Return</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

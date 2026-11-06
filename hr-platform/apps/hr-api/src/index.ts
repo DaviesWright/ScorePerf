@@ -34,6 +34,11 @@ import {
   objectivesOpen,
   remainingDays,
   totalWeight,
+  canApprovePlan,
+  canSubmitPlan,
+  countWorkingDays,
+  isPlanLapsed,
+  planDeadline,
   parseReportingLinesCsv,
   parseStrategyCsv,
   validateObjective,
@@ -1577,6 +1582,161 @@ app.post("/api/v1/objectives/:id/amend", zValidator("json", ObjectiveAmendBody),
     throw err;
   }
   return c.json({ id, amended: true });
+});
+
+// Annual leave plan. Entries must start at least six weeks after they are submitted. HR approves no later than six
+// weeks before the start. An unapproved entry past that deadline is returned to the manager by the sweep.
+const PlanBody = z.object({
+  leaveTypeId: z.number().int().positive(),
+  startDate: z.string().max(10),
+  endDate: z.string().max(10),
+  reason: z.string().trim().max(500).default(""),
+});
+const PlanDecisionBody = z.object({ decision: z.enum(["approve", "reject"]), comment: z.string().trim().max(1000).optional() });
+
+app.post("/api/v1/leave/plan", zValidator("json", PlanBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const body = c.req.valid("json");
+  const shape = checkDateShape(body.startDate, body.endDate);
+  if (shape) return c.json({ error: shape }, 422);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!canSubmitPlan(today, body.startDate)) return c.json({ error: "Plan leave at least six weeks ahead of the start date." }, 422);
+  const sql = getSql(c.env);
+  const type = await sql`SELECT 1 FROM leave_types WHERE id = ${body.leaveTypeId} AND company_id = ${companyId} AND is_active`;
+  if (type.length === 0) return c.json({ error: "Unknown leave type." }, 400);
+  const holidays = await sql`SELECT holiday_date::text AS d FROM company_holidays WHERE company_id = ${companyId}`;
+  const days = countWorkingDays(body.startDate, body.endDate, new Set(holidays.map((h) => String(h.d))));
+  if (days === 0) return c.json({ error: "Those dates contain no working days." }, 422);
+  const inserted = await sql`
+    INSERT INTO annual_leave_plans (company_id, employee_id, plan_year, leave_type_id, start_date, end_date, days)
+    VALUES (${companyId}, ${userId}, ${Number(body.startDate.slice(0, 4))}, ${body.leaveTypeId}, ${body.startDate}::date, ${body.endDate}::date, ${days})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id), days, status: "draft" }, 201);
+});
+
+app.get("/api/v1/leave/plan/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const year = Number(c.req.query("year") ?? new Date().getUTCFullYear());
+  if (!Number.isSafeInteger(year) || year < 2000 || year > 2100) return c.json({ error: "Invalid year." }, 422);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT p.id, p.start_date::text AS start_date, p.end_date::text AS end_date, p.days::float8 AS days, p.status,
+      p.decision_comment, lt.name AS leave_type
+    FROM annual_leave_plans p JOIN leave_types lt ON lt.id = p.leave_type_id
+    WHERE p.company_id = ${companyId} AND p.employee_id = ${userId} AND p.plan_year = ${year}
+    ORDER BY p.start_date
+  `;
+  return c.json({
+    year,
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      leaveType: String(r.leave_type),
+      startDate: String(r.start_date),
+      endDate: String(r.end_date),
+      days: Number(r.days),
+      status: String(r.status),
+      deadline: planDeadline(String(r.start_date)),
+      decisionComment: r.decision_comment ? String(r.decision_comment) : null,
+    })),
+  });
+});
+
+// HR: plan entries waiting for a decision, earliest deadline first.
+app.get("/api/v1/leave/plan/pending", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT p.id, p.start_date::text AS start_date, p.end_date::text AS end_date, p.days::float8 AS days,
+      lt.name AS leave_type, e.first_name, e.last_name, d.name AS department
+    FROM annual_leave_plans p
+    JOIN leave_types lt ON lt.id = p.leave_type_id
+    JOIN employees e ON e.id = p.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id AND d.company_id = e.company_id
+    WHERE p.company_id = ${companyId} AND p.status = 'submitted'
+    ORDER BY p.start_date LIMIT 300
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      employeeName: `${r.first_name} ${r.last_name}`,
+      department: r.department ? String(r.department) : null,
+      leaveType: String(r.leave_type),
+      startDate: String(r.start_date),
+      endDate: String(r.end_date),
+      days: Number(r.days),
+      deadline: planDeadline(String(r.start_date)),
+    })),
+  });
+});
+
+app.post("/api/v1/leave/plan/:id/submit", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [entry] = await sql`SELECT start_date::text AS start_date, status FROM annual_leave_plans WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId}`;
+  if (!entry) return c.json({ error: "Not found" }, 404);
+  if (entry.status !== "draft" && entry.status !== "returned") return c.json({ error: "Only draft or returned entries can be submitted." }, 409);
+  const today = new Date().toISOString().slice(0, 10);
+  if (!canSubmitPlan(today, String(entry.start_date))) return c.json({ error: "It is too late to plan this absence; it must start at least six weeks ahead." }, 422);
+  await sql`UPDATE annual_leave_plans SET status = 'submitted', decision_comment = NULL WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId}`;
+  await notifyManagerAndHr(sql, companyId, userId, userId, "plan_submitted",
+    `${await personName(sql, companyId, userId)} submitted a leave plan for ${String(entry.start_date)} (approval needed by ${planDeadline(String(entry.start_date))}).`);
+  return c.json({ id, status: "submitted" });
+});
+
+// HR approves or returns submitted plan entries. Approval is refused after the six-week deadline.
+app.post("/api/v1/leave/plan/:id/decision", zValidator("json", PlanDecisionBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR approves leave plans." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  if (body.decision === "reject" && (body.comment ?? "").length < 3) {
+    return c.json({ error: "A return needs a reason of at least 3 characters." }, 422);
+  }
+  const sql = getSql(c.env);
+  const [entry] = await sql`SELECT employee_id, start_date::text AS start_date, status FROM annual_leave_plans WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!entry) return c.json({ error: "Not found" }, 404);
+  if (entry.status !== "submitted") return c.json({ error: "Only submitted entries can be decided." }, 409);
+  const today = new Date().toISOString().slice(0, 10);
+  if (body.decision === "approve" && !canApprovePlan(today, String(entry.start_date))) {
+    return c.json({ error: `The approval deadline was ${planDeadline(String(entry.start_date))}. This entry must go back to the manager.` }, 409);
+  }
+  const status = body.decision === "approve" ? "approved" : "returned";
+  await sql`
+    UPDATE annual_leave_plans SET status = ${status}, decided_by = ${userId}, decided_at = NOW(), decision_comment = ${body.comment ?? null}
+    WHERE id = ${id} AND company_id = ${companyId} AND status = 'submitted'
+  `;
+  await notifyManagerAndHr(sql, companyId, Number(entry.employee_id), userId, "plan_decided",
+    `${await personName(sql, companyId, userId)} ${status === "approved" ? "approved" : "returned"} a leave plan entry for ${await personName(sql, companyId, Number(entry.employee_id))}.`);
+  return c.json({ id, status });
+});
+
+// Sweep: unapproved entries past their deadline go back to the manager. HR runs it; a scheduled job can call it later.
+app.post("/api/v1/leave/plan/sweep", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can run the plan sweep." }, 403);
+  const sql = getSql(c.env);
+  const today = new Date().toISOString().slice(0, 10);
+  const due = await sql`
+    SELECT id, employee_id, start_date::text AS start_date, status FROM annual_leave_plans
+    WHERE company_id = ${companyId} AND status IN ('draft', 'submitted') AND start_date - 42 < ${today}::date
+  `;
+  let returned = 0;
+  for (const e of due) {
+    if (!isPlanLapsed(today, String(e.start_date), String(e.status))) continue;
+    await sql`
+      UPDATE annual_leave_plans SET status = 'returned', decided_at = NOW(), decision_comment = 'Not approved six weeks before the start; returned to your manager.'
+      WHERE id = ${Number(e.id)} AND company_id = ${companyId} AND status IN ('draft', 'submitted')
+    `;
+    await notifyManagerAndHr(sql, companyId, Number(e.employee_id), userId, "plan_lapsed",
+      `A leave plan entry for ${await personName(sql, companyId, Number(e.employee_id))} starting ${String(e.start_date)} was not approved in time and is back with the manager.`);
+    returned += 1;
+  }
+  return c.json({ returned });
 });
 
 // Business trips. Requested like leave and decided by the same rule (solid manager or HR, never your own). Approved

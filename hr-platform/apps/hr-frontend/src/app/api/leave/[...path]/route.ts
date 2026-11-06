@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // reads it on the server and forwards the call to the API as a Bearer token. Only the leave endpoints are
 // reachable, and state-changing calls must come from this site.
 
-const ALLOWED = /^(me|requests|approvals|calendar|team|company|trips|trips\/me|trips\/pending|trips\/\d{1,9}\/(decision|cancel)|requests\/\d{1,9}\/(cancel|decision))$/;
+const ALLOWED = /^(me|requests|approvals|calendar|team|company|trips|trips\/me|trips\/pending|trips\/\d{1,9}\/(decision|cancel)|plan\/me|plan\/pending|plan\/sweep|plan\/\d{1,9}\/(submit|decision)|plan|requests\/\d{1,9}\/(cancel|decision))$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
