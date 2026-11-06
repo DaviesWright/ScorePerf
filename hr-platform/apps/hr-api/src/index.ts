@@ -556,7 +556,8 @@ const LeaveRequestBody = z.object({
   endDate: z.string().max(10),
   reason: z.string().max(500).default(""),
 });
-const LeaveDecisionBody = z.object({ decision: z.enum(["approve", "reject"]) });
+const LeaveDecisionBody = z.object({ decision: z.enum(["approve", "reject"]), comment: z.string().trim().max(1000).optional() });
+const HolidayBody = z.object({ name: z.string().trim().min(2).max(255), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
 
 const toLeaveRequest = (r: Record<string, unknown>) => ({
   id: Number(r.id),
@@ -717,13 +718,50 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
   if (request.employeeId === userId) return c.json({ error: "You cannot decide your own request." }, 403);
   const solid = await isSolidManager(sql, companyId, userId, request.employeeId);
   if (!canDecide({ userId, role }, request, solid)) return c.json({ error: "You can only decide requests from your solid reports, or HR can decide." }, 403);
-  const status = c.req.valid("json").decision === "approve" ? "approved" : "rejected";
+  const body = c.req.valid("json");
+  if (body.decision === "reject" && (body.comment ?? "").length < 3) {
+    return c.json({ error: "A rejection needs a reason of at least 3 characters." }, 422);
+  }
+  const status = body.decision === "approve" ? "approved" : "rejected";
   const updated = await sql`
-    UPDATE leave_requests SET status = ${status}, approved_by = ${userId}, updated_at = NOW()
+    UPDATE leave_requests SET status = ${status}, approved_by = ${userId}, updated_at = NOW(),
+      decided_at = NOW(), decision_comment = ${body.comment ?? null}
     WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' RETURNING id
   `;
   if (updated.length === 0) return c.json({ error: "This request is no longer pending." }, 409);
   return c.json({ id, status });
+});
+
+// Company holidays: everyone reads; HR adds and removes. Used when working days are counted.
+app.get("/api/v1/holidays", async (c) => {
+  const { companyId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`SELECT id, name, holiday_date::text AS date FROM company_holidays WHERE company_id = ${companyId} ORDER BY holiday_date`;
+  return c.json({ results: rows.map((r) => ({ id: Number(r.id), name: String(r.name), date: String(r.date) })) });
+});
+
+app.post("/api/v1/holidays", zValidator("json", HolidayBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can add holidays." }, 403);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const dup = await sql`SELECT 1 FROM company_holidays WHERE company_id = ${companyId} AND holiday_date = ${body.date}::date LIMIT 1`;
+  if (dup.length > 0) return c.json({ error: "A holiday already exists on that date." }, 409);
+  const inserted = await sql`
+    INSERT INTO company_holidays (company_id, name, holiday_date) VALUES (${companyId}, ${body.name}, ${body.date}::date) RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id) }, 201);
+});
+
+app.post("/api/v1/holidays/:id/delete", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can remove holidays." }, 403);
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const deleted = await sql`DELETE FROM company_holidays WHERE id = ${id} AND company_id = ${companyId} RETURNING id`;
+  if (deleted.length === 0) return c.json({ error: "Not found" }, 404);
+  return c.json({ id, deleted: true });
 });
 
 app.get("/api/v1/leave/calendar", async (c) => {

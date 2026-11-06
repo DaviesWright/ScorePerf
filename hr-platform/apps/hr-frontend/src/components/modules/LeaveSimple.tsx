@@ -7,7 +7,7 @@ import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, t
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
 
-type Tab = "mine" | "request" | "approvals" | "calendar";
+type Tab = "mine" | "request" | "approvals" | "calendar" | "holidays";
 
 interface LeaveSimpleProps {
   api: LeaveApi;
@@ -91,6 +91,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
     { key: "mine", label: "My leave" },
     { key: "request", label: "Request leave" },
     ...(decider ? ([{ key: "approvals", label: "Approvals" }, { key: "calendar", label: "Team calendar" }] as { key: Tab; label: string }[]) : []),
+    ...(user.role === "hr_admin" || user.role === "hr_director" ? ([{ key: "holidays", label: "Holidays" }] as { key: Tab; label: string }[]) : []),
   ];
 
   return (
@@ -127,6 +128,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
       )}
       {tab === "approvals" && decider && <Approvals api={api} />}
       {tab === "calendar" && decider && <Calendar api={api} />}
+      {tab === "holidays" && (user.role === "hr_admin" || user.role === "hr_director") && <Holidays />}
     </div>
   );
 };
@@ -277,16 +279,18 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
 function Approvals({ api }: { api: LeaveApi }) {
   const { data, error, loading, reload } = useLoad(() => api.approvals(), [api]);
   const [confirming, setConfirming] = useState<number | null>(null);
+  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
   const [actionError, setActionError] = useState("");
 
   const decide = useCallback(
-    async (id: number, decision: "approve" | "reject") => {
+    async (id: number, decision: "approve" | "reject", comment?: string) => {
       setBusy(id);
       setActionError("");
-      const r = await api.decide(id, decision);
+      const r = await api.decide(id, decision, comment);
       setBusy(null);
       setConfirming(null);
+      setReason("");
       if (!r.ok) setActionError(r.error);
       reload();
     },
@@ -322,12 +326,18 @@ function Approvals({ api }: { api: LeaveApi }) {
                       Approve
                     </button>
                     {confirming === r.id ? (
-                      <>
-                        <button type="button" style={{ ...S.btn, borderColor: C.danger, color: C.danger }} disabled={busy === r.id} onClick={() => decide(r.id, "reject")}>
-                          Confirm reject
-                        </button>
-                        <button type="button" style={S.btn} onClick={() => setConfirming(null)}>Keep pending</button>
-                      </>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: "220px" }}>
+                        <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                          Reason for rejecting (required)
+                          <textarea rows={2} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} style={S.input} />
+                        </label>
+                        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                          <button type="button" style={{ ...S.btn, borderColor: C.danger, color: C.danger }} disabled={busy === r.id || reason.trim().length < 3} onClick={() => decide(r.id, "reject", reason.trim())}>
+                            Confirm reject
+                          </button>
+                          <button type="button" style={S.btn} onClick={() => { setConfirming(null); setReason(""); }}>Keep pending</button>
+                        </div>
+                      </div>
                     ) : (
                       <button type="button" style={S.btn} onClick={() => setConfirming(r.id)} aria-label={`Reject ${r.employeeName ?? "request"} ${range(r)}`}>
                         Reject
@@ -370,6 +380,85 @@ function Calendar({ api }: { api: LeaveApi }) {
           </tbody>
         </table>
       )}
+    </>
+  );
+}
+
+// Company holidays. HR adds and removes them; working-day counts skip them on the next request.
+function Holidays() {
+  const [rows, setRows] = useState<{ id: number; name: string; date: string }[]>([]);
+  const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/hr/holidays", { cache: "no-store" })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error ?? "Could not load holidays.");
+        if (!cancelled) setRows(body.results ?? []);
+      })
+      .catch((e: unknown) => !cancelled && setError(e instanceof Error ? e.message : "Could not load holidays."));
+    return () => {
+      cancelled = true;
+    };
+  }, [tick]);
+
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const r = await fetch("/api/hr/holidays", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, date }) });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Could not add the holiday.");
+    setName("");
+    setDate("");
+    setTick((n) => n + 1);
+  };
+
+  const remove = async (id: number) => {
+    setBusy(true);
+    setError("");
+    const r = await fetch(`/api/hr/holidays/${id}/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    setBusy(false);
+    if (!r.ok) return setError("Could not remove the holiday.");
+    setTick((n) => n + 1);
+  };
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Company holidays</h2>
+      <p style={S.note}>Holidays on weekdays are not counted as leave days.</p>
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+      {rows.length === 0 ? (
+        <p style={S.note}>No holidays yet.</p>
+      ) : (
+        <table style={S.table}>
+          <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>Company holidays</caption>
+          <thead>
+            <tr>{["Date", "Holiday", "Action"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((h) => (
+              <tr key={h.id}>
+                <td style={S.td}>{fmt(h.date)}</td>
+                <td style={S.td}>{h.name}</td>
+                <td style={S.td}><button type="button" style={S.btn} disabled={busy} onClick={() => remove(h.id)} aria-label={`Remove ${h.name}`}>Remove</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <form onSubmit={add} style={{ maxWidth: "420px", marginTop: "1rem" }}>
+        <h3 style={{ margin: "0 0 0.5rem", fontSize: "16px" }}>Add a holiday</h3>
+        <label style={S.field}>Name *<input required minLength={2} maxLength={255} value={name} onChange={(e) => setName(e.target.value)} style={S.input} /></label>
+        <label style={S.field}>Date *<input required type="date" value={date} onChange={(e) => setDate(e.target.value)} style={S.input} /></label>
+        <button type="submit" style={S.primary} disabled={busy}>{busy ? "Saving…" : "Add holiday"}</button>
+      </form>
     </>
   );
 }

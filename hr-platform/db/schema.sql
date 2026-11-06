@@ -445,6 +445,8 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     status VARCHAR(50) DEFAULT 'pending' NOT NULL,
     reason TEXT DEFAULT '' NOT NULL,
     approved_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    decision_comment TEXT, -- migration 0008: reason given with a decision (required for rejection)
+    decided_at TIMESTAMPTZ, -- migration 0008
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

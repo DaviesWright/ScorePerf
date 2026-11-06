@@ -42,7 +42,7 @@ export interface LeaveApi {
   create(input: NewLeaveRequest): Promise<Result>;
   cancel(id: number): Promise<Result>;
   approvals(): Promise<LeaveRequestView[]>;
-  decide(id: number, decision: "approve" | "reject"): Promise<Result>;
+  decide(id: number, decision: "approve" | "reject", comment?: string): Promise<Result>;
   calendar(): Promise<LeaveRequestView[]>;
 }
 
@@ -84,8 +84,8 @@ export const httpLeaveApi: LeaveApi = {
     if (r.status !== 200) throw new Error(r.data.error ?? `Could not load approvals (${r.status}).`);
     return r.data.results;
   },
-  async decide(id, decision) {
-    return asResult(await call("POST", `requests/${id}/decision`, { decision }));
+  async decide(id, decision, comment) {
+    return asResult(await call("POST", `requests/${id}/decision`, { decision, comment }));
   },
   async calendar() {
     const r = await call<{ results: LeaveRequestView[] }>("GET", "calendar");
