@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -625,18 +625,74 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
   // Performance Management Settings Configuration State
   const [frameworkConfig, setFrameworkConfig] = useState({
-    activeFramework: "BSC" as "BSC" | "OKR",
-    strictSingleFramework: true,
     financialWeight: 30,
     customerWeight: 50,
     internalWeight: 15,
     learningWeight: 5,
-    okrGradingScale: "0_1" as "0_1" | "percentage",
     minObjectivesPerEmployee: 5,
     maxObjectivesPerEmployee: 8,
     mandatoryCorporateAlignment: true,
     allowEmployeeProposeKeyResults: true,
   });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // Load the company's saved settings once. Until they arrive, the form shows the defaults above.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/hr/performance/settings", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { settings?: { pillarWeights: { financial: number; customer: number; internal: number; learning: number }; minObjectives: number; maxObjectives: number; mandatoryCorporateAlignment: boolean; allowEmployeeProposeKeyResults: boolean } } | null) => {
+        const s = data?.settings;
+        if (cancelled || !s) return;
+        setFrameworkConfig({
+          financialWeight: s.pillarWeights.financial,
+          customerWeight: s.pillarWeights.customer,
+          internalWeight: s.pillarWeights.internal,
+          learningWeight: s.pillarWeights.learning,
+          minObjectivesPerEmployee: s.minObjectives,
+          maxObjectivesPerEmployee: s.maxObjectives,
+          mandatoryCorporateAlignment: s.mandatoryCorporateAlignment,
+          allowEmployeeProposeKeyResults: s.allowEmployeeProposeKeyResults,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Saves only after the server confirms. Errors from the server (validation, or not HR) are shown as they come back.
+  const saveFrameworkSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch("/api/hr/performance/settings/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pillarWeights: {
+            financial: frameworkConfig.financialWeight,
+            customer: frameworkConfig.customerWeight,
+            internal: frameworkConfig.internalWeight,
+            learning: frameworkConfig.learningWeight,
+          },
+          minObjectives: frameworkConfig.minObjectivesPerEmployee,
+          maxObjectives: frameworkConfig.maxObjectivesPerEmployee,
+          mandatoryCorporateAlignment: frameworkConfig.mandatoryCorporateAlignment,
+          allowEmployeeProposeKeyResults: frameworkConfig.allowEmployeeProposeKeyResults,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; errors?: string[] };
+      if (!res.ok) {
+        setStatusMessage({ text: [data.error ?? "The settings were not saved.", ...(data.errors ?? [])].join(" "), error: true });
+        return;
+      }
+      setStatusMessage({ text: "Performance framework and cascading scorecard weights saved." });
+    } catch {
+      setStatusMessage({ text: "The server could not be reached. Settings were not saved.", error: true });
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const [signOffChainConfig, setSignOffChainConfig] = useState({
     immutableSelfScore: true,
@@ -4081,44 +4137,18 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textSecondary, marginBottom: "0.5rem" }}>
                         Primary Organizational Methodology
                       </label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                        <div
-                          onClick={() => setFrameworkConfig({ ...frameworkConfig, activeFramework: "BSC" })}
-                          style={{
-                            padding: "0.85rem 1rem",
-                            borderRadius: radii.md,
-                            border: `2px solid ${frameworkConfig.activeFramework === "BSC" ? colors.indigoAction : colors.border}`,
-                            backgroundColor: frameworkConfig.activeFramework === "BSC" ? colors.indigoSubtle : colors.surfaceSubtle,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div style={{ fontWeight: 800, fontSize: typography.sizes.xs, color: colors.textPrimary, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <span>Balanced Scorecard</span>
-                            {frameworkConfig.activeFramework === "BSC" && <Badge variant="success" size="sm">Active</Badge>}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem" }}>
-                            Strategic 4-quadrant weighting for operational and financial alignment.
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={() => setFrameworkConfig({ ...frameworkConfig, activeFramework: "OKR" })}
-                          style={{
-                            padding: "0.85rem 1rem",
-                            borderRadius: radii.md,
-                            border: `2px solid ${frameworkConfig.activeFramework === "OKR" ? colors.indigoAction : colors.border}`,
-                            backgroundColor: frameworkConfig.activeFramework === "OKR" ? colors.indigoSubtle : colors.surfaceSubtle,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div style={{ fontWeight: 800, fontSize: typography.sizes.xs, color: colors.textPrimary, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <span>Objectives &amp; KRs (OKR)</span>
-                            {frameworkConfig.activeFramework === "OKR" && <Badge variant="success" size="sm">Active</Badge>}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem" }}>
-                            Agile, high-velocity stretch targets with 0.0–1.0 confidence grading.
-                          </div>
-                        </div>
+                      <div
+                        style={{
+                          padding: "0.85rem 1rem",
+                          borderRadius: radii.md,
+                          border: `1px solid ${colors.border}`,
+                          backgroundColor: colors.surfaceSubtle,
+                          fontSize: "11px",
+                          color: colors.textMuted,
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        Each appraisal cycle takes one framework (Balanced Scorecard, OKR or MBO) when it is created. The framework cannot be changed after that.
                       </div>
                     </div>
 
@@ -4290,7 +4320,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setStatusMessage({ text: "Performance framework and cascading scorecard weights saved successfully." })}
+                        disabled={settingsSaving}
+                        onClick={saveFrameworkSettings}
                       >
                         Save Framework Settings
                       </Button>

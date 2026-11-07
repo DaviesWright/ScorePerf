@@ -260,6 +260,36 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "performance_pms",
     nextSuggestedLabel: "Calibrate Cascading BSC →",
   },
+  my_performance: {
+    whatToDoHere: "Read your objectives, their weighted progress and where your review stands. This page is read only.",
+    nextSuggestedView: "objectives",
+    nextSuggestedLabel: "Go to Objectives →",
+  },
+  my_profile: {
+    whatToDoHere: "Ask HR to change a bank or tax detail here. The stored value changes only after HR approves the request.",
+    nextSuggestedView: "payslips",
+    nextSuggestedLabel: "Go to Payslips →",
+  },
+  payslips: {
+    whatToDoHere: "Download your payslips as PDFs. HR uploads each payslip here, one PDF per employee and month.",
+    nextSuggestedView: "document_centre",
+    nextSuggestedLabel: "Go to Document Centre →",
+  },
+  document_centre: {
+    whatToDoHere: "Open each HR document and acknowledge that you have read it. HR sees how many copies are still outstanding.",
+    nextSuggestedView: "my_performance",
+    nextSuggestedLabel: "Go to My Performance →",
+  },
+  performance_setup: {
+    whatToDoHere: "Load the corporate strategy goals and the reporting lines from CSV. Each load replaces the whole set, so check the file first.",
+    nextSuggestedView: "performance_pms",
+    nextSuggestedLabel: "Go to Appraisal Oversight →",
+  },
+  company_setup: {
+    whatToDoHere: "Add offices and link each department to one. Set who approves leave and objectives, one level at a time. Test each integration before you rely on it.",
+    nextSuggestedView: "performance_setup",
+    nextSuggestedLabel: "Go to Performance Setup →",
+  },
   performance_pms: {
     whatToDoHere: "Click any Dashboard counter (e.g., No Objectives, Active Objectives) to drill down, or switch tabs to 'Cascading BSC' to adjust strategic weights.",
     nextSuggestedView: "approval_workflows",

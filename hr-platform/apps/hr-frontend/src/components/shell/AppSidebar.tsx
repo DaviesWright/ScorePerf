@@ -13,7 +13,13 @@ export type ModuleViewKey =
   | "dashboard"
   | "assets"
   | "performance_pms"
+  | "performance_setup"
+  | "company_setup"
   | "objectives"
+  | "my_profile"
+  | "payslips"
+  | "document_centre"
+  | "my_performance"
   | "skills_marketplace"
   | "admin_nerve_center"
   | "lifecycle_portals"
@@ -127,6 +133,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           badge: "ESS",
           badgeType: "peach" as const,
         },
+        { key: "my_profile" as ModuleViewKey, label: "Bank & Tax Details", icon: Icons.Wallet },
+        { key: "payslips" as ModuleViewKey, label: "Payslips", icon: Icons.FileText },
+        { key: "document_centre" as ModuleViewKey, label: "Document Centre", icon: Icons.BookOpen },
+        { key: "my_performance" as ModuleViewKey, label: "My Performance", icon: Icons.Target },
       ],
     },
     {
@@ -235,6 +245,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           badge: "Maker-Checker",
           badgeType: "emerald" as const,
         },
+        { key: "company_setup" as ModuleViewKey, label: "Company Setup", icon: Icons.Settings },
         { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
         { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
         { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },

@@ -16,7 +16,12 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "command_centre",
   "time_and_leave",
   "performance_pms",
+  "performance_setup",
   "objectives",
+  "my_performance",
+  "my_profile",
+  "payslips",
+  "document_centre",
   "self_service",
   "reports_analytics",
   "workforce_directory",
@@ -28,6 +33,7 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "helpdesk",
   "employee_settings",
   "approval_workflows",
+  "company_setup",
   "governance_import",
   "disciplinary",
   "policies_handbook",
@@ -36,7 +42,18 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
 export type FeatureKey = "ai_assistant" | "payslip";
 export const ALL_FEATURES: readonly FeatureKey[] = ["ai_assistant", "payslip"];
 
-export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["dashboard", "time_and_leave", "performance_pms", "objectives", "assets"];
+export const DEFAULT_VIEWS: readonly ModuleViewKey[] = [
+  "dashboard",
+  "time_and_leave",
+  "performance_pms",
+  "performance_setup",
+  "objectives",
+  "my_performance",
+  "my_profile",
+  "payslips",
+  "document_centre",
+  "assets",
+];
 
 const VIEW_ALIASES: Record<string, ModuleViewKey> = {
   leave: "time_and_leave",

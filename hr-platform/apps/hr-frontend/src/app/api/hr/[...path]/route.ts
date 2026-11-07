@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // on the server and forwards it as a Bearer token. Only the listed paths are reachable; state-changing calls must
 // come from this site.
 
-const ALLOWED = /^(home|me|notifications|notifications\/read-all|notifications\/\d{1,9}\/read|reporting-lines\/me|holidays|holidays\/\d{1,9}\/delete|leave\/types|leave\/types\/\d{1,9}\/update|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/overdue|assets\/\d{1,9}\/(assign|return|history)|employees\/\d{1,9}\/offboard)$/;
+const ALLOWED = /^(home|me|notifications|notifications\/read-all|notifications\/\d{1,9}\/read|reporting-lines|reporting-lines\/me|reporting-lines\/import|strategy|strategy\/import|performance\/settings|performance\/settings\/update|holidays|holidays\/\d{1,9}\/delete|leave\/types|leave\/types\/\d{1,9}\/update|announcements|announcements\/\d{1,9}\/archive|assets|assets\/me|assets\/overdue|assets\/\d{1,9}\/(assign|return|history)|employees\/\d{1,9}\/offboard|profile\/details|profile\/changes|profile\/changes\/pending|profile\/changes\/\d{1,9}\/decision|payslips|payslips\/\d{1,9}\/file|document-types|documents\/me|documents\/publish|documents\/publications|documents\/\d{1,9}\/(acknowledge|file)|performance\/me|approvals\/settings|approvals\/settings\/update|offices|offices\/\d{1,9}\/update|departments\/\d{1,9}\/office|integrations|integrations\/(business_central|seamless_hr|clay_hr|coursera)\/(update|test))$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
@@ -36,6 +36,18 @@ async function forward(req: NextRequest, ctx: { params: Promise<{ path: string[]
     });
   } catch {
     return NextResponse.json({ error: "The server could not be reached. Try again." }, { status: 502 });
+  }
+  // PDFs (payslips and documents) pass through as bytes. Everything else is JSON, read as text.
+  if ((upstream.headers.get("Content-Type") ?? "").startsWith("application/pdf")) {
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": upstream.headers.get("Content-Disposition") ?? "attachment",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   }
   return new NextResponse(await upstream.text(), {
     status: upstream.status,

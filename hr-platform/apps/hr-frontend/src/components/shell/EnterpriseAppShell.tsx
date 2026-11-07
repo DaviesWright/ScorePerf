@@ -18,6 +18,12 @@ import { LeaveScreen } from "../modules/LeaveSimple";
 import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { DashboardScreen } from "../modules/DashboardSimple";
 import { AssetsScreen } from "../modules/AssetsSimple";
+import { PerformanceSetupScreen } from "../modules/PerformanceSetupScreen";
+import { CompanySetupScreen } from "../modules/CompanySetupScreen";
+import { ProfileChangesScreen } from "../modules/ProfileChangesScreen";
+import { PayslipsScreen } from "../modules/PayslipsScreen";
+import { DocumentCentreScreen } from "../modules/DocumentCentreScreen";
+import { MyPerformanceScreen } from "../modules/MyPerformanceScreen";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
@@ -202,6 +208,18 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Employee Directory";
       case "performance_pms":
         return "Appraisal Oversight";
+      case "performance_setup":
+        return "Performance Setup: Strategy & Reporting Lines";
+      case "company_setup":
+        return "Company Setup: Offices, Approval Levels & Integrations";
+      case "my_profile":
+        return "Bank & Tax Details: Changes Need HR Approval";
+      case "payslips":
+        return "Payslips";
+      case "document_centre":
+        return "Document Centre: Policies and Acknowledgments";
+      case "my_performance":
+        return "My Performance (read only)";
       case "objectives":
         return "Objectives";
       case "dashboard":
@@ -428,6 +446,13 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
+
+          {currentView === "performance_setup" && <PerformanceSetupScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "company_setup" && <CompanySetupScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "payslips" && <PayslipsScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "document_centre" && <DocumentCentreScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 

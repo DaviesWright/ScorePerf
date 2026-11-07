@@ -14,6 +14,23 @@ import {
   CalculateScoreSchema,
   JobMessage,
 } from "@hr-platform/shared";
+import {
+  DEFAULT_APPROVAL_SETTINGS,
+  INTEGRATION_PROVIDERS,
+  PROVIDER_INFO,
+  leaveStepOutcome,
+  managerDecidesStep,
+  objectivesManagerDecides,
+  preflight,
+  slotStatus,
+  validateApprovalSettings,
+  validateConnection,
+  validateOffice,
+  type ApprovalSettings,
+  type IntegrationProvider,
+  type LeaveChain,
+} from "@hr-platform/shared";
+import { ADAPTERS, RESERVED_SECRET_NAMES } from "./integrations/adapters";
 import { authenticate, type TenantContext } from "./auth";
 import { createAuthRoutes } from "./auth-routes";
 import type { MagicLinkDeps } from "./magic-link";
@@ -42,9 +59,23 @@ import {
   planDeadline,
   parseReportingLinesCsv,
   parseStrategyCsv,
+  DEFAULT_PERFORMANCE_SETTINGS,
+  validatePerformanceSettings,
+  type PerformanceSettings,
   validateObjective,
   validateRequest,
   type ObjectiveStatus,
+  PROFILE_FIELDS,
+  PROFILE_FIELD_LABELS,
+  type ProfileField,
+  profileValueError,
+  canDecideProfileChange,
+  PDF_MAX_BYTES,
+  isPdf,
+  payslipError,
+  netPay,
+  acknowledgmentError,
+  weightedProgress,
 } from "@hr-platform/shared";
 
 export interface Env {
@@ -769,17 +800,21 @@ app.get("/api/v1/leave/approvals", async (c) => {
   const rows = await sql`
     SELECT lr.id, lr.employee_id, lr.leave_type_id, lt.name AS leave_type_name, lr.start_date::text AS start_date,
       lr.end_date::text AS end_date, lr.requested_days, lr.status, lr.reason, lr.approved_by,
+      lr.current_step, lt.approval_chain,
       e.first_name, e.last_name, d.name AS department
     FROM leave_requests lr
     JOIN leave_types lt ON lt.id = lr.leave_type_id
     JOIN employees e ON e.id = lr.employee_id
     LEFT JOIN departments d ON d.id = e.department_id
     WHERE lr.company_id = ${companyId} AND lr.status = 'pending' AND lr.employee_id <> ${userId}
-      AND (${isHrRole(role)}::boolean OR (lr.current_step = 1 AND lr.employee_id IN (
-        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid')))
+      AND (${isHrRole(role)}::boolean OR lr.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
     ORDER BY lr.start_date ASC LIMIT 200
   `;
-  return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
+  // A line manager sees a request only at a step whose configured approver is the line manager.
+  const levels = await loadApprovalSettings(sql, companyId);
+  const visible = rows.filter((r) => isHrRole(role) || managerDecidesStep(levelsFor(levels, String(r.approval_chain)), Number(r.current_step)));
+  return c.json({ count: visible.length, results: visible.map(toLeaveRequest) });
 });
 
 app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecisionBody), async (c) => {
@@ -805,18 +840,23 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
   `;
   if (!meta) return c.json({ error: "Not found" }, 404);
   const hr = isHrRole(role);
-  // Two-step chains: the solid manager's approval moves the request to HR. Only HR can approve step 2.
-  if (body.decision === "approve" && meta.approval_chain === "manager_then_hr" && Number(meta.current_step) === 1 && !hr) {
+  // The configured levels for this chain decide the step. Defaults: "manager" stops at the line manager, and
+  // "manager_then_hr" moves an approval on to HR. HR decides any step and finishes the request.
+  const levels = levelsFor(await loadApprovalSettings(sql, companyId), String(meta.approval_chain));
+  const step = Number(meta.current_step);
+  const outcome = leaveStepOutcome(levels, step, { hr, solidManager: solid }, body.decision);
+  if (outcome.action === "forbidden") return c.json({ error: outcome.reason }, 403);
+  if (outcome.action === "advance") {
     const moved = await sql`
-      UPDATE leave_requests SET current_step = 2, updated_at = NOW()
-      WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' AND current_step = 1 RETURNING id
+      UPDATE leave_requests SET current_step = ${outcome.step}, updated_at = NOW()
+      WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' AND current_step = ${step} RETURNING id
     `;
     if (moved.length === 0) return c.json({ error: "This request is no longer pending." }, 409);
+    const nextIsHr = levels[outcome.step - 1] === "hr";
     await notifyManagerAndHr(sql, companyId, request.employeeId, userId, "leave_awaiting_hr",
-      `${await personName(sql, companyId, userId)} approved a leave request for ${await personName(sql, companyId, request.employeeId)}; it now needs HR approval.`);
-    return c.json({ id, status: "pending", step: 2 });
+      `${await personName(sql, companyId, userId)} approved a leave request for ${await personName(sql, companyId, request.employeeId)}; it now needs ${nextIsHr ? "HR" : "the next"} approval.`);
+    return c.json({ id, status: "pending", step: outcome.step });
   }
-  if (Number(meta.current_step) === 2 && !hr) return c.json({ error: "This step is waiting for HR." }, 403);
   if (body.decision === "approve" && meta.requires_evidence && Number(meta.evidence) === 0) {
     return c.json({ error: "Evidence must be attached before this leave can be approved." }, 422);
   }
@@ -1154,6 +1194,7 @@ app.get("/api/v1/objectives/pending", async (c) => {
   const { companyId, userId, role } = c.get("tenant");
   if (!isDecider(role)) return c.json({ error: "Forbidden" }, 403);
   const sql = getSql(c.env);
+  const managerLevel = objectivesManagerDecides(await loadApprovalSettings(sql, companyId));
   const cycle = await objectiveCycle(sql, companyId, queryCycleId(c.req.query("cycleId")));
   if (!cycle) return c.json({ cycle: null, results: [] });
   const rows = await sql`
@@ -1163,8 +1204,8 @@ app.get("/api/v1/objectives/pending", async (c) => {
     JOIN employees e ON e.id = o.employee_id
     LEFT JOIN departments d ON d.id = e.department_id
     WHERE o.company_id = ${companyId} AND o.cycle_id = ${cycle.id} AND o.status = 'submitted' AND o.employee_id <> ${userId}
-      AND (${isHrRole(role)}::boolean OR o.employee_id IN (
-        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
+      AND (${isHrRole(role)}::boolean OR (${managerLevel}::boolean AND o.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid')))
     ORDER BY o.employee_id, o.id LIMIT 500
   `;
   return c.json({ cycle, results: rows.map(toObjective) });
@@ -1179,7 +1220,9 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
   const cycle = await objectiveCycle(sql, companyId, cycleId);
   if (!cycle) return c.json({ error: "Not found" }, 404);
   if (!cycle.open) return c.json({ error: "Goal setting is closed for this cycle." }, 409);
-  const solid = await isSolidManager(sql, companyId, userId, employeeId);
+  // The objective approval level decides whether a line manager may decide at all; HR always can.
+  const managerLevel = objectivesManagerDecides(await loadApprovalSettings(sql, companyId));
+  const solid = managerLevel && (await isSolidManager(sql, companyId, userId, employeeId));
   if (!canDecideObjectives({ userId, role }, employeeId, "submitted", solid)) {
     return c.json({ error: "You can only decide objectives of your solid reports, or HR can decide." }, 403);
   }
@@ -1363,6 +1406,38 @@ app.post("/api/v1/strategy/import", zValidator("json", StrategyImportBody), asyn
     }
   });
   return c.json({ loaded: parsed.rows.length }, 201);
+});
+
+// Company performance settings: everyone reads the saved values (or the defaults); only HR saves them.
+const PerformanceSettingsBody = z.object({
+  pillarWeights: z.object({ financial: z.number(), customer: z.number(), internal: z.number(), learning: z.number() }),
+  minObjectives: z.number(),
+  maxObjectives: z.number(),
+  mandatoryCorporateAlignment: z.boolean(),
+  allowEmployeeProposeKeyResults: z.boolean(),
+});
+
+app.get("/api/v1/performance/settings", async (c) => {
+  const { companyId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`SELECT settings, updated_at FROM performance_settings WHERE company_id = ${companyId}`;
+  const settings = rows[0] ? (rows[0].settings as PerformanceSettings) : DEFAULT_PERFORMANCE_SETTINGS;
+  return c.json({ settings, updatedAt: rows[0] ? new Date(String(rows[0].updated_at)).toISOString() : null, saved: rows.length > 0 });
+});
+
+app.post("/api/v1/performance/settings/update", zValidator("json", PerformanceSettingsBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change performance settings." }, 403);
+  const settings = c.req.valid("json") as PerformanceSettings;
+  const errors = validatePerformanceSettings(settings);
+  if (errors.length > 0) return c.json({ error: "The settings are not valid.", errors }, 422);
+  const sql = getSql(c.env);
+  await sql`
+    INSERT INTO performance_settings (company_id, settings, updated_by, updated_at)
+    VALUES (${companyId}, ${JSON.stringify(settings)}::jsonb, ${userId}, NOW())
+    ON CONFLICT (company_id) DO UPDATE SET settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+  `;
+  return c.json({ saved: true, settings });
 });
 
 // Home page content for everyone: active announcements, birthdays in the next 14 days, and the staff directory.
@@ -2204,6 +2279,393 @@ app.get("/api/v1/payroll/payslips", async (c) => {
   });
 });
 
+// --- Self-service (db/migrations/0015_self_service.sql). Paths stay off /api/v1/payroll: the RBAC middleware blocks it for employees.
+
+// Notifications for banking and tax requests go to HR only, never to the solid manager. The actor is skipped.
+async function notifyHr(sql: Sql, companyId: number, actorId: number, kind: string, message: string): Promise<void> {
+  await sql`
+    INSERT INTO notifications (company_id, recipient_id, kind, message)
+    SELECT ${companyId}, e.id, ${kind}, ${message} FROM employees e
+    WHERE e.company_id = ${companyId} AND e.is_active AND e.access_role IN ('hr_admin', 'hr_director') AND e.id <> ${actorId}
+  `;
+}
+
+// A PDF from a base64 JSON field (the frontend proxy only forwards JSON). Returns the bytes or the reason refused.
+function readPdf(b64: string): { bytes: Uint8Array } | { error: string } {
+  let binary: string;
+  try {
+    binary = atob(b64);
+  } catch {
+    return { error: "The file is not valid base64." };
+  }
+  const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+  if (bytes.length > PDF_MAX_BYTES) return { error: "The file must be 5 MB or smaller." };
+  if (!isPdf(bytes)) return { error: "The file must be a PDF." };
+  return { bytes };
+}
+
+const PdfBase64 = z.string().min(8).max(7_000_000);
+const ProfileChangeBody = z.object({ field: z.enum(PROFILE_FIELDS), value: z.string().trim().min(1).max(100) });
+const ProfileDecisionBody = z.object({ decision: z.enum(["approve", "reject"]), comment: z.string().trim().max(500).default("") });
+const PayslipUploadBody = z.object({
+  employeeId: z.number().int().positive(),
+  month: z.number().int(),
+  year: z.number().int(),
+  grossPay: z.number(),
+  deductions: z.number(),
+  fileBase64: PdfBase64,
+});
+const DocumentTypeBody = z.object({ name: z.string().trim().min(2).max(100) });
+const DocumentPublishBody = z.object({
+  title: z.string().trim().min(3).max(200),
+  documentTypeId: z.number().int().positive().nullable().optional(),
+  fileBase64: PdfBase64,
+});
+
+const toProfileRequest = (r: Record<string, unknown>) => ({
+  id: Number(r.id),
+  field: String(r.field),
+  fieldLabel: PROFILE_FIELD_LABELS[r.field as ProfileField] ?? String(r.field),
+  oldValue: String(r.old_value),
+  newValue: String(r.new_value),
+  status: String(r.status),
+  decisionComment: r.decision_comment === null || r.decision_comment === undefined ? null : String(r.decision_comment),
+  createdAt: new Date(String(r.created_at)).toISOString(),
+  decidedAt: r.decided_at ? new Date(String(r.decided_at)).toISOString() : null,
+  ...(r.first_name !== undefined ? { employeeName: `${r.first_name} ${r.last_name}` } : {}),
+});
+
+// Banking and tax details. An employee asks for a change; HR approves or rejects. A stored value changes only inside the
+// approval transaction, which also marks the request approved.
+app.get("/api/v1/profile/details", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const [values, requests] = await Promise.all([
+    sql`SELECT field, value FROM employee_bank_tax_fields WHERE company_id = ${companyId} AND employee_id = ${userId}`,
+    sql`
+      SELECT id, field, old_value, new_value, status, decision_comment, created_at, decided_at FROM profile_change_requests
+      WHERE company_id = ${companyId} AND employee_id = ${userId} ORDER BY created_at DESC LIMIT 50
+    `,
+  ]);
+  return c.json({
+    values: Object.fromEntries(values.map((v) => [String(v.field), String(v.value)])),
+    requests: requests.map(toProfileRequest),
+  });
+});
+
+app.post("/api/v1/profile/changes", zValidator("json", ProfileChangeBody), async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const body = c.req.valid("json");
+  const problem = profileValueError(body.field, body.value);
+  if (problem) return c.json({ error: problem }, 422);
+  const sql = getSql(c.env);
+  const [current] = await sql`SELECT value FROM employee_bank_tax_fields WHERE company_id = ${companyId} AND employee_id = ${userId} AND field = ${body.field}`;
+  const oldValue = current ? String(current.value) : "";
+  if (oldValue === body.value) return c.json({ error: "That is already the stored value." }, 409);
+  const waiting = `${PROFILE_FIELD_LABELS[body.field]} already has a request waiting for HR.`;
+  const [open] = await sql`SELECT 1 FROM profile_change_requests WHERE company_id = ${companyId} AND employee_id = ${userId} AND field = ${body.field} AND status = 'pending'`;
+  if (open) return c.json({ error: waiting }, 409);
+  // The unique index on open requests catches two submissions at once.
+  const inserted = await sql`
+    INSERT INTO profile_change_requests (company_id, employee_id, field, old_value, new_value)
+    VALUES (${companyId}, ${userId}, ${body.field}, ${oldValue}, ${body.value}) RETURNING id
+  `.catch((e: { code?: string }) => {
+    if (e.code === "23505") return null;
+    throw e;
+  });
+  if (!inserted) return c.json({ error: waiting }, 409);
+  await notifyHr(sql, companyId, userId, "profile_change_requested", `${await personName(sql, companyId, userId)} asked to change ${PROFILE_FIELD_LABELS[body.field]}.`);
+  return c.json({ id: Number(inserted[0].id), status: "pending" }, 201);
+});
+
+app.get("/api/v1/profile/changes/pending", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can review profile changes." }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT r.id, r.employee_id, r.field, r.old_value, r.new_value, r.status, r.decision_comment, r.created_at, r.decided_at,
+      e.first_name, e.last_name
+    FROM profile_change_requests r JOIN employees e ON e.id = r.employee_id
+    WHERE r.company_id = ${companyId} AND r.status = 'pending' ORDER BY r.created_at LIMIT 200
+  `;
+  return c.json({ count: rows.length, results: rows.map(toProfileRequest) });
+});
+
+app.post("/api/v1/profile/changes/:id/decision", zValidator("json", ProfileDecisionBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const [pr] = await sql`SELECT employee_id, field, new_value, status FROM profile_change_requests WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!pr) return c.json({ error: "Not found" }, 404);
+  const refusal = canDecideProfileChange({ userId, role }, Number(pr.employee_id));
+  if (refusal) return c.json({ error: refusal }, 403);
+  if (pr.status !== "pending") return c.json({ error: "This request has already been decided." }, 409);
+  const approved = body.decision === "approve";
+  const applied = await sql.begin(async (tx) => {
+    // The status is checked again in this UPDATE, so two HR users deciding at once cannot both apply the change.
+    const decided = await tx`
+      UPDATE profile_change_requests SET status = ${approved ? "approved" : "rejected"}, decided_by = ${userId}, decided_at = NOW(),
+        decision_comment = ${body.comment}
+      WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' RETURNING id
+    `;
+    if (decided.length === 0) return false;
+    if (approved) {
+      await tx`
+        INSERT INTO employee_bank_tax_fields (company_id, employee_id, field, value, updated_by, updated_at)
+        VALUES (${companyId}, ${pr.employee_id}, ${pr.field}, ${pr.new_value}, ${userId}, NOW())
+        ON CONFLICT (employee_id, field) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+      `;
+    }
+    // The audit diff names the field and the outcome only. Account numbers and other values never enter the log.
+    await tx`
+      INSERT INTO audit_logs (company_id, actor_id, entity_name, entity_id, action, diff)
+      VALUES (${companyId}, ${userId}, 'profile_change_requests', ${String(id)}, ${approved ? "approved" : "rejected"},
+        ${JSON.stringify({ field: String(pr.field) })}::jsonb)
+    `;
+    return true;
+  });
+  if (!applied) return c.json({ error: "This request has already been decided." }, 409);
+  const label = PROFILE_FIELD_LABELS[pr.field as ProfileField];
+  await sql`
+    INSERT INTO notifications (company_id, recipient_id, kind, message)
+    VALUES (${companyId}, ${pr.employee_id}, 'profile_change_decided', ${`Your change to ${label} was ${approved ? "approved" : "rejected"}.`})
+  `;
+  return c.json({ id, status: approved ? "approved" : "rejected" });
+});
+
+// Payslips. Employees list and download their own. HR uploads one PDF per employee and month; the amounts are checked
+// here and net pay is computed on the server.
+app.get("/api/v1/payslips", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT id, month, year, gross_pay, deductions, net_pay, paid_at FROM payslips
+    WHERE company_id = ${companyId} AND employee_id = ${userId} AND storage_key IS NOT NULL
+    ORDER BY year DESC, month DESC LIMIT 60
+  `;
+  return c.json({
+    count: rows.length,
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      month: Number(r.month),
+      year: Number(r.year),
+      grossPay: Number(r.gross_pay),
+      deductions: Number(r.deductions),
+      netPay: Number(r.net_pay),
+      paidAt: r.paid_at ? new Date(String(r.paid_at)).toISOString() : null,
+    })),
+  });
+});
+
+app.post("/api/v1/payslips", zValidator("json", PayslipUploadBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can upload payslips." }, 403);
+  const body = c.req.valid("json");
+  const problem = payslipError(body);
+  if (problem) return c.json({ error: problem }, 422);
+  const file = readPdf(body.fileBase64);
+  if ("error" in file) return c.json({ error: file.error }, 422);
+  const sql = getSql(c.env);
+  const [employee] = await sql`SELECT id FROM employees WHERE id = ${body.employeeId} AND company_id = ${companyId} AND is_active`;
+  if (!employee) return c.json({ error: "Employee not found." }, 404);
+  const duplicate = "A payslip for that employee and month is already uploaded.";
+  const [taken] = await sql`SELECT 1 FROM payslips WHERE company_id = ${companyId} AND employee_id = ${body.employeeId} AND month = ${body.month} AND year = ${body.year}`;
+  if (taken) return c.json({ error: duplicate }, 409);
+  const key = `payslips/${companyId}/${crypto.randomUUID()}.pdf`;
+  await c.env.DOCS.put(key, file.bytes, { httpMetadata: { contentType: "application/pdf" } });
+  const inserted = await sql`
+    INSERT INTO payslips (company_id, employee_id, month, year, gross_pay, deductions, net_pay, status, storage_key)
+    VALUES (${companyId}, ${body.employeeId}, ${body.month}, ${body.year}, ${body.grossPay}, ${body.deductions},
+      ${netPay(body.grossPay, body.deductions)}, 'published', ${key})
+    RETURNING id
+  `.catch(async (e: { code?: string }) => {
+    await c.env.DOCS.delete(key);
+    if (e.code === "23505") return null;
+    throw e;
+  });
+  if (!inserted) return c.json({ error: duplicate }, 409);
+  return c.json({ id: Number(inserted[0].id) }, 201);
+});
+
+app.get("/api/v1/payslips/:id/file", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [p] = await sql`SELECT employee_id, month, year, storage_key FROM payslips WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!p || !p.storage_key) return c.json({ error: "Not found" }, 404);
+  if (Number(p.employee_id) !== userId && !isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const object = await c.env.DOCS.get(String(p.storage_key));
+  if (!object) return c.json({ error: "The file is missing from storage." }, 404);
+  return c.body(object.body, 200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="payslip-${p.year}-${String(p.month).padStart(2, "0")}.pdf"`,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+  });
+});
+
+// Document centre. HR publishes a PDF to every active employee; each employee acknowledges their own copy.
+// employee_documents holds one row per employee per publication; file_url is the object key of the PDF.
+app.get("/api/v1/document-types", async (c) => {
+  const { companyId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`SELECT id, name FROM document_types WHERE company_id = ${companyId} ORDER BY name`;
+  return c.json({ count: rows.length, results: rows.map((r) => ({ id: Number(r.id), name: String(r.name) })) });
+});
+
+app.post("/api/v1/document-types", zValidator("json", DocumentTypeBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can add document types." }, 403);
+  const { name } = c.req.valid("json");
+  const sql = getSql(c.env);
+  const inserted = await sql`
+    INSERT INTO document_types (company_id, name) VALUES (${companyId}, ${name}) ON CONFLICT (company_id, name) DO NOTHING RETURNING id
+  `;
+  if (inserted.length === 0) return c.json({ error: "That document type already exists." }, 409);
+  return c.json({ id: Number(inserted[0].id), name }, 201);
+});
+
+const toDocumentRow = (r: Record<string, unknown>) => ({
+  id: Number(r.id),
+  title: String(r.title),
+  typeName: r.type_name === null || r.type_name === undefined ? null : String(r.type_name),
+  status: String(r.status),
+  publishedAt: new Date(String(r.created_at)).toISOString(),
+  acknowledgedAt: r.acknowledged_at ? new Date(String(r.acknowledged_at)).toISOString() : null,
+});
+
+app.post("/api/v1/documents/publish", zValidator("json", DocumentPublishBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can publish documents." }, 403);
+  const body = c.req.valid("json");
+  const file = readPdf(body.fileBase64);
+  if ("error" in file) return c.json({ error: file.error }, 422);
+  const sql = getSql(c.env);
+  if (body.documentTypeId) {
+    const [type] = await sql`SELECT 1 FROM document_types WHERE id = ${body.documentTypeId} AND company_id = ${companyId}`;
+    if (!type) return c.json({ error: "Document type not found." }, 422);
+  }
+  const key = `documents/${companyId}/${crypto.randomUUID()}.pdf`;
+  await c.env.DOCS.put(key, file.bytes, { httpMetadata: { contentType: "application/pdf" } });
+  // The casts type the parameters in the SELECT list, so Postgres does not guess their types.
+  const published = await sql`
+    INSERT INTO employee_documents (company_id, employee_id, document_type_id, title, file_url, status)
+    SELECT CAST(${companyId} AS INTEGER), e.id, CAST(${body.documentTypeId ?? null} AS INTEGER), CAST(${body.title} AS VARCHAR(255)),
+      CAST(${key} AS TEXT), 'pending'
+    FROM employees e WHERE e.company_id = ${companyId} AND e.is_active
+    RETURNING id
+  `.catch(async (e: unknown) => {
+    await c.env.DOCS.delete(key);
+    throw e;
+  });
+  if (published.length === 0) {
+    await c.env.DOCS.delete(key);
+    return c.json({ error: "There are no active employees to publish to." }, 422);
+  }
+  return c.json({ published: published.length }, 201);
+});
+
+// My documents, newest first.
+app.get("/api/v1/documents/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT ed.id, ed.title, ed.status, ed.created_at, ed.acknowledged_at, dt.name AS type_name
+    FROM employee_documents ed LEFT JOIN document_types dt ON dt.id = ed.document_type_id
+    WHERE ed.company_id = ${companyId} AND ed.employee_id = ${userId} ORDER BY ed.created_at DESC LIMIT 200
+  `;
+  return c.json({ count: rows.length, results: rows.map(toDocumentRow) });
+});
+
+// HR view: one line per publication, with how many copies are acknowledged.
+app.get("/api/v1/documents/publications", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can see publication status." }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT min(id) AS sample_id, min(title) AS title, min(created_at) AS published_at,
+      count(*)::int AS total, count(acknowledged_at)::int AS acknowledged
+    FROM employee_documents WHERE company_id = ${companyId}
+    GROUP BY file_url ORDER BY min(created_at) DESC LIMIT 100
+  `;
+  return c.json({
+    count: rows.length,
+    results: rows.map((r) => ({
+      sampleId: Number(r.sample_id),
+      title: String(r.title),
+      publishedAt: new Date(String(r.published_at)).toISOString(),
+      total: Number(r.total),
+      acknowledged: Number(r.acknowledged),
+      outstanding: Number(r.total) - Number(r.acknowledged),
+    })),
+  });
+});
+
+app.post("/api/v1/documents/:id/acknowledge", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [doc] = await sql`SELECT employee_id, status FROM employee_documents WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!doc) return c.json({ error: "Not found" }, 404);
+  if (Number(doc.employee_id) !== userId) return c.json({ error: "You can only acknowledge your own documents." }, 403);
+  const refusal = acknowledgmentError(String(doc.status));
+  if (refusal) return c.json({ error: refusal }, 409);
+  const updated = await sql`
+    UPDATE employee_documents SET status = 'acknowledged', acknowledged_at = NOW()
+    WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId} AND status = 'pending' RETURNING id
+  `;
+  if (updated.length === 0) return c.json({ error: "This document is already acknowledged." }, 409);
+  return c.json({ id, status: "acknowledged" });
+});
+
+app.get("/api/v1/documents/:id/file", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [doc] = await sql`SELECT employee_id, title, file_url FROM employee_documents WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!doc) return c.json({ error: "Not found" }, 404);
+  if (Number(doc.employee_id) !== userId && !isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const object = await c.env.DOCS.get(String(doc.file_url));
+  if (!object) return c.json({ error: "The file is missing from storage." }, 404);
+  return c.body(object.body, 200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="${String(doc.title).replace(/[^\w .-]/g, "_")}.pdf"`,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+  });
+});
+
+// Personal performance (read only): my objectives in the chosen or latest cycle, their weighted progress and my review status.
+app.get("/api/v1/performance/me", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const cycleId = queryCycleId(c.req.query("cycleId"));
+  const sql = getSql(c.env);
+  const [cycle] = cycleId
+    ? await sql`SELECT id, title, status::text AS status, start_date::text AS start_date, end_date::text AS end_date
+        FROM performance_cycles WHERE id = ${cycleId} AND company_id = ${companyId}`
+    : await sql`SELECT id, title, status::text AS status, start_date::text AS start_date, end_date::text AS end_date
+        FROM performance_cycles WHERE company_id = ${companyId} ORDER BY start_date DESC, id DESC LIMIT 1`;
+  if (!cycle) return c.json({ cycle: null, objectives: [], progress: null, reviews: [], assignmentStatus: null });
+  const [objectives, reviews, assignment] = await Promise.all([
+    sql`SELECT ${sql.unsafe(OBJECTIVE_COLUMNS)} FROM employee_objectives WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycle.id} ORDER BY id`,
+    sql`SELECT status, updated_at FROM performance_reviews WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycle.id} ORDER BY id`,
+    sql`SELECT status FROM performance_assignments WHERE company_id = ${companyId} AND employee_id = ${userId} AND cycle_id = ${cycle.id}`,
+  ]);
+  const mapped = objectives.map(toObjective);
+  return c.json({
+    cycle: { id: Number(cycle.id), title: String(cycle.title), status: String(cycle.status), startDate: String(cycle.start_date), endDate: String(cycle.end_date) },
+    objectives: mapped,
+    progress: weightedProgress(mapped.map((o) => ({ progress: o.progress, weight: o.weight }))),
+    reviews: reviews.map((r) => ({ status: String(r.status), updatedAt: new Date(String(r.updated_at)).toISOString() })),
+    assignmentStatus: assignment[0] ? String(assignment[0].status) : null,
+  });
+});
+
 // 9. Asset Management
 // Assets. asset_allocations is the assignment ledger: an open assignment has return_date NULL, and the unique index
 // asset_allocations_one_open allows at most one. Writes are HR only. Assigning or returning locks the asset row.
@@ -2438,8 +2900,10 @@ app.get("/api/v1/projects", async (c) => {
 });
 
 // 12. Documents & End-to-End Encryption (E2EE) Status
+// HR only: every employee's document rows. Employees use GET /api/v1/documents/me.
 app.get("/api/v1/documents", async (c) => {
-  const { companyId } = c.get("tenant");
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can see every employee's documents." }, 403);
   const sql = getSql(c.env);
   const docs = await sql`
     SELECT ed.*, dt.name as document_type_name, e.first_name, e.last_name
@@ -2631,6 +3095,221 @@ app.get("/api/v1/onboarding/tasks", async (c) => {
   });
 });
 
+
+// ---- Company setup (HR only to change): approval levels, offices and integration connections. ----
+
+const ApproverSchema = z.enum(["line_manager", "hr"]);
+const ApprovalLevelsBody = z.object({
+  leave: z.object({ manager: z.array(ApproverSchema), manager_then_hr: z.array(ApproverSchema) }),
+  objectives: z.array(ApproverSchema),
+});
+
+/** A stored set that still validates, or the defaults. */
+function usableSettings(raw: unknown): ApprovalSettings {
+  const s = raw as ApprovalSettings | undefined;
+  return s && validateApprovalSettings(s).length === 0 ? s : DEFAULT_APPROVAL_SETTINGS;
+}
+
+async function loadApprovalSettings(sql: ReturnType<typeof getSql>, companyId: number): Promise<ApprovalSettings> {
+  const rows = await sql`SELECT settings FROM approval_settings WHERE company_id = ${companyId}`;
+  return usableSettings(rows[0]?.settings);
+}
+
+/** The levels of a leave chain. An unknown chain name falls back to the "manager" levels. */
+function levelsFor(settings: ApprovalSettings, chain: string): ApprovalSettings["objectives"] {
+  return settings.leave[chain as LeaveChain] ?? settings.leave.manager;
+}
+
+const isUniqueViolation = (err: unknown): boolean => (err as { code?: string }).code === "23505";
+
+app.get("/api/v1/approvals/settings", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can view approval levels." }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`SELECT settings, updated_at FROM approval_settings WHERE company_id = ${companyId}`;
+  return c.json({
+    settings: usableSettings(rows[0]?.settings),
+    saved: rows.length > 0,
+    updatedAt: rows[0] ? new Date(String(rows[0].updated_at)).toISOString() : null,
+  });
+});
+
+app.post("/api/v1/approvals/settings/update", zValidator("json", ApprovalLevelsBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change approval levels." }, 403);
+  const settings = c.req.valid("json") as ApprovalSettings;
+  const errors = validateApprovalSettings(settings);
+  if (errors.length > 0) return c.json({ error: "The approval levels are not valid.", errors }, 422);
+  const sql = getSql(c.env);
+  await sql`
+    INSERT INTO approval_settings (company_id, settings, updated_by, updated_at)
+    VALUES (${companyId}, ${JSON.stringify(settings)}::jsonb, ${userId}, NOW())
+    ON CONFLICT (company_id) DO UPDATE SET settings = EXCLUDED.settings, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+  `;
+  return c.json({ saved: true, settings });
+});
+
+// Offices: everyone reads the list; HR changes it and links departments to one office each.
+const OfficeBody = z.object({ name: z.string(), address: z.string(), country: z.string() });
+
+app.get("/api/v1/offices", async (c) => {
+  const { companyId } = c.get("tenant");
+  const sql = getSql(c.env);
+  const offices = await sql`SELECT id, name, address, country FROM offices WHERE company_id = ${companyId} ORDER BY name`;
+  const departments = await sql`SELECT id, name, office_id FROM departments WHERE company_id = ${companyId} ORDER BY name`;
+  return c.json({
+    results: offices.map((o) => ({ id: Number(o.id), name: String(o.name), address: String(o.address), country: String(o.country) })),
+    departments: departments.map((d) => ({ id: Number(d.id), name: String(d.name), officeId: d.office_id === null ? null : Number(d.office_id) })),
+  });
+});
+
+app.post("/api/v1/offices", zValidator("json", OfficeBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change offices." }, 403);
+  const body = c.req.valid("json");
+  const input = { name: body.name.trim(), address: body.address.trim(), country: body.country.trim().toUpperCase() };
+  const error = validateOffice(input);
+  if (error) return c.json({ error }, 422);
+  const sql = getSql(c.env);
+  try {
+    const [row] = await sql`
+      INSERT INTO offices (company_id, name, address, country) VALUES (${companyId}, ${input.name}, ${input.address}, ${input.country}) RETURNING id
+    `;
+    return c.json({ id: Number(row.id) }, 201);
+  } catch (err) {
+    if (isUniqueViolation(err)) return c.json({ error: "An office with this name already exists." }, 409);
+    throw err;
+  }
+});
+
+app.post("/api/v1/offices/:id/update", zValidator("json", OfficeBody), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change offices." }, 403);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const input = { name: body.name.trim(), address: body.address.trim(), country: body.country.trim().toUpperCase() };
+  const error = validateOffice(input);
+  if (error) return c.json({ error }, 422);
+  const sql = getSql(c.env);
+  try {
+    const updated = await sql`
+      UPDATE offices SET name = ${input.name}, address = ${input.address}, country = ${input.country}
+      WHERE id = ${id} AND company_id = ${companyId} RETURNING id
+    `;
+    if (updated.length === 0) return c.json({ error: "Not found" }, 404);
+    return c.json({ id });
+  } catch (err) {
+    if (isUniqueViolation(err)) return c.json({ error: "An office with this name already exists." }, 409);
+    throw err;
+  }
+});
+
+app.post("/api/v1/departments/:id/office", zValidator("json", z.object({ officeId: z.number().int().positive().nullable() })), async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change offices." }, 403);
+  const id = Number(c.req.param("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return c.json({ error: "Not found" }, 404);
+  const { officeId } = c.req.valid("json");
+  const sql = getSql(c.env);
+  if (officeId !== null) {
+    const [office] = await sql`SELECT id FROM offices WHERE id = ${officeId} AND company_id = ${companyId}`;
+    if (!office) return c.json({ error: "That office does not belong to this company." }, 422);
+  }
+  const updated = await sql`UPDATE departments SET office_id = ${officeId} WHERE id = ${id} AND company_id = ${companyId} RETURNING id`;
+  if (updated.length === 0) return c.json({ error: "Not found" }, 404);
+  return c.json({ id, officeId });
+});
+
+// Integration connections. Secrets are Worker secrets named in secret_refs; only "is it set" ever leaves the server.
+const IntegrationBody = z.object({
+  label: z.string(),
+  enabled: z.boolean(),
+  baseUrl: z.string().max(500),
+  secretRefs: z.record(z.string(), z.string()),
+});
+
+function parseProvider(raw: string): IntegrationProvider | null {
+  return (INTEGRATION_PROVIDERS as readonly string[]).includes(raw) ? (raw as IntegrationProvider) : null;
+}
+
+/** True when a Worker secret of this name is set. Only this boolean leaves the function, never the value. */
+function secretIsSet(env: Env, name: string): boolean {
+  const value = (env as unknown as Record<string, unknown>)[name];
+  return typeof value === "string" && value.length > 0;
+}
+
+app.get("/api/v1/integrations", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can view integrations." }, 403);
+  const sql = getSql(c.env);
+  const rows = await sql`SELECT provider, label, enabled, base_url, secret_refs, updated_at FROM integration_connections WHERE company_id = ${companyId}`;
+  const present = (name: string) => secretIsSet(c.env, name);
+  return c.json({
+    results: INTEGRATION_PROVIDERS.map((provider) => {
+      const row = rows.find((r) => r.provider === provider);
+      const conn = row
+        ? {
+            label: String(row.label),
+            enabled: Boolean(row.enabled),
+            baseUrl: String(row.base_url),
+            secretRefs: row.secret_refs as Record<string, string>,
+            updatedAt: new Date(String(row.updated_at)).toISOString(),
+          }
+        : null;
+      return {
+        provider,
+        label: PROVIDER_INFO[provider].label,
+        purpose: PROVIDER_INFO[provider].purpose,
+        connection: conn,
+        slots: slotStatus(provider, conn?.secretRefs ?? {}, present),
+        status: preflight(provider, conn, present),
+      };
+    }),
+  });
+});
+
+app.post("/api/v1/integrations/:provider/update", zValidator("json", IntegrationBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can change integrations." }, 403);
+  const provider = parseProvider(c.req.param("provider"));
+  if (!provider) return c.json({ error: "Not found" }, 404);
+  const body = c.req.valid("json");
+  const input = { label: body.label.trim(), enabled: body.enabled, baseUrl: body.baseUrl.trim(), secretRefs: body.secretRefs };
+  const errors = validateConnection(provider, input);
+  if (Object.values(input.secretRefs).some((name) => RESERVED_SECRET_NAMES.includes(name))) errors.push("That secret name is reserved for the platform.");
+  if (errors.length > 0) return c.json({ error: "The connection is not valid.", errors }, 422);
+  const sql = getSql(c.env);
+  await sql`
+    INSERT INTO integration_connections (company_id, provider, label, enabled, base_url, secret_refs, updated_by, updated_at)
+    VALUES (${companyId}, ${provider}, ${input.label}, ${input.enabled}, ${input.baseUrl}, ${JSON.stringify(input.secretRefs)}::jsonb, ${userId}, NOW())
+    ON CONFLICT (company_id, provider) DO UPDATE SET label = EXCLUDED.label, enabled = EXCLUDED.enabled, base_url = EXCLUDED.base_url,
+      secret_refs = EXCLUDED.secret_refs, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+  `;
+  return c.json({ saved: true, provider });
+});
+
+app.post("/api/v1/integrations/:provider/test", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can test integrations." }, 403);
+  const provider = parseProvider(c.req.param("provider"));
+  if (!provider) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [row] = await sql`SELECT enabled, base_url, secret_refs FROM integration_connections WHERE company_id = ${companyId} AND provider = ${provider}`;
+  const conn = row ? { enabled: Boolean(row.enabled), baseUrl: String(row.base_url), secretRefs: row.secret_refs as Record<string, string> } : null;
+  const outcome = preflight(provider, conn, (name) => secretIsSet(c.env, name));
+  // Nothing is sent to the provider until every referenced secret is set.
+  if (!conn || outcome.status !== "ready") return c.json({ provider, ...outcome });
+  const env = c.env as unknown as Record<string, string | undefined>;
+  const result = await ADAPTERS[provider].testConnection({
+    baseUrl: conn.baseUrl,
+    secret: (slot) => {
+      const name = conn.secretRefs[slot];
+      return name ? env[name] : undefined;
+    },
+  });
+  return c.json({ provider, ...result });
+});
 
 interface ReviewWorkflowPayload {
   cycleId: number;
