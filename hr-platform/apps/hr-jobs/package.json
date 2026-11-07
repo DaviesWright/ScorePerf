@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@hr-platform/shared": "*",
-    "postgres": "^3.4.5"
+    "postgres": "^4.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
