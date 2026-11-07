@@ -26,3 +26,21 @@ updates:
     commit-message:
       prefix: "[UPDT]"
       include: scope
+
+  # ScoReview HR platform (npm workspace). zod stays on 3.x because
+  # @hono/zod-validator 0.4.x requires zod 3; zod major bumps are ignored.
+  - package-ecosystem: npm
+    directory: "/hr-platform"
+    target-branch: main-custom
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    ignore:
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: scope
