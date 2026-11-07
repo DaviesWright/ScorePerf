@@ -36,6 +36,7 @@ import {
   totalWeight,
   canApprovePlan,
   canSubmitPlan,
+  carryForwardDays,
   countWorkingDays,
   isPlanLapsed,
   planDeadline,
@@ -51,6 +52,8 @@ export interface Env {
     connectionString: string;
   };
   SESSIONS: KVNamespace;
+  // R2 bucket scoreview-docs (wrangler.jsonc r2_buckets). Holds leave evidence: doctor's notes and photos.
+  DOCS: R2Bucket;
   JOBS_QUEUE: Queue<JobMessage>;
   REVIEW_WORKFLOW: Workflow;
   // Worker secret (`wrangler secret put AUTH_JWT_SECRET`; `.dev.vars` locally), at least 32 characters.
@@ -580,7 +583,7 @@ const toLeaveRequest = (r: Record<string, unknown>) => ({
   decidedBy: r.approved_by ? Number(r.approved_by) : null,
 });
 
-async function leaveBalances(sql: ReturnType<typeof getSql>, companyId: number, userId: number, year: number) {
+async function baseBalances(sql: ReturnType<typeof getSql>, companyId: number, userId: number, year: number) {
   const rows = await sql`
     SELECT lt.id, lt.name, COALESCE(a.total_days, lt.default_days)::float AS total,
       COALESCE(SUM(CASE WHEN r.status = 'approved' THEN r.requested_days END), 0)::float AS used,
@@ -603,6 +606,39 @@ async function leaveBalances(sql: ReturnType<typeof getSql>, companyId: number, 
     pending: Number(r.pending),
     remaining: remainingDays(Number(r.total), Number(r.used), Number(r.pending)),
   }));
+}
+
+// Balance = entitlement + HR adjustments this year + days carried from last year (if the type allows it, capped, and
+// expiring on 31 March) - approved - pending. Carry-forward looks back one year only.
+async function leaveBalances(sql: ReturnType<typeof getSql>, companyId: number, userId: number, year: number) {
+  const [now, prev, adjustments, types] = await Promise.all([
+    baseBalances(sql, companyId, userId, year),
+    baseBalances(sql, companyId, userId, year - 1),
+    sql`
+      SELECT leave_type_id, plan_year, COALESCE(SUM(days), 0)::float AS days FROM leave_balance_adjustments
+      WHERE company_id = ${companyId} AND employee_id = ${userId} AND plan_year IN (${year}, ${year - 1})
+      GROUP BY leave_type_id, plan_year
+    `,
+    sql`SELECT id, is_carry_forward, carry_forward_limit::float AS cap FROM leave_types WHERE company_id = ${companyId}`,
+  ]);
+  const today = new Date().toISOString().slice(0, 10);
+  const adjustedBy = (typeId: number, y: number) =>
+    Number(adjustments.find((a) => Number(a.leave_type_id) === typeId && Number(a.plan_year) === y)?.days ?? 0);
+  return now.map((b) => {
+    const type = types.find((t) => Number(t.id) === b.leaveTypeId);
+    const last = prev.find((p) => p.leaveTypeId === b.leaveTypeId);
+    const prevRemaining = last ? last.total + adjustedBy(b.leaveTypeId, year - 1) - last.used : 0;
+    const carried = carryForwardDays({
+      prevRemaining,
+      limit: type?.cap === null || type?.cap === undefined ? null : Number(type.cap),
+      today,
+      year,
+      carries: Boolean(type?.is_carry_forward),
+    });
+    const adjusted = adjustedBy(b.leaveTypeId, year);
+    const total = b.total + adjusted + carried;
+    return { ...b, total, carried, adjusted, remaining: remainingDays(total, b.used, b.pending) };
+  });
 }
 
 app.get("/api/v1/leave/me", async (c) => {
@@ -739,8 +775,8 @@ app.get("/api/v1/leave/approvals", async (c) => {
     JOIN employees e ON e.id = lr.employee_id
     LEFT JOIN departments d ON d.id = e.department_id
     WHERE lr.company_id = ${companyId} AND lr.status = 'pending' AND lr.employee_id <> ${userId}
-      AND (${isHrRole(role)}::boolean OR lr.employee_id IN (
-        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid'))
+      AND (${isHrRole(role)}::boolean OR (lr.current_step = 1 AND lr.employee_id IN (
+        SELECT employee_id FROM reporting_lines WHERE company_id = ${companyId} AND manager_id = ${userId} AND kind = 'solid')))
     ORDER BY lr.start_date ASC LIMIT 200
   `;
   return c.json({ count: rows.length, results: rows.map(toLeaveRequest) });
@@ -760,6 +796,29 @@ app.post("/api/v1/leave/requests/:id/decision", zValidator("json", LeaveDecision
   const body = c.req.valid("json");
   if (body.decision === "reject" && (body.comment ?? "").length < 3) {
     return c.json({ error: "A rejection needs a reason of at least 3 characters." }, 422);
+  }
+  const [meta] = await sql`
+    SELECT lr.current_step, lt.approval_chain, lt.requires_evidence,
+      (SELECT count(*)::int FROM leave_evidence ev WHERE ev.request_id = lr.id) AS evidence
+    FROM leave_requests lr JOIN leave_types lt ON lt.id = lr.leave_type_id
+    WHERE lr.id = ${id} AND lr.company_id = ${companyId}
+  `;
+  if (!meta) return c.json({ error: "Not found" }, 404);
+  const hr = isHrRole(role);
+  // Two-step chains: the solid manager's approval moves the request to HR. Only HR can approve step 2.
+  if (body.decision === "approve" && meta.approval_chain === "manager_then_hr" && Number(meta.current_step) === 1 && !hr) {
+    const moved = await sql`
+      UPDATE leave_requests SET current_step = 2, updated_at = NOW()
+      WHERE id = ${id} AND company_id = ${companyId} AND status = 'pending' AND current_step = 1 RETURNING id
+    `;
+    if (moved.length === 0) return c.json({ error: "This request is no longer pending." }, 409);
+    await notifyManagerAndHr(sql, companyId, request.employeeId, userId, "leave_awaiting_hr",
+      `${await personName(sql, companyId, userId)} approved a leave request for ${await personName(sql, companyId, request.employeeId)}; it now needs HR approval.`);
+    return c.json({ id, status: "pending", step: 2 });
+  }
+  if (Number(meta.current_step) === 2 && !hr) return c.json({ error: "This step is waiting for HR." }, 403);
+  if (body.decision === "approve" && meta.requires_evidence && Number(meta.evidence) === 0) {
+    return c.json({ error: "Evidence must be attached before this leave can be approved." }, 422);
   }
   const status = body.decision === "approve" ? "approved" : "rejected";
   const updated = await sql`
@@ -785,6 +844,16 @@ const LeaveTypeUpdateBody = z.object({
   defaultDays: z.number().int().min(0).max(365).optional(),
   isCarryForward: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  requiresEvidence: z.boolean().optional(),
+  approvalChain: z.enum(["manager", "manager_then_hr"]).optional(),
+  carryForwardLimit: z.number().min(0).max(365).nullable().optional(),
+});
+const BalanceAdjustBody = z.object({
+  employeeId: z.number().int().positive(),
+  leaveTypeId: z.number().int().positive(),
+  year: z.number().int().min(2000).max(2100),
+  days: z.number().min(-365).max(365).refine((d) => d !== 0, { message: "Days cannot be zero." }),
+  reason: z.string().trim().min(5).max(500),
 });
 
 app.get("/api/v1/leave/types", async (c) => {
@@ -792,7 +861,9 @@ app.get("/api/v1/leave/types", async (c) => {
   if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
   const sql = getSql(c.env);
   const rows = await sql`
-    SELECT id, name, default_days, is_carry_forward, is_active FROM leave_types WHERE company_id = ${companyId} ORDER BY id
+    SELECT id, name, default_days, is_carry_forward, is_active, requires_evidence, approval_chain,
+      carry_forward_limit::float8 AS carry_forward_limit
+    FROM leave_types WHERE company_id = ${companyId} ORDER BY id
   `;
   return c.json({
     results: rows.map((r) => ({
@@ -801,6 +872,9 @@ app.get("/api/v1/leave/types", async (c) => {
       defaultDays: Number(r.default_days),
       isCarryForward: Boolean(r.is_carry_forward),
       isActive: Boolean(r.is_active),
+      requiresEvidence: Boolean(r.requires_evidence),
+      approvalChain: String(r.approval_chain),
+      carryForwardLimit: r.carry_forward_limit === null ? null : Number(r.carry_forward_limit),
     })),
   });
 });
@@ -826,7 +900,11 @@ app.post("/api/v1/leave/types/:id/update", zValidator("json", LeaveTypeUpdateBod
   if (id === null) return c.json({ error: "Not found" }, 404);
   const body = c.req.valid("json");
   const sql = getSql(c.env);
-  const [current] = await sql`SELECT id, name, default_days, is_carry_forward, is_active FROM leave_types WHERE id = ${id} AND company_id = ${companyId}`;
+  const [current] = await sql`
+    SELECT id, name, default_days, is_carry_forward, is_active, requires_evidence, approval_chain,
+      carry_forward_limit::float8 AS carry_forward_limit
+    FROM leave_types WHERE id = ${id} AND company_id = ${companyId}
+  `;
   if (!current) return c.json({ error: "Not found" }, 404);
   const name = body.name ?? String(current.name);
   if (name.toLowerCase() !== String(current.name).toLowerCase()) {
@@ -835,10 +913,59 @@ app.post("/api/v1/leave/types/:id/update", zValidator("json", LeaveTypeUpdateBod
   }
   await sql`
     UPDATE leave_types SET name = ${name}, default_days = ${body.defaultDays ?? Number(current.default_days)},
-      is_carry_forward = ${body.isCarryForward ?? Boolean(current.is_carry_forward)}, is_active = ${body.isActive ?? Boolean(current.is_active)}
+      is_carry_forward = ${body.isCarryForward ?? Boolean(current.is_carry_forward)}, is_active = ${body.isActive ?? Boolean(current.is_active)},
+      requires_evidence = ${body.requiresEvidence ?? (current.requires_evidence as boolean)},
+      approval_chain = ${body.approvalChain ?? (current.approval_chain as string)},
+      carry_forward_limit = ${body.carryForwardLimit === undefined ? (current.carry_forward_limit as number | null) : body.carryForwardLimit}
     WHERE id = ${id} AND company_id = ${companyId}
   `;
   return c.json({ id, updated: true });
+});
+
+// HR adjusts a balance with a reason. Every adjustment is kept with who made it and when; nothing is overwritten.
+app.post("/api/v1/leave/balances/adjust", zValidator("json", BalanceAdjustBody), async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can adjust leave balances." }, 403);
+  const body = c.req.valid("json");
+  const sql = getSql(c.env);
+  const [employee] = await sql`SELECT 1 FROM employees WHERE id = ${body.employeeId} AND company_id = ${companyId}`;
+  if (!employee) return c.json({ error: "No employee with that id." }, 422);
+  const [type] = await sql`SELECT 1 FROM leave_types WHERE id = ${body.leaveTypeId} AND company_id = ${companyId}`;
+  if (!type) return c.json({ error: "Unknown leave type." }, 422);
+  const inserted = await sql`
+    INSERT INTO leave_balance_adjustments (company_id, employee_id, leave_type_id, plan_year, days, reason, adjusted_by)
+    VALUES (${companyId}, ${body.employeeId}, ${body.leaveTypeId}, ${body.year}, ${body.days}, ${body.reason}, ${userId})
+    RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id) }, 201);
+});
+
+app.get("/api/v1/leave/balances/adjustments", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
+  const employeeId = Number(c.req.query("employeeId"));
+  if (!Number.isSafeInteger(employeeId) || employeeId <= 0) return c.json({ error: "employeeId is required." }, 422);
+  const sql = getSql(c.env);
+  const rows = await sql`
+    SELECT a.id, a.plan_year, a.days::float8 AS days, a.reason, a.created_at, lt.name AS leave_type,
+      h.first_name AS by_first, h.last_name AS by_last
+    FROM leave_balance_adjustments a
+    JOIN leave_types lt ON lt.id = a.leave_type_id
+    LEFT JOIN employees h ON h.id = a.adjusted_by
+    WHERE a.company_id = ${companyId} AND a.employee_id = ${employeeId}
+    ORDER BY a.created_at DESC LIMIT 200
+  `;
+  return c.json({
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      leaveType: String(r.leave_type),
+      year: Number(r.plan_year),
+      days: Number(r.days),
+      reason: String(r.reason),
+      adjustedBy: r.by_first ? `${r.by_first} ${r.by_last}` : null,
+      createdAt: new Date(String(r.created_at)).toISOString(),
+    })),
+  });
 });
 
 // Company holidays: everyone reads; HR adds and removes. Used when working days are counted.
@@ -1342,6 +1469,8 @@ app.post("/api/v1/announcements/:id/archive", async (c) => {
 app.get("/api/v1/dashboard", async (c) => {
   const { companyId, userId, role } = c.get("tenant");
   const decider = isDecider(role);
+  const requestedWindow = Number(c.req.query("days") ?? 14);
+  const windowDays = [7, 14, 30].includes(requestedWindow) ? requestedWindow : 14;
   const sql = getSql(c.env);
   const [away, myPending, cycleRows, approvalCounts, upcoming] = await Promise.all([
     sql`SELECT count(*)::int AS n FROM leave_requests WHERE company_id = ${companyId} AND status = 'approved' AND start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`,
@@ -1367,7 +1496,7 @@ app.get("/api/v1/dashboard", async (c) => {
           JOIN employees e ON e.id = lr.employee_id
           LEFT JOIN departments d ON d.id = e.department_id
           WHERE lr.company_id = ${companyId} AND lr.status = 'approved'
-            AND lr.start_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 14
+            AND lr.start_date BETWEEN CURRENT_DATE AND CURRENT_DATE + ${windowDays}::int
           ORDER BY lr.start_date LIMIT 10
         `
       : Promise.resolve(null),
@@ -1865,6 +1994,79 @@ app.post("/api/v1/leave/trips/:id/cancel", async (c) => {
   await notifyManagerAndHr(sql, companyId, userId, userId, "trip_cancelled",
     `${await personName(sql, companyId, userId)} cancelled a pending business trip.`);
   return c.json({ id, status: "cancelled" });
+});
+
+// Leave evidence (doctor's note, photo). Stored in the DOCS bucket. Only the owner uploads, while the request is
+// pending. The owner, HR and the solid manager can see and download it. The file's bytes must match its type.
+const EVIDENCE_MAX_BYTES = 5 * 1024 * 1024;
+const EVIDENCE_SIGNATURES: Record<string, (b: Uint8Array) => boolean> = {
+  "image/jpeg": (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  "image/png": (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  "application/pdf": (b) => b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46,
+};
+
+async function canSeeEvidence(sql: ReturnType<typeof getSql>, companyId: number, userId: number, role: string, employeeId: number): Promise<boolean> {
+  if (userId === employeeId || isHrRole(role)) return true;
+  return isSolidManager(sql, companyId, userId, employeeId);
+}
+
+app.post("/api/v1/leave/requests/:id/evidence", async (c) => {
+  const { companyId, userId } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [req] = await sql`SELECT employee_id, status FROM leave_requests WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!req) return c.json({ error: "Not found" }, 404);
+  if (Number(req.employee_id) !== userId) return c.json({ error: "Only the person who asked for the leave can attach evidence." }, 403);
+  if (req.status !== "pending") return c.json({ error: "Evidence can only be added while the request is pending." }, 409);
+  const contentType = (c.req.header("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  const signature = EVIDENCE_SIGNATURES[contentType];
+  if (!signature) return c.json({ error: "Upload a JPEG, PNG or PDF." }, 422);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > EVIDENCE_MAX_BYTES) return c.json({ error: "The file must be between 1 byte and 5 MB." }, 422);
+  if (!signature(bytes)) return c.json({ error: "The file content does not match its type." }, 422);
+  const key = `leave/${companyId}/${id}/${crypto.randomUUID()}`;
+  await c.env.DOCS.put(key, bytes, { httpMetadata: { contentType } });
+  const inserted = await sql`
+    INSERT INTO leave_evidence (company_id, request_id, storage_key, content_type, size_bytes, uploaded_by)
+    VALUES (${companyId}, ${id}, ${key}, ${contentType}, ${bytes.length}, ${userId}) RETURNING id
+  `;
+  return c.json({ id: Number(inserted[0].id), sizeBytes: bytes.length }, 201);
+});
+
+app.get("/api/v1/leave/requests/:id/evidence", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const id = objectiveId(c.req.param("id"));
+  if (id === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [req] = await sql`SELECT employee_id FROM leave_requests WHERE id = ${id} AND company_id = ${companyId}`;
+  if (!req) return c.json({ error: "Not found" }, 404);
+  if (!(await canSeeEvidence(sql, companyId, userId, role, Number(req.employee_id)))) return c.json({ error: "Forbidden" }, 403);
+  const rows = await sql`SELECT id, content_type, size_bytes, uploaded_at FROM leave_evidence WHERE request_id = ${id} ORDER BY uploaded_at`;
+  return c.json({
+    results: rows.map((r) => ({ id: Number(r.id), contentType: String(r.content_type), sizeBytes: Number(r.size_bytes), uploadedAt: new Date(String(r.uploaded_at)).toISOString() })),
+  });
+});
+
+app.get("/api/v1/leave/evidence/:evidenceId", async (c) => {
+  const { companyId, userId, role } = c.get("tenant");
+  const evidenceId = objectiveId(c.req.param("evidenceId"));
+  if (evidenceId === null) return c.json({ error: "Not found" }, 404);
+  const sql = getSql(c.env);
+  const [ev] = await sql`
+    SELECT ev.storage_key, ev.content_type, lr.employee_id
+    FROM leave_evidence ev JOIN leave_requests lr ON lr.id = ev.request_id
+    WHERE ev.id = ${evidenceId} AND ev.company_id = ${companyId}
+  `;
+  if (!ev) return c.json({ error: "Not found" }, 404);
+  if (!(await canSeeEvidence(sql, companyId, userId, role, Number(ev.employee_id)))) return c.json({ error: "Forbidden" }, 403);
+  const object = await c.env.DOCS.get(String(ev.storage_key));
+  if (!object) return c.json({ error: "The file is missing from storage." }, 404);
+  return c.body(object.body, 200, {
+    "Content-Type": String(ev.content_type),
+    "Content-Disposition": "attachment",
+    "Cache-Control": "private, no-store",
+  });
 });
 
 // Leave views by date range. Default: today to 60 days ahead. Ranges are capped at a year.

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   let upstream: Response;
   try {
-    upstream = await fetch(`${API_BASE}/api/v1/dashboard`, {
+    upstream = await fetch(`${API_BASE}/api/v1/dashboard${req.nextUrl.search}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

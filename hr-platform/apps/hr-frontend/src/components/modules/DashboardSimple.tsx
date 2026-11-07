@@ -68,6 +68,7 @@ export const DashboardScreen: React.FC<{ user: { id: string; persona: AccessRole
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(realSession);
+  const [leaveWindow, setLeaveWindow] = useState(14);
 
   useEffect(() => {
     if (!realSession) return;
@@ -85,7 +86,7 @@ export const DashboardScreen: React.FC<{ user: { id: string; persona: AccessRole
     return () => {
       cancelled = true;
     };
-  }, [realSession, user.id]);
+  }, [realSession, user.id, leaveWindow]);
 
   const decider = user.persona === "line_manager" || user.persona === "hr_admin" || user.persona === "hr_director";
 
@@ -134,12 +135,17 @@ export const DashboardScreen: React.FC<{ user: { id: string; persona: AccessRole
 
           {data.upcomingLeave && (
             <>
-              <h2 style={S.h2}>Leave starting in the next 14 days</h2>
+              <h2 style={{ ...S.h2, display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                Leave starting in the next
+                <select value={leaveWindow} onChange={(e) => setLeaveWindow(Number(e.target.value))} aria-label="Leave window" style={{ minHeight: "32px", padding: "0 0.4rem", font: "inherit" }}>
+                  {[7, 14, 30].map((d) => <option key={d} value={d}>{d} days</option>)}
+                </select>
+              </h2>
               {data.upcomingLeave.length === 0 ? (
-                <p style={S.note}>No approved leave starts in the next 14 days.</p>
+                <p style={S.note}>No approved leave starts in the next {leaveWindow} days.</p>
               ) : (
                 <table style={S.table}>
-                  <Caption>Leave starting in the next 14 days</Caption>
+                  <Caption>{`Leave starting in the next ${leaveWindow} days`}</Caption>
                   <thead>
                     <tr>{["Employee", "Department", "Dates", "Type"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
                   </thead>

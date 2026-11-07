@@ -450,6 +450,10 @@ CREATE TABLE IF NOT EXISTS leave_types (
     default_days INTEGER DEFAULT 14 NOT NULL,
     is_carry_forward BOOLEAN DEFAULT false NOT NULL,
     is_active BOOLEAN DEFAULT true NOT NULL,
+    requires_evidence BOOLEAN NOT NULL DEFAULT false, -- migration 0013: doctor's note or photo needed before approval
+    approval_chain VARCHAR(20) NOT NULL DEFAULT 'manager' -- migration 0013: 'manager' or 'manager_then_hr'
+        CONSTRAINT leave_types_approval_chain_check CHECK (approval_chain IN ('manager', 'manager_then_hr')),
+    carry_forward_limit NUMERIC(5, 2) CHECK (carry_forward_limit IS NULL OR carry_forward_limit >= 0), -- migration 0013
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, name)
 );
@@ -479,11 +483,41 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     approved_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
     decision_comment TEXT, -- migration 0008: reason given with a decision (required for rejection)
     decided_at TIMESTAMPTZ, -- migration 0008
+    current_step SMALLINT NOT NULL DEFAULT 1, -- migration 0013: 1 = solid manager, 2 = HR
     half_day_period VARCHAR(10) -- migration 0009: morning or afternoon for a half-day request; NULL otherwise
         CONSTRAINT leave_requests_half_day_check CHECK (half_day_period IS NULL OR half_day_period IN ('morning', 'afternoon')),
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Evidence for leave (migration 0013): files stored in the DOCS bucket, linked to the request.
+CREATE TABLE IF NOT EXISTS leave_evidence (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    request_id INTEGER NOT NULL REFERENCES leave_requests(id) ON DELETE CASCADE,
+    storage_key TEXT NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
+    size_bytes INTEGER NOT NULL CHECK (size_bytes > 0),
+    uploaded_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    uploaded_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_evidence_request ON leave_evidence (request_id);
+
+-- Balance adjustments by HR (migration 0013): kept with the reason and who made them.
+CREATE TABLE IF NOT EXISTS leave_balance_adjustments (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    leave_type_id INTEGER NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+    plan_year INTEGER NOT NULL,
+    days NUMERIC(5, 2) NOT NULL CHECK (days <> 0),
+    reason TEXT NOT NULL,
+    adjusted_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_adjustments_balance ON leave_balance_adjustments (company_id, employee_id, leave_type_id, plan_year);
 
 -- Annual leave plan (migration 0012): planned absences; HR approves at least six weeks before the start.
 CREATE TABLE IF NOT EXISTS annual_leave_plans (

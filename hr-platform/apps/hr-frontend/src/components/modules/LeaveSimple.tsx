@@ -136,10 +136,59 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
       {tab === "trips" && <TripsPanel canDecide={decider} />}
       {tab === "plan" && <PlanPanel isHr={user.role === "hr_admin" || user.role === "hr_director"} />}
       {tab === "holidays" && (user.role === "hr_admin" || user.role === "hr_director") && <Holidays />}
-      {tab === "types" && (user.role === "hr_admin" || user.role === "hr_director") && <LeaveTypes />}
+      {tab === "types" && (user.role === "hr_admin" || user.role === "hr_director") && (
+        <>
+          <LeaveTypes />
+          <div style={{ marginTop: "2rem" }}>
+            <BalanceAdjust />
+          </div>
+        </>
+      )}
     </div>
   );
 };
+
+// Evidence for a pending request: attach a JPEG, PNG or PDF (doctor's note or photo), and see what is attached.
+function EvidenceControl({ requestId }: { requestId: number }) {
+  const [files, setFiles] = useState<{ id: number; contentType: string; sizeBytes: number }[]>([]);
+  const [message, setMessage] = useState("");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/leave/requests/${requestId}/evidence`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => !cancelled && setFiles(b.results ?? []))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId, tick]);
+
+  const upload = async (file: File) => {
+    setMessage("Uploading…");
+    const r = await fetch(`/api/leave/requests/${requestId}/evidence`, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) return setMessage(body.error ?? "Upload failed.");
+    setMessage("Attached.");
+    setTick((n) => n + 1);
+  };
+
+  return (
+    <div style={{ marginTop: "0.4rem", fontSize: "13px" }}>
+      <label>
+        Attach evidence (JPEG, PNG or PDF, up to 5 MB)
+        <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+      </label>
+      {message && <p role="status" style={{ margin: "0.25rem 0", color: C.muted }}>{message}</p>}
+      {files.map((f) => (
+        <div key={f.id}>
+          <a href={`/api/leave/evidence/${f.id}`} download style={{ color: C.accent }}>Evidence {f.id} ({Math.max(1, Math.round(f.sizeBytes / 1024))} KB)</a>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function MyLeave({ api, onRequest }: { api: LeaveApi; onRequest: () => void }) {
   const { data, error, loading, reload } = useLoad(() => api.me(), [api]);
@@ -206,6 +255,7 @@ function MyLeave({ api, onRequest }: { api: LeaveApi; onRequest: () => void }) {
                           {busy === r.id ? "Cancelling…" : "Cancel"}
                         </button>
                       )}
+                      {r.status === "pending" && <EvidenceControl requestId={r.id} />}
                     </td>
                   </tr>
                 ))}
@@ -847,6 +897,111 @@ interface LeaveTypeRow {
   defaultDays: number;
   isCarryForward: boolean;
   isActive: boolean;
+  requiresEvidence: boolean;
+  approvalChain: "manager" | "manager_then_hr";
+  carryForwardLimit: number | null;
+}
+
+// HR balance adjustments: a day count (positive or negative) with a reason, kept as history per person.
+function BalanceAdjust() {
+  const thisYear = new Date().getUTCFullYear();
+  const [people, setPeople] = useState<{ id: number; name: string }[]>([]);
+  const [types, setTypes] = useState<{ id: number; name: string }[]>([]);
+  const [history, setHistory] = useState<{ id: number; leaveType: string; year: number; days: number; reason: string; adjustedBy: string | null; createdAt: string }[]>([]);
+  const [draft, setDraft] = useState({ employeeId: "", leaveTypeId: "", year: String(thisYear), days: "1", reason: "" });
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/hr/home", { cache: "no-store" }).then((r) => r.json()).then((b) => setPeople((b.directory ?? []).map((p: { id: number; name: string }) => ({ id: p.id, name: p.name })))).catch(() => undefined);
+    fetch("/api/hr/leave/types", { cache: "no-store" }).then((r) => r.json()).then((b) => setTypes((b.results ?? []).map((t: { id: number; name: string }) => ({ id: t.id, name: t.name })))).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!draft.employeeId) return setHistory([]);
+    let cancelled = false;
+    fetch(`/api/leave/balances/adjustments?employeeId=${draft.employeeId}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((b) => !cancelled && setHistory(b.results ?? []))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.employeeId, tick]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    const r = await fetch("/api/leave/balances/adjust", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId: Number(draft.employeeId), leaveTypeId: Number(draft.leaveTypeId), year: Number(draft.year), days: Number(draft.days), reason: draft.reason.trim() }),
+    });
+    const body = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) return setError(body.error ?? "Could not record the adjustment.");
+    setMessage("Adjustment recorded.");
+    setDraft({ ...draft, days: "1", reason: "" });
+    setTick((n) => n + 1);
+  };
+
+  return (
+    <>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Balance adjustments</h2>
+      <p style={S.note}>Every adjustment is kept with its reason and who made it.</p>
+      {message && <p role="status" style={{ color: C.ok, fontWeight: 600 }}>{message}</p>}
+      {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
+      <form onSubmit={submit} style={{ maxWidth: "520px" }}>
+        <label style={S.field}>Person *
+          <select required value={draft.employeeId} onChange={(e) => setDraft({ ...draft, employeeId: e.target.value })} style={S.input}>
+            <option value="">Choose…</option>
+            {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </label>
+        <label style={S.field}>Leave type *
+          <select required value={draft.leaveTypeId} onChange={(e) => setDraft({ ...draft, leaveTypeId: e.target.value })} style={S.input}>
+            <option value="">Choose…</option>
+            {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </label>
+        <label style={S.field}>Year *<input required type="number" min={2000} max={2100} value={draft.year} onChange={(e) => setDraft({ ...draft, year: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>Days (use minus to take days back) *<input required type="number" min={-365} max={365} step={0.5} value={draft.days} onChange={(e) => setDraft({ ...draft, days: e.target.value })} style={S.input} /></label>
+        <label style={S.field}>Reason *<input required minLength={5} maxLength={500} value={draft.reason} onChange={(e) => setDraft({ ...draft, reason: e.target.value })} style={S.input} /></label>
+        <button type="submit" style={S.primary} disabled={busy}>{busy ? "Saving…" : "Record adjustment"}</button>
+      </form>
+      {draft.employeeId && (
+        <>
+          <h3 style={{ margin: "1rem 0 0.5rem", fontSize: "16px" }}>History for this person</h3>
+          {history.length === 0 ? (
+            <p style={S.note}>No adjustments yet.</p>
+          ) : (
+            <table style={S.table}>
+              <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>Balance adjustments</caption>
+              <thead>
+                <tr>{["When", "Type", "Year", "Days", "Reason", "By"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {history.map((h) => (
+                  <tr key={h.id}>
+                    <td style={S.td}>{new Date(h.createdAt).toLocaleDateString("en-GB")}</td>
+                    <td style={S.td}>{h.leaveType}</td>
+                    <td style={S.td}>{h.year}</td>
+                    <td style={S.td}>{h.days > 0 ? `+${h.days}` : h.days}</td>
+                    <td style={S.td}>{h.reason}</td>
+                    <td style={S.td}>{h.adjustedBy ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
+    </>
+  );
 }
 
 function LeaveTypes() {
@@ -911,13 +1066,26 @@ function LeaveTypes() {
       )}
 
       {editing && (
-        <form style={{ ...S.field, maxWidth: "420px", marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); send(`/api/hr/leave/types/${editing.id}/update`, { name: editing.name, defaultDays: editing.defaultDays, isCarryForward: editing.isCarryForward, isActive: editing.isActive }, "Saved."); }}>
+        <form style={{ ...S.field, maxWidth: "420px", marginTop: "1rem" }} onSubmit={(e) => { e.preventDefault(); send(`/api/hr/leave/types/${editing.id}/update`, { name: editing.name, defaultDays: editing.defaultDays, isCarryForward: editing.isCarryForward, isActive: editing.isActive, requiresEvidence: editing.requiresEvidence, approvalChain: editing.approvalChain, carryForwardLimit: editing.carryForwardLimit }, "Saved."); }}>
           <h3 style={{ margin: "0 0 0.5rem", fontSize: "16px" }}>Edit {editing.name}</h3>
           <label style={S.field}>Name<input required minLength={2} maxLength={100} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} style={S.input} /></label>
           <label style={S.field}>Days per person<input type="number" min={0} max={365} value={editing.defaultDays} onChange={(e) => setEditing({ ...editing, defaultDays: Number(e.target.value) })} style={S.input} /></label>
           <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
             <input type="checkbox" checked={editing.isCarryForward} onChange={(e) => setEditing({ ...editing, isCarryForward: e.target.checked })} />
             Unused days carry forward
+          </label>
+          <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <input type="checkbox" checked={editing.requiresEvidence} onChange={(e) => setEditing({ ...editing, requiresEvidence: e.target.checked })} />
+            Needs evidence (doctor's note or photo) before approval
+          </label>
+          <label style={S.field}>Approval chain
+            <select value={editing.approvalChain} onChange={(e) => setEditing({ ...editing, approvalChain: e.target.value as "manager" | "manager_then_hr" })} style={S.input}>
+              <option value="manager">Solid manager only</option>
+              <option value="manager_then_hr">Solid manager, then HR</option>
+            </select>
+          </label>
+          <label style={S.field}>Carry-forward cap (days, blank for no cap)
+            <input type="number" min={0} max={365} value={editing.carryForwardLimit ?? ""} onChange={(e) => setEditing({ ...editing, carryForwardLimit: e.target.value === "" ? null : Number(e.target.value) })} style={S.input} />
           </label>
           <label style={{ ...S.field, flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
             <input type="checkbox" checked={editing.isActive} onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })} />
