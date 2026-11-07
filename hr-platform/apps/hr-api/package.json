@@ -14,7 +14,7 @@
     "@hono/zod-validator": "^0.4.3",
     "@hr-platform/shared": "*",
     "hono": "^4.13.16",
-    "postgres": "^3.4.5",
+    "postgres": "^4.0.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
