@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { call } from "./assetApi";
+import { S, Caption } from "./assetStyles";
+import { WriteOffForm, ApprovalsPanel, RecoveryPanel } from "./AssetsWriteOff";
+import { CategoriesPanel, DetailsForm, ExportButton, TeamPanel } from "./AssetsAdmin";
 
 // Assets screen. HR registers, assigns, returns and reviews the history of company equipment. Everyone sees the
 // assets assigned to them. Live data only; the demo login has no API behind it.
@@ -16,6 +20,10 @@ interface Asset {
   status: Status;
   asset_condition: Condition;
   category_name: string | null;
+  purchase_date: string | null;
+  purchase_price: string | null;
+  warranty_expiry: string | null;
+  notes: string | null;
   employee_id: number | null;
   first_name: string | null;
   last_name: string | null;
@@ -46,40 +54,12 @@ const STATUS_STYLE: Record<Status, { bg: string; text: string; edge: string; lab
   allocated: { bg: "#eff6ff", text: "#1e40af", edge: "#2563eb", label: "Assigned" },
   maintenance: { bg: "#fffbeb", text: "#92400e", edge: "#d97706", label: "Maintenance" },
   retired: { bg: "#f4f4f5", text: "#3f3f46", edge: "#71717a", label: "Retired" },
-  lost: { bg: "#fff1f2", text: "#9f1239", edge: "#e11d48", label: "Lost" },
+  lost: { bg: "#fff1f2", text: "#9f1239", edge: "#e11d48", label: "Written off" },
 };
-
-const S = {
-  page: { padding: "1.5rem", maxWidth: "1100px" } as React.CSSProperties,
-  h2: { margin: "1.5rem 0 0.5rem", fontSize: "17px", color: "#4338ca" } as React.CSSProperties,
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "0.75rem" } as React.CSSProperties,
-  table: { width: "100%", borderCollapse: "collapse", background: "#ffffff", border: "1px solid #d1d5db" } as React.CSSProperties,
-  th: { textAlign: "left", padding: "0.6rem 0.75rem", borderBottom: "1px solid #d1d5db", background: "#eef2ff", color: "#3730a3", fontWeight: 600 } as React.CSSProperties,
-  td: { padding: "0.6rem 0.75rem", borderBottom: "1px solid #d1d5db", verticalAlign: "top" } as React.CSSProperties,
-  btn: { minHeight: "40px", padding: "0 0.9rem", border: "1px solid #d1d5db", borderRadius: "4px", background: "#ffffff", color: "#1f2937", font: "inherit", cursor: "pointer" } as React.CSSProperties,
-  primary: { minHeight: "44px", padding: "0 1.2rem", border: "1px solid #1d4ed8", borderRadius: "4px", background: "#1d4ed8", color: "#ffffff", font: "inherit", cursor: "pointer" } as React.CSSProperties,
-  input: { minHeight: "40px", padding: "0.4rem 0.6rem", border: "1px solid #d1d5db", borderRadius: "4px", font: "inherit", background: "#ffffff" } as React.CSSProperties,
-  field: { display: "flex", flexDirection: "column", gap: "0.3rem", marginBottom: "0.75rem" } as React.CSSProperties,
-  panel: { border: "1px solid #d1d5db", background: "#ffffff", padding: "1rem", marginTop: "0.75rem" } as React.CSSProperties,
-  note: { color: "#4b5563", margin: "0.25rem 0 0" } as React.CSSProperties,
-};
-
-const Caption = ({ children }: { children: string }) => <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{children}</caption>;
 
 function Pill({ status }: { status: Status }) {
   const s = STATUS_STYLE[status];
   return <span style={{ display: "inline-block", padding: "0.1rem 0.55rem", borderRadius: "999px", background: s.bg, color: s.text, border: `1px solid ${s.edge}`, fontWeight: 600 }}>{s.label}</span>;
-}
-
-async function call<T>(method: string, path: string, body?: unknown): Promise<{ ok: boolean; status: number; data: T & { error?: string } }> {
-  const res = await fetch(`/api/hr/${path}`, {
-    method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  return { ok: res.ok, status: res.status, data };
 }
 
 export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; realSession: boolean }> = ({ user, realSession }) => {
@@ -97,9 +77,10 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
   const [assignCondition, setAssignCondition] = useState<Condition>("good");
   const [returnCondition, setReturnCondition] = useState<Condition>("good");
   const [returnNotes, setReturnNotes] = useState("");
-  const [reg, setReg] = useState({ name: "", assetCode: "", serialNumber: "", condition: "good" as Condition });
+  const emptyReg = { name: "", assetCode: "", serialNumber: "", condition: "good" as Condition, purchaseDate: "", purchasePrice: "", warrantyExpiry: "", notes: "" };
+  const [reg, setReg] = useState(emptyReg);
   const [overdueDays, setOverdueDays] = useState(365);
-  const [overdue, setOverdue] = useState<{ assetCode: string; name: string; employeeName: string; daysHeld: number }[]>([]);
+  const [overdue, setOverdue] = useState<{ assetCode: string; name: string; employeeName: string; daysHeld: number; thresholdDays: number }[]>([]);
   const [leaver, setLeaver] = useState("");
   const [leaverBlock, setLeaverBlock] = useState<{ assetCode: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -131,7 +112,7 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
   useEffect(() => {
     if (!realSession || !isHr) return;
     let cancelled = false;
-    call<{ results: { assetCode: string; name: string; employeeName: string; daysHeld: number }[] }>("GET", `assets/overdue?days=${overdueDays}`).then((r) => {
+    call<{ results: { assetCode: string; name: string; employeeName: string; daysHeld: number; thresholdDays: number }[] }>("GET", `assets/overdue?days=${overdueDays}`).then((r) => {
       if (!cancelled && r.ok) setOverdue(r.data.results ?? []);
     });
     return () => {
@@ -194,7 +175,10 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
             ))}
           </div>
 
-          <h2 style={S.h2}>All assets</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem" }}>
+            <h2 style={S.h2}>All assets</h2>
+            <ExportButton path="assets/export.csv" filename="assets-register.csv" label="Export register (CSV)" onError={setError} />
+          </div>
           <div style={{ overflowX: "auto" }}>
             <table style={S.table}>
               <Caption>All assets</Caption>
@@ -258,6 +242,8 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
                 </form>
               )}
 
+              <WriteOffForm asset={selected} onDone={(m) => { setMessage(m); setSelected(null); setReloadKey((n) => n + 1); }} />
+              <DetailsForm asset={selected} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
               <h4 style={{ margin: "1rem 0 0.5rem" }}>History</h4>
               {history.length === 0 ? (
                 <p style={S.note}>No assignments yet.</p>
@@ -292,6 +278,10 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
               Held for at least (days)
               <input type="number" min={0} max={3650} value={overdueDays} onChange={(e) => setOverdueDays(Math.max(0, Math.min(3650, Number(e.target.value) || 0)))} style={S.input} />
             </label>
+            <p style={S.note}>A category may set its own number of days. Categories without one use the number above.</p>
+            <div style={{ margin: "0.5rem 0" }}>
+              <ExportButton path={`assets/overdue.csv?days=${overdueDays}`} filename="assets-overdue.csv" label="Export overdue (CSV)" onError={setError} />
+            </div>
             {overdue.length === 0 ? (
               <p style={S.note}>Nothing held that long.</p>
             ) : (
@@ -299,7 +289,7 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
                 <table style={S.table}>
                   <Caption>Overdue assignments</Caption>
                   <thead>
-                    <tr>{["Code", "Name", "Holder", "Days held"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+                    <tr>{["Code", "Name", "Holder", "Days held", "Threshold (days)"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
                   </thead>
                   <tbody>
                     {overdue.map((o) => (
@@ -308,6 +298,7 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
                         <td style={S.td}>{o.name}</td>
                         <td style={S.td}>{o.employeeName}</td>
                         <td style={S.td}>{o.daysHeld}</td>
+                        <td style={S.td}>{o.thresholdDays}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -318,19 +309,19 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
 
           <section style={S.panel} aria-label="Offboard an employee">
             <h2 style={{ ...S.h2, marginTop: 0 }}>Offboard an employee</h2>
-            <p style={S.note}>Offboarding is refused while the person still holds assets. Return them first.</p>
+            <p style={S.note}>Offboarding is refused while the person still holds assets. Return them or write them off first. A recovery task is opened for HR.</p>
             <form style={{ maxWidth: "420px" }} onSubmit={async (e) => {
               e.preventDefault();
               setBusy(true);
               setLeaverBlock([]);
-              const r = await call<{ error?: string; openAssets?: { assetCode: string; name: string }[] }>("POST", `employees/${leaver}/offboard`, {});
+              const r = await call<{ error?: string; recoveryTask?: string; openAssets?: { assetCode: string; name: string }[] }>("POST", `employees/${leaver}/offboard`, {});
               setBusy(false);
               if (r.ok) {
                 setMessage("Employee offboarded.");
                 setLeaver("");
                 setReloadKey((n) => n + 1);
               } else {
-                setFormError(r.data.error ?? "Could not offboard.");
+                setFormError([r.data.error ?? "Could not offboard.", r.data.recoveryTask ? `Recovery task opened: ${r.data.recoveryTask}.` : ""].filter(Boolean).join(" "));
                 setLeaverBlock(r.data.openAssets ?? []);
               }
             }}>
@@ -349,9 +340,12 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
             </form>
           </section>
 
+          <RecoveryPanel refreshKey={reloadKey} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
+          <CategoriesPanel refreshKey={reloadKey} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
+
           <section style={S.panel} aria-label="Register an asset">
             <h2 style={{ ...S.h2, marginTop: 0 }}>Register an asset</h2>
-            <form style={{ maxWidth: "420px" }} onSubmit={(e) => { e.preventDefault(); act(() => call("POST", "assets", { name: reg.name, assetCode: reg.assetCode, serialNumber: reg.serialNumber || null, condition: reg.condition }), "Asset registered."); setReg({ name: "", assetCode: "", serialNumber: "", condition: "good" }); }}>
+            <form style={{ maxWidth: "420px" }} onSubmit={(e) => { e.preventDefault(); act(() => call("POST", "assets", { name: reg.name, assetCode: reg.assetCode, serialNumber: reg.serialNumber || null, condition: reg.condition, purchaseDate: reg.purchaseDate || null, purchasePrice: reg.purchasePrice === "" ? null : Number(reg.purchasePrice), warrantyExpiry: reg.warrantyExpiry || null, notes: reg.notes || null }), "Asset registered."); setReg(emptyReg); }}>
               <label style={S.field}>Name *<input required minLength={2} maxLength={255} value={reg.name} onChange={(e) => setReg({ ...reg, name: e.target.value })} style={S.input} /></label>
               <label style={S.field}>Asset code *<input required minLength={2} maxLength={50} value={reg.assetCode} onChange={(e) => setReg({ ...reg, assetCode: e.target.value })} style={S.input} /></label>
               <label style={S.field}>Serial number<input maxLength={100} value={reg.serialNumber} onChange={(e) => setReg({ ...reg, serialNumber: e.target.value })} style={S.input} /></label>
@@ -360,11 +354,20 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
                   {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </label>
+              <label style={S.field}>Purchase date<input type="date" value={reg.purchaseDate} onChange={(e) => setReg({ ...reg, purchaseDate: e.target.value })} style={S.input} /></label>
+              <label style={S.field}>Purchase price<input type="number" min={0} step="0.01" value={reg.purchasePrice} onChange={(e) => setReg({ ...reg, purchasePrice: e.target.value })} style={S.input} /></label>
+              <label style={S.field}>Warranty expiry<input type="date" value={reg.warrantyExpiry} onChange={(e) => setReg({ ...reg, warrantyExpiry: e.target.value })} style={S.input} /></label>
+              <label style={S.field}>Notes
+                <textarea maxLength={2000} rows={2} value={reg.notes} onChange={(e) => setReg({ ...reg, notes: e.target.value })} style={{ ...S.input, minHeight: "70px" }} />
+              </label>
               <button type="submit" style={S.primary} disabled={busy}>Register asset</button>
             </form>
           </section>
         </>
       )}
+
+      <ApprovalsPanel refreshKey={reloadKey} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
+      {!isHr && <TeamPanel refreshKey={reloadKey} />}
 
       <h2 style={S.h2}>{isHr ? "Assigned to me" : "My assets"}</h2>
       {mine.length === 0 ? (

@@ -603,6 +603,8 @@ CREATE TABLE IF NOT EXISTS asset_categories (
     id SERIAL PRIMARY KEY,
     company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
+    overdue_days INTEGER CONSTRAINT asset_categories_overdue_days_check CHECK (overdue_days IS NULL OR overdue_days BETWEEN 1 AND 3650), -- migration 0019
+    depreciation_months INTEGER CONSTRAINT asset_categories_depreciation_check CHECK (depreciation_months IS NULL OR depreciation_months BETWEEN 1 AND 600), -- migration 0019
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, name)
 );
@@ -618,8 +620,16 @@ CREATE TABLE IF NOT EXISTS company_assets (
         CONSTRAINT company_assets_status_check CHECK (status IN ('available', 'allocated', 'maintenance', 'retired', 'lost')),
     asset_condition VARCHAR(20) DEFAULT 'good' NOT NULL -- migration 0007: new, good, fair or poor
         CONSTRAINT company_assets_condition_check CHECK (asset_condition IN ('new', 'good', 'fair', 'poor')),
+    purchase_date DATE, -- migration 0019
+    purchase_price NUMERIC(12, 2) CONSTRAINT company_assets_purchase_price_check CHECK (purchase_price IS NULL OR purchase_price >= 0), -- migration 0019
+    warranty_expiry DATE, -- migration 0019
+    notes TEXT, -- migration 0019
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Migration 0019: serial numbers unique per company where recorded.
+CREATE UNIQUE INDEX IF NOT EXISTS company_assets_company_serial_unique
+    ON company_assets (company_id, serial_number) WHERE serial_number IS NOT NULL AND serial_number <> '';
 
 -- Assignment ledger. An open assignment has return_date NULL; migration 0007 allows at most one per asset.
 CREATE TABLE IF NOT EXISTS asset_allocations (
@@ -639,6 +649,43 @@ CREATE TABLE IF NOT EXISTS asset_allocations (
 
 CREATE UNIQUE INDEX IF NOT EXISTS asset_allocations_one_open
     ON asset_allocations (asset_id) WHERE return_date IS NULL;
+
+-- Migration 0019: write-off requests (pending until the holder's solid manager decides; approved at once when no current holder).
+CREATE TABLE IF NOT EXISTS asset_write_offs (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    asset_id INTEGER NOT NULL REFERENCES company_assets(id) ON DELETE CASCADE,
+    allocation_id INTEGER REFERENCES asset_allocations(id) ON DELETE SET NULL,
+    holder_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL CHECK (char_length(reason) BETWEEN 3 AND 1000),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    requested_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    decided_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asset_write_offs_one_pending
+    ON asset_write_offs (asset_id) WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_asset_write_offs_company_status ON asset_write_offs (company_id, status);
+
+-- Migration 0019: offboarding recovery tasks, one open task per person.
+CREATE TABLE IF NOT EXISTS asset_recovery_tasks (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    status VARCHAR(10) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    opened_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    opened_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    closed_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    closed_at TIMESTAMPTZ,
+    close_note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asset_recovery_tasks_one_open
+    ON asset_recovery_tasks (employee_id) WHERE status = 'open';
 
 -- 13. Helpdesk & Support
 CREATE TABLE IF NOT EXISTS helpdesk_categories (

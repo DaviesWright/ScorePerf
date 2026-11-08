@@ -33,6 +33,8 @@ import {
 import { ADAPTERS, RESERVED_SECRET_NAMES } from "./integrations/adapters";
 import { authenticate, type TenantContext } from "./auth";
 import { createAuthRoutes } from "./auth-routes";
+import { createAssetRoutes, openRecoveryTask, overdueAssets } from "./assets-routes";
+import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
 import {
@@ -2677,6 +2679,10 @@ const AssetCreateBody = z.object({
   categoryId: z.number().int().positive().nullable().optional(),
   serialNumber: z.string().trim().max(100).nullable().optional(),
   condition: AssetCondition.default("good"),
+  purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  purchasePrice: z.number().min(0).max(9_999_999_999.99).nullable().optional(),
+  warrantyExpiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 const AssetAssignBody = z.object({ employeeId: z.number().int().positive(), condition: AssetCondition });
 const AssetReturnBody = z.object({ condition: AssetCondition, notes: z.string().max(1000).default("") });
@@ -2688,6 +2694,8 @@ app.get("/api/v1/assets", async (c) => {
   const sql = getSql(c.env);
   const assets = await sql`
     SELECT ca.id, ca.asset_code, ca.name, ca.serial_number, ca.status, ca.asset_condition,
+      ca.purchase_date::text AS purchase_date, ca.purchase_price::text AS purchase_price,
+      ca.warranty_expiry::text AS warranty_expiry, ca.notes,
       ac.name AS category_name, e.id AS employee_id, e.first_name, e.last_name
     FROM company_assets ca
     LEFT JOIN asset_categories ac ON ac.id = ca.category_id
@@ -2720,12 +2728,18 @@ app.post("/api/v1/assets", zValidator("json", AssetCreateBody), async (c) => {
   const sql = getSql(c.env);
   const dup = await sql`SELECT 1 FROM company_assets WHERE company_id = ${companyId} AND asset_code = ${body.assetCode} LIMIT 1`;
   if (dup.length > 0) return c.json({ error: "An asset with this code already exists." }, 409);
-  const inserted = await sql`
-    INSERT INTO company_assets (company_id, category_id, name, asset_code, serial_number, status, asset_condition)
-    VALUES (${companyId}, ${body.categoryId ?? null}, ${body.name}, ${body.assetCode}, ${body.serialNumber ?? null}, 'available', ${body.condition})
-    RETURNING id
-  `;
-  return c.json({ id: Number(inserted[0].id), status: "available" }, 201);
+  try {
+    const inserted = await sql`
+      INSERT INTO company_assets (company_id, category_id, name, asset_code, serial_number, status, asset_condition, purchase_date, purchase_price, warranty_expiry, notes)
+      VALUES (${companyId}, ${body.categoryId ?? null}, ${body.name}, ${body.assetCode}, ${normaliseSerial(body.serialNumber)}, 'available', ${body.condition},
+        ${body.purchaseDate ?? null}, ${body.purchasePrice ?? null}, ${body.warrantyExpiry ?? null}, ${body.notes ?? null})
+      RETURNING id
+    `;
+    return c.json({ id: Number(inserted[0].id), status: "available" }, 201);
+  } catch (err) {
+    if (isSerialViolation(err)) return c.json({ error: "Another asset already has this serial number." }, 409);
+    throw err;
+  }
 });
 
 app.post("/api/v1/assets/:id/assign", zValidator("json", AssetAssignBody), async (c) => {
@@ -2789,26 +2803,19 @@ app.get("/api/v1/assets/overdue", async (c) => {
   if (!isHrRole(role)) return c.json({ error: "Forbidden" }, 403);
   const raw = Number(c.req.query("days") ?? 365);
   const days = Number.isSafeInteger(raw) && raw >= 0 && raw <= 3650 ? raw : 365;
-  const sql = getSql(c.env);
-  const rows = await sql`
-    SELECT ca.id AS asset_id, ca.asset_code, ca.name, aa.allocated_date::text AS allocated_date,
-      (CURRENT_DATE - aa.allocated_date)::int AS days_held, e.id AS employee_id, e.first_name, e.last_name
-    FROM asset_allocations aa
-    JOIN company_assets ca ON ca.id = aa.asset_id
-    JOIN employees e ON e.id = aa.employee_id
-    WHERE aa.company_id = ${companyId} AND aa.return_date IS NULL AND aa.allocated_date <= CURRENT_DATE - ${days}::int
-    ORDER BY aa.allocated_date ASC
-  `;
+  // The threshold is the category's overdue_days when set, else `days`. See assets-routes.ts.
+  const rows = await overdueAssets(getSql(c.env), companyId, days);
   return c.json({
     days,
     results: rows.map((r) => ({
-      assetId: Number(r.asset_id),
-      assetCode: String(r.asset_code),
-      name: String(r.name),
-      allocatedDate: String(r.allocated_date),
-      daysHeld: Number(r.days_held),
-      employeeId: Number(r.employee_id),
-      employeeName: `${r.first_name} ${r.last_name}`,
+      assetId: r.assetId,
+      assetCode: r.assetCode,
+      name: r.name,
+      allocatedDate: r.allocatedDate,
+      daysHeld: r.daysHeld,
+      thresholdDays: r.thresholdDays,
+      employeeId: r.employeeId,
+      employeeName: r.employeeName,
     })),
   });
 });
@@ -2832,15 +2839,25 @@ app.post("/api/v1/employees/:id/offboard", async (c) => {
     ORDER BY ca.asset_code
   `;
   if (held.length > 0) {
+    // Records the "Recover N assets from [name]" task for HR. The block itself stays until each asset is returned or written off.
+    await openRecoveryTask(sql, companyId, id, userId);
+    const [who] = await sql`SELECT first_name, last_name FROM employees WHERE id = ${id}`;
     return c.json(
       {
-        error: `${held.length} asset(s) must be returned before offboarding.`,
+        error: `${held.length} asset(s) must be returned or written off before offboarding.`,
+        recoveryTask: recoveryTaskTitle(held.length, `${who.first_name} ${who.last_name}`),
         openAssets: held.map((a) => ({ id: Number(a.id), assetCode: String(a.asset_code), name: String(a.name) })),
       },
       409,
     );
   }
   await sql`UPDATE employees SET is_active = false, updated_at = NOW() WHERE id = ${id} AND company_id = ${companyId}`;
+  // Nothing is left to recover, so an open recovery task for this person closes with the offboarding.
+  await sql`
+    UPDATE asset_recovery_tasks SET status = 'closed', closed_by = ${userId}, closed_at = NOW(),
+      close_note = 'Offboarded with every asset returned or written off.'
+    WHERE company_id = ${companyId} AND employee_id = ${id} AND status = 'open'
+  `;
   return c.json({ id, offboarded: true });
 });
 
@@ -2872,6 +2889,9 @@ app.get("/api/v1/assets/:id/history", async (c) => {
     })),
   });
 });
+
+// Assets part B: categories, asset details, write-off and approval, recovery tasks, team view, CSV. See assets-routes.ts.
+app.route("/", createAssetRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {

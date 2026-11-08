@@ -11,3 +11,4 @@ export * from "./selfService";
 export * from "./approvalLevels";
 export * from "./offices";
 export * from "./integrations";
+export * from "./assets";
