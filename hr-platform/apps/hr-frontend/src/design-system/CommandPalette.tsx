@@ -607,7 +607,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     cursor: "pointer",
                     backgroundColor: isSelected ? colors.indigoSubtle : "transparent",
                     borderLeft: isSelected ? `3px solid ${colors.indigoAccent}` : "3px solid transparent",
-                    transition: "all 0.08s ease",
+                    transition: "background-color 0.08s ease, border-color 0.08s ease, color 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1 }}>

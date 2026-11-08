@@ -561,7 +561,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   position: "relative",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 {tab.label}
@@ -685,7 +685,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                       borderRadius: radii.lg,
                       padding: "1.25rem 1.5rem",
                       backgroundColor: colors.surface,
-                      transition: "all 0.15s ease",
+                      transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                     }}
                   >

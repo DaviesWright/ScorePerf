@@ -480,7 +480,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                       fontWeight: selectedLeadershipTier === tier ? 700 : 500,
                       fontSize: typography.sizes.xs,
                       cursor: "pointer",
-                      transition: "all 0.12s ease",
+                      transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                     }}
                   >
                     {tier === "Leads Self" && "👤 Leads Self (Personal Mastery)"}
@@ -514,7 +514,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                       border: `1px solid ${selectedDomain === dom.name ? colors.indigoAction : colors.border}`,
                       backgroundColor: selectedDomain === dom.name ? colors.indigoSubtle : colors.surface,
                       cursor: "pointer",
-                      transition: "all 0.12s ease",
+                      transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.25rem" }}>

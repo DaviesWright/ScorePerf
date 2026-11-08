@@ -480,7 +480,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   color: isSelected ? colors.indigoAction : colors.textPrimary,
                   textAlign: "left",
                   cursor: "pointer",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   fontWeight: isSelected ? 600 : 400,
                   fontSize: typography.sizes.sm,
                 }}

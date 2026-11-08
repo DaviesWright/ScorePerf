@@ -126,7 +126,11 @@ export const radii = {
   full: "9999px",
 };
 
+// Named properties only: never "all", so layout is never animated by accident.
 export const transitions = {
-  default: "all 0.15s cubic-bezier(0.16, 1, 0.3, 1)",
-  fast: "all 0.1s ease-in-out",
+  default: "background-color 160ms cubic-bezier(0.2, 0, 0, 1), border-color 160ms cubic-bezier(0.2, 0, 0, 1), color 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms cubic-bezier(0.2, 0, 0, 1), opacity 160ms cubic-bezier(0.2, 0, 0, 1)",
+  fast: "background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out",
 };
+
+// Keyboard focus ring: a white gap then Deep Indigo, visible on every surface.
+export const focusRing = "0 0 0 2px #ffffff, 0 0 0 4px #4338ca";

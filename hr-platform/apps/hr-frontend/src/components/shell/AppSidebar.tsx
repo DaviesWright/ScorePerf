@@ -30,7 +30,8 @@ export type ModuleViewKey =
   | "governance_import"
   | "approval_workflows"
   | "disciplinary"
-  | "policies_handbook";
+  | "policies_handbook"
+  | "organogram";
 
 export type UserPersona = "hr_director" | "hr_admin" | "line_manager" | "employee";
 
@@ -389,7 +390,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   gap: "0.3rem",
                   fontSize: "10px",
                   fontWeight: 700,
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 {isPinned ? <Icons.Pin size={12} color={colors.emeraldAction} /> : <Icons.PinOff size={12} color="#94a3b8" />}
@@ -519,7 +520,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               cursor: "pointer",
               fontSize: "11px",
               fontWeight: 600,
-              transition: "all 0.15s ease",
+              transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             }}
             title="Open Omni-Agent Copilot (⌘J)"
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.8)")}
@@ -592,7 +593,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                           fontWeight: isActive ? 600 : 400,
                           fontSize: typography.sizes.sm,
                           textAlign: "left",
-                          transition: "all 0.12s ease",
+                          transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                           borderLeft: isActive && !isEffectiveCollapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
                         }}
                       >

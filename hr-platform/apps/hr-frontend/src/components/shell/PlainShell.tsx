@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import type { ModuleViewKey } from "./AppSidebar";
 import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
 
@@ -10,7 +10,7 @@ import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
 
 const LABELS: Record<ModuleViewKey, string> = {
   dashboard: "Dashboard",
-  assets: "Assets",
+  assets: "Assets Management",
   command_centre: "Command Centre",
   time_and_leave: "Leave",
   performance_pms: "Performance",
@@ -35,7 +35,20 @@ const LABELS: Record<ModuleViewKey, string> = {
   governance_import: "Data Governance",
   disciplinary: "Disciplinary Management",
   policies_handbook: "Policies & Handbooks",
+  organogram: "Organogram",
 };
+
+// Major sidebar sections and the views under each. Views not listed here fall into "Other", so none disappear.
+const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
+  { label: "Dashboard", views: ["dashboard"] },
+  { label: "My Self-Service", views: ["self_service", "my_profile", "payslips", "document_centre", "my_performance"] },
+  { label: "People", views: ["workforce_directory", "lifecycle_portals", "disciplinary", "approval_workflows"] },
+  { label: "Time & Performance", views: ["time_and_leave", "performance_pms", "performance_setup", "objectives"] },
+  { label: "Assets & IT", views: ["assets", "asset_management", "helpdesk"] },
+  { label: "Projects & Talent", views: ["projects", "skills_marketplace"] },
+  { label: "Reports & Governance", views: ["reports_analytics", "governance_import", "policies_handbook", "admin_nerve_center"] },
+  { label: "Company Admin", views: ["company_setup", "organogram", "employee_settings"] },
+];
 
 const C = {
   text: "#1f2937",
@@ -61,6 +74,9 @@ const CSS = `
 .ps-nav button:hover { background: ${C.page}; }
 .ps-nav button[aria-current="page"] { background: ${C.accentSoft}; color: ${C.accent}; border-color: ${C.accent}; font-weight: 600; }
 .ps-main { flex: 1; min-width: 0; }
+.ps-nav .ps-group { font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.ps-sub { margin: 0.25rem 0 0.5rem 0.5rem; padding-left: 0.5rem; border-left: 2px solid ${C.border}; }
+.ps-sub button { padding-left: 0.75rem; font-size: 14px; }
 .ps-signout { min-height: 44px; padding: 0 1rem; border: 1px solid ${C.border}; border-radius: 4px; background: ${C.surface};
   color: ${C.text}; font: inherit; cursor: pointer; }
 .ps-signout:hover { background: ${C.page}; }
@@ -81,11 +97,20 @@ interface PlainShellProps {
   currentView: ModuleViewKey;
   onNavigate: (view: ModuleViewKey) => void;
   onSignOut: () => void;
+  onOpenDede?: () => void;
+  onOpenSearch?: () => void;
   children: React.ReactNode;
 }
 
-export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNavigate, onSignOut, children }) => {
-  const items = ALL_VIEWS.filter((v) => isViewEnabled(v));
+export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNavigate, onSignOut, onOpenDede, onOpenSearch, children }) => {
+  const [openState, setOpenState] = useState<Record<string, boolean>>({});
+  const enabled = ALL_VIEWS.filter((v) => isViewEnabled(v));
+  const grouped = GROUPS.map((g) => ({ label: g.label, views: g.views.filter((v) => enabled.includes(v)) })).filter((g) => g.views.length > 0);
+  const placed = new Set<ModuleViewKey>(GROUPS.flatMap((g) => g.views));
+  const other = enabled.filter((v) => !placed.has(v));
+  if (other.length > 0) grouped.push({ label: "Other", views: other });
+  // Every section starts open so each page is visible in the sidebar; the user can collapse any section.
+  const isOpen = (label: string) => openState[label] ?? true;
   return (
     <div className="ps-root">
       <style>{CSS}</style>
@@ -99,6 +124,16 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNav
             {user.name}
             {user.role ? <span style={{ color: C.muted }}> ({user.role})</span> : null}
           </span>
+          {onOpenSearch && (
+            <button type="button" className="ps-signout" onClick={onOpenSearch}>
+              Search
+            </button>
+          )}
+          {onOpenDede && (
+            <button type="button" className="ps-signout" onClick={onOpenDede}>
+              Ask Dede
+            </button>
+          )}
           <button type="button" className="ps-signout" onClick={onSignOut}>
             Sign out
           </button>
@@ -107,13 +142,35 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNav
       <div className="ps-body">
         <nav className="ps-nav" aria-label="Main">
           <ul>
-            {items.map((view) => (
-              <li key={view}>
-                <button type="button" aria-current={currentView === view ? "page" : undefined} onClick={() => onNavigate(view)}>
-                  {LABELS[view]}
-                </button>
-              </li>
-            ))}
+            {grouped.map((g) => {
+              const expanded = isOpen(g.label);
+              const id = `ps-group-${g.label.replace(/[^A-Za-z0-9]+/g, "-").toLowerCase()}`;
+              return (
+                <li key={g.label}>
+                  <button
+                    type="button"
+                    className="ps-group"
+                    aria-expanded={expanded}
+                    aria-controls={id}
+                    onClick={() => setOpenState({ ...openState, [g.label]: !expanded })}
+                  >
+                    <span>{g.label}</span>
+                    <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+                  </button>
+                  {expanded && (
+                    <ul id={id} className="ps-sub">
+                      {g.views.map((view) => (
+                        <li key={view}>
+                          <button type="button" aria-current={currentView === view ? "page" : undefined} onClick={() => onNavigate(view)}>
+                            {LABELS[view]}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
         <main id="ps-content" className="ps-main" tabIndex={-1}>

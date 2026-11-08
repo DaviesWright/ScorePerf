@@ -33,6 +33,7 @@ import { EmployeeSettingsView } from "../modules/EmployeeSettingsView";
 import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
+import { OrganogramView } from "../modules/OrganogramView";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
 import { SHELL_MODE, firstEnabledView, isViewEnabled } from "../../config/modules";
 import { PlainShell } from "./PlainShell";
@@ -77,7 +78,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
-    const source = initialEmployees.length > 0 ? initialEmployees : DEFAULT_EMPLOYEES;
+    const source = initialEmployees.length > 0 || initialUser ? initialEmployees : DEFAULT_EMPLOYEES;
     return source.map((emp) => {
       if (emp.team_name) return emp;
       const dept = emp.department_name || "";
@@ -95,10 +96,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   });
   const [cycles, setCycles] = useState<CycleRecord[]>(initialCycles);
   // The API sends nothing until the frontend has a login, so the demo registry stands in.
-  const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 ? initialAssets : DEMO_ASSETS);
+  const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 || initialUser ? initialAssets : DEMO_ASSETS);
   const [leaves, setLeaves] = useState<LeaveRecord[]>(initialLeaves);
   const [tickets, setTickets] = useState<TicketRecord[]>(initialTickets);
-  const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 ? initialProjects : DEMO_PROJECTS);
+  const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 || initialUser ? initialProjects : DEMO_PROJECTS);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isOmniAgentOpen, setIsOmniAgentOpen] = useState(false);
@@ -253,6 +254,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Disciplinary Management & Case Reviews";
       case "policies_handbook":
         return "Policies & Handbooks";
+      case "organogram":
+        return "Organogram";
     }
   };
 
@@ -422,7 +425,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             <AssetManagementView assets={assets} employees={employees} />
           )}
 
-          {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} onNavigate={setCurrentView} />}
 
           {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
 
@@ -509,14 +512,53 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           )}
 
           {currentView === "policies_handbook" && <PoliciesHandbookView />}
+          {currentView === "organogram" && <OrganogramView />}
     </>
   );
 
   if (SHELL_MODE === "plain") {
     return (
-      <PlainShell user={currentUser} currentView={currentView} onNavigate={setCurrentView} onSignOut={handleSignOut}>
-        {viewContent}
-      </PlainShell>
+      <>
+        <PlainShell
+          user={currentUser}
+          currentView={currentView}
+          onNavigate={setCurrentView}
+          onSignOut={handleSignOut}
+          onOpenDede={() => {
+            setOmniInitialTab("prompts");
+            setIsOmniAgentOpen(true);
+          }}
+          onOpenSearch={() => setIsCommandPaletteOpen(true)}
+        >
+          {viewContent}
+        </PlainShell>
+        <OmniAgentDrawer
+          isOpen={isOmniAgentOpen}
+          onClose={() => setIsOmniAgentOpen(false)}
+          onOpen={(tab) => {
+            setOmniInitialTab(tab || "prompts");
+            setIsOmniAgentOpen(true);
+          }}
+          initialTab={omniInitialTab}
+          persona={persona}
+          currentView={currentView}
+          onNavigate={setCurrentView}
+          onExecuteWorkflow={handleOmniWorkflow}
+        />
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onSelectView={setCurrentView}
+          employees={employees}
+          onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
+          onOpenPayslip={() => setIsPayslipModalOpen(true)}
+          onOpenOmniAgent={() => {
+            setOmniInitialTab("chat");
+            setIsOmniAgentOpen(true);
+          }}
+          onQuickAction={handleQuickAction}
+        />
+      </>
     );
   }
 

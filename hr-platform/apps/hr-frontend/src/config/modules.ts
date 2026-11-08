@@ -4,7 +4,7 @@ import type { ModuleViewKey } from "../components/shell/AppSidebar";
 // Nothing is deleted when a module is off: its component, data and API routes stay, and the navigation,
 // the route guard in the shell and every cross-link (palette, quick menu, welcome brief) consult this file.
 //
-//   NEXT_PUBLIC_ENABLED_MODULES   comma list of view keys or aliases, or "all". Default: leave,performance.
+//   NEXT_PUBLIC_ENABLED_MODULES   comma list of view keys or aliases, or "all". Default: all.
 //   NEXT_PUBLIC_ENABLED_FEATURES  comma list of features, or "all". Default: none.
 //
 // Both are inlined at build time, so changing them needs a rebuild or a dev-server restart.
@@ -33,6 +33,7 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "employee_settings",
   "approval_workflows",
   "company_setup",
+  "organogram",
   "governance_import",
   "disciplinary",
   "policies_handbook",
@@ -73,7 +74,7 @@ export function parseEnabledViews(raw: string | undefined): Set<ModuleViewKey> {
     const key = VIEW_ALIASES[t] ?? ALL_VIEWS.find((v) => v === t);
     if (key) found.add(key);
   }
-  return found.size > 0 ? found : new Set(DEFAULT_VIEWS);
+  return found.size > 0 ? found : new Set(ALL_VIEWS);
 }
 
 export function parseEnabledFeatures(raw: string | undefined): Set<FeatureKey> {

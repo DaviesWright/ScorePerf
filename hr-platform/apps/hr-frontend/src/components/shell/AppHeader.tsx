@@ -110,7 +110,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           borderRadius: radii.md,
           padding: "0.45rem 0.85rem",
           cursor: "pointer",
-          transition: "all 0.15s ease",
+          transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.borderColor = colors.indigoBorder)}
         onMouseLeave={(e) => (e.currentTarget.style.borderColor = colors.border)}
@@ -185,7 +185,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             fontWeight: 700,
             cursor: "pointer",
             color: colors.indigoPrimary,
-            transition: "all 0.12s ease",
+            transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = colors.indigoBorder)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = colors.border)}
@@ -210,7 +210,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             fontWeight: 700,
             cursor: "pointer",
             color: currentSandbox ? "#92400e" : "#166534",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
           }}
         >
           <span

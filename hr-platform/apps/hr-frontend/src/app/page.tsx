@@ -25,7 +25,9 @@ interface Me {
 
 const initialsOf = (first: string, last: string) => `${first[0] ?? ""}${last[0] ?? ""}`.toUpperCase();
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ demo?: string }> }) {
+  // "/?demo=1" opens the demo persona picker without a sign-in, alongside the real sign-in at /login.
+  const demoRequested = (await searchParams).demo === "1";
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
 
   let employees: EmployeeRecord[] = [];
@@ -82,7 +84,7 @@ export default async function DashboardPage() {
 
   // No valid session (no cookie, expired or refused token, or the API is unreachable): sign in first.
   // redirect() throws, so it stays outside the try block above.
-  if (!user && !DEMO_LOGIN) redirect("/login");
+  if (!user && !DEMO_LOGIN && !demoRequested) redirect("/login");
 
   return (
     <EnterpriseAppShell

@@ -15,9 +15,9 @@ import {
 
 const read = (rel: string) => readFileSync(new URL(rel, import.meta.url), "utf8");
 
-test("default is Leave and Performance only", () => {
-  assert.deepEqual([...parseEnabledViews(undefined)].sort(), [...DEFAULT_VIEWS].sort());
-  assert.deepEqual([...parseEnabledViews("")].sort(), [...DEFAULT_VIEWS].sort());
+test("default is every view", () => {
+  assert.deepEqual([...parseEnabledViews(undefined)].sort(), [...ALL_VIEWS].sort());
+  assert.deepEqual([...parseEnabledViews("")].sort(), [...ALL_VIEWS].sort());
 });
 
 test("aliases and view keys are accepted, case and spacing ignored", () => {
@@ -29,9 +29,9 @@ test('"all" restores every module', () => {
   assert.deepEqual([...parseEnabledViews("all")].sort(), [...ALL_VIEWS].sort());
 });
 
-test("unknown names are ignored, and an all-unknown list falls back to the default", () => {
+test("unknown names are ignored, and an all-unknown list falls back to every view", () => {
   assert.deepEqual([...parseEnabledViews("nonsense,leave")], ["time_and_leave"]);
-  assert.deepEqual([...parseEnabledViews("nonsense")].sort(), [...DEFAULT_VIEWS].sort());
+  assert.deepEqual([...parseEnabledViews("nonsense")].sort(), [...ALL_VIEWS].sort());
 });
 
 test("features are off unless named; 'all' turns them all on", () => {
@@ -49,7 +49,7 @@ test("shell mode is plain unless set to full", () => {
 test("with no env set, the running config matches the default", () => {
   assert.equal(isViewEnabled("time_and_leave"), true);
   assert.equal(isViewEnabled("performance_pms"), true);
-  assert.equal(isViewEnabled("helpdesk"), false);
+  assert.equal(isViewEnabled("helpdesk"), true);
   assert.equal(isFeatureEnabled("ai_assistant"), false);
   assert.equal(firstEnabledView(), "dashboard");
 });

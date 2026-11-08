@@ -986,7 +986,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   fontSize: typography.sizes.xs,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
                 }}
               >
@@ -1094,7 +1094,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     fontSize: typography.sizes.xs,
                     fontWeight: 600,
                     cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   }}
                 >
                   <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: colors.brandBlue }} />
@@ -1128,7 +1128,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "rgba(37, 99, 235, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "2px solid #2563eb" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1157,7 +1157,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "ACTIVE" ? "rgba(249, 115, 22, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "ACTIVE" ? "2px solid #f97316" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1186,7 +1186,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "rgba(239, 68, 68, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "2px solid #ef4444" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1215,7 +1215,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "APPROVED" ? "rgba(139, 92, 246, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "APPROVED" ? "2px solid #8b5cf6" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1244,7 +1244,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "DECLINED" ? "rgba(16, 185, 129, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "DECLINED" ? "2px solid #10b981" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -2249,7 +2249,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                             fontWeight: currentScore === lvl.score ? 700 : 500,
                             fontSize: "11px",
                             cursor: "pointer",
-                            transition: "all 0.12s ease",
+                            transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                           }}
                         >
                           {lvl.label}
@@ -3334,7 +3334,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     fontSize: typography.sizes.xs,
                     fontWeight: 700,
                     cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   }}
                 >
                   {subTab}

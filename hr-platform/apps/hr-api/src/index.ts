@@ -33,7 +33,9 @@ import {
 import { ADAPTERS, RESERVED_SECRET_NAMES } from "./integrations/adapters";
 import { authenticate, type TenantContext } from "./auth";
 import { createAuthRoutes } from "./auth-routes";
+import { createReviewerRoutes } from "./reviewer-routes";
 import { createAssetRoutes, openRecoveryTask, overdueAssets } from "./assets-routes";
+import { createOrgRoutes } from "./org-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -154,6 +156,7 @@ app.get("/health", (c) => {
 // Public sign-in (magic link + KV). Deliberately outside /api/v1: these routes mint the token that
 // `authenticate` checks. See src/auth-routes.ts.
 app.route("/auth", createAuthRoutes<Env>(magicLinkDeps));
+app.route("/auth", createReviewerRoutes(getSql));
 
 // Authentication: every /api/v1 route needs a signed bearer token. The tenant (company), user and
 // role come from its claims, never from request headers (ADR-0005, SOC2 CC6.1, ISO 27001 A.9.4.2).
@@ -2892,6 +2895,9 @@ app.get("/api/v1/assets/:id/history", async (c) => {
 
 // Assets part B: categories, asset details, write-off and approval, recovery tasks, team view, CSV. See assets-routes.ts.
 app.route("/", createAssetRoutes(getSql));
+
+// Organogram: generated tree and HR job-title entry. See org-routes.ts.
+app.route("/", createOrgRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {

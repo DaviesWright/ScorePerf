@@ -1626,7 +1626,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                 fontSize: "11px",
                 fontWeight: 500,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = colors.indigoSubtle;
@@ -1754,7 +1754,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1781,7 +1781,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1808,7 +1808,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1865,7 +1865,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                 fontSize: "11px",
                 fontWeight: selectedCategory === cat.key ? 700 : 500,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
             >
               {cat.label}

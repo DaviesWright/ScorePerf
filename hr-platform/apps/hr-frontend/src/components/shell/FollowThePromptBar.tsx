@@ -380,6 +380,11 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "self_service",
     nextSuggestedLabel: "Go to Employee Self-Service →",
   },
+  organogram: {
+    whatToDoHere: "View the company tree generated from reporting lines, and fill in each person's job title.",
+    nextSuggestedView: "workforce_directory",
+    nextSuggestedLabel: "Go to Workforce Directory →",
+  },
 };
 
 interface FollowThePromptBarProps {
@@ -547,7 +552,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                         alignItems: "center",
                         justifyContent: "center",
                         padding: 0,
-                        transition: "all 0.15s ease",
+                        transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                       }}
                     >
                       {isDone ? "✓" : step.stepNumber}

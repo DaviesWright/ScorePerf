@@ -458,7 +458,7 @@ export const GovernanceView: React.FC = () => {
                 fontWeight: isActive ? 700 : 500,
                 fontSize: typography.sizes.sm,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
             >
               <TabIcon size={15} color={isActive ? colors.indigoAccent : colors.textMuted} />

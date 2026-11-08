@@ -333,7 +333,7 @@ export const AdminNerveCenterView: React.FC = () => {
                     width: `${changeFatigueScore}%`,
                     height: "100%",
                     backgroundColor: changeFatigueScore < 40 ? "#16a34a" : changeFatigueScore < 70 ? "#d97706" : "#dc2626",
-                    transition: "all 0.3s ease",
+                    transition: "background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease",
                   }}
                 />
               </div>
