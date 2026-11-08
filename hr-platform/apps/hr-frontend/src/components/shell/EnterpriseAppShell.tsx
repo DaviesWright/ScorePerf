@@ -20,6 +20,7 @@ import { DashboardScreen } from "../modules/DashboardSimple";
 import { AssetsScreen } from "../modules/AssetsSimple";
 import { PerformanceSetupScreen } from "../modules/PerformanceSetupScreen";
 import { CompanySetupScreen } from "../modules/CompanySetupScreen";
+import { EmployeeHomeScreen } from "../modules/EmployeeHomeScreen";
 import { ProfileChangesScreen } from "../modules/ProfileChangesScreen";
 import { PayslipsScreen } from "../modules/PayslipsScreen";
 import { DocumentCentreScreen } from "../modules/DocumentCentreScreen";
@@ -64,7 +65,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   apiOnline,
   initialUser = null,
 }) => {
-  const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(firstEnabledView());
+  // Employees with a real session land on their home (self_service). Everyone else lands on the dashboard.
+  const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(() =>
+    initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
+  );
   // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
   const setCurrentView = (view: ModuleViewKey) => {
     if (isViewEnabled(view)) setCurrentViewRaw(view);
@@ -344,7 +348,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
               This module is not enabled for this deployment.
             </div>
           )}
-          {currentView === "self_service" && (
+          {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
+          {currentView === "self_service" && !initialUser && (
             <EmployeeSelfServiceView
               currentEmployee={{
                 id: 1,

@@ -44,6 +44,7 @@ export const ALL_FEATURES: readonly FeatureKey[] = ["ai_assistant", "payslip"];
 
 export const DEFAULT_VIEWS: readonly ModuleViewKey[] = [
   "dashboard",
+  "self_service",
   "time_and_leave",
   "performance_pms",
   "performance_setup",
