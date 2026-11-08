@@ -286,7 +286,8 @@ app.get("/api/v1/employees", async (c) => {
 });
 
 app.post("/api/v1/employees", zValidator("json", CreateEmployeeSchema), async (c) => {
-  const { companyId } = c.get("tenant");
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can add employees." }, 403);
   const data = c.req.valid("json");
   const sql = getSql(c.env);
 
