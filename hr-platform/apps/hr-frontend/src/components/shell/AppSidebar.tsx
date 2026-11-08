@@ -301,7 +301,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {/* Brand & Organization Header */}
         <div
           style={{
-            padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
+            padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 0.85rem",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",
@@ -472,7 +472,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       onSelectPersona(pKey);
                       setShowPersonaMenu(false);
                       if (pKey === "employee") onSelectView("self_service");
-                      if (pKey === "hr_director") onSelectView("command_centre");
+                      if (pKey === "hr_director") onSelectView("dashboard");
                       if (pKey === "hr_admin") onSelectView("workforce_directory");
                       if (pKey === "line_manager") onSelectView("time_and_leave");
                     }}
@@ -538,7 +538,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         </div>
 
         {/* Navigation Sections */}
-        <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
+        <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem", overflowY: "auto" }}>
           {visibleNavSections.map((section, sIdx) => (
             <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
               {!isEffectiveCollapsed && (
@@ -548,7 +548,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                     color: "#64748b",
-                    padding: "0.25rem 0.65rem 0.35rem",
+                    padding: "0.25rem 0.5rem 0.35rem",
                     textTransform: "uppercase",
                   }}
                 >
@@ -578,7 +578,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "0.65rem",
-                          padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem 0.65rem",
+                          padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem",
                           justifyContent: isEffectiveCollapsed ? "center" : "space-between",
                           backgroundColor: isActive
                             ? "rgba(79, 70, 229, 0.22)"
@@ -693,7 +693,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {/* User Session Bar */}
         <div
           style={{
-            padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
+            padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 0.85rem",
             borderTop: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",

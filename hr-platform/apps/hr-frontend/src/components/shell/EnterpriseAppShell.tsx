@@ -6,7 +6,6 @@ import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CommandPalette } from "../../design-system/CommandPalette";
 import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
-import { CommandCentreView } from "../modules/CommandCentreView";
 import { WorkforceDirectoryView, EmployeeRecord, AssetRecord } from "../modules/WorkforceDirectoryView";
 import { PerformanceManagementView, CycleRecord } from "../modules/PerformanceManagementView";
 import { SkillsMarketplaceView } from "../modules/SkillsMarketplaceView";
@@ -70,7 +69,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
   );
   // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
-  const setCurrentView = (view: ModuleViewKey) => {
+  // command_centre was merged into the dashboard; old links and buttons that still name it land on the dashboard.
+  const setCurrentView = (requested: ModuleViewKey) => {
+    const view = requested === "command_centre" ? "dashboard" : requested;
     if (isViewEnabled(view)) setCurrentViewRaw(view);
   };
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
@@ -371,33 +372,6 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
               onOpenPayslip={() => setIsPayslipModalOpen(true)}
               onNavigate={setCurrentView}
             />
-          )}
-
-          {currentView === "command_centre" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="command_centre"
-                requiredScope="workforce:read"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <CommandCentreView
-                employees={employees}
-                assets={assets}
-                cycles={cycles}
-                stats={{
-                  totalEmployees: employees.length,
-                  activeCycles: cycles.length,
-                  totalAssets: assets.length,
-                  pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
-                  openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
-                  activeProjects: projects.length,
-                }}
-                onNavigate={setCurrentView}
-              />
-            )
           )}
 
           {currentView === "reports_analytics" && (

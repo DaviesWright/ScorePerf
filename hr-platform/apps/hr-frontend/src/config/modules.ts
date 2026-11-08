@@ -13,7 +13,6 @@ import type { ModuleViewKey } from "../components/shell/AppSidebar";
 export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "dashboard",
   "assets",
-  "command_centre",
   "time_and_leave",
   "performance_pms",
   "performance_setup",

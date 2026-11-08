@@ -54,7 +54,7 @@ const CSS = `
 .ps-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
   padding: 0.75rem 1.5rem; background: ${C.surface}; border-bottom: 1px solid ${C.border}; }
 .ps-body { display: flex; flex: 1; min-height: 0; }
-.ps-nav { width: 220px; flex-shrink: 0; padding: 1rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
+.ps-nav { width: 220px; flex-shrink: 0; padding: 1.5rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
 .ps-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
 .ps-nav button { width: 100%; text-align: left; padding: 0.6rem 0.75rem; min-height: 44px; border: 1px solid transparent;
   border-radius: 4px; background: transparent; color: ${C.text}; font: inherit; cursor: pointer; }
@@ -70,7 +70,7 @@ const CSS = `
 .ps-root textarea:focus-visible { outline: 3px solid ${C.accent}; outline-offset: 2px; }
 @media (max-width: 1023px) {
   .ps-body { flex-direction: column; }
-  .ps-nav { width: auto; border-right: none; border-bottom: 1px solid ${C.border}; padding: 0.5rem 1rem; }
+  .ps-nav { width: auto; border-right: none; border-bottom: 1px solid ${C.border}; padding: 0.5rem 0.75rem; }
   .ps-nav ul { flex-direction: row; flex-wrap: wrap; }
   .ps-nav button { width: auto; }
 }
