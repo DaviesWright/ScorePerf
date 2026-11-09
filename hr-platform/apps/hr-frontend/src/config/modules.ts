@@ -90,7 +90,9 @@ export const SHELL_MODE = parseShellMode(process.env.NEXT_PUBLIC_SHELL);
 const enabledViews = parseEnabledViews(process.env.NEXT_PUBLIC_ENABLED_MODULES);
 const enabledFeatures = parseEnabledFeatures(process.env.NEXT_PUBLIC_ENABLED_FEATURES);
 
-export const isViewEnabled = (view: ModuleViewKey): boolean => enabledViews.has(view);
+// Payslips belong to the payroll module. The view stays hidden until the payslip feature is switched on.
+export const isViewEnabled = (view: ModuleViewKey): boolean =>
+  enabledViews.has(view) && (view !== "payslips" || enabledFeatures.has("payslip"));
 export const isFeatureEnabled = (feature: FeatureKey): boolean => enabledFeatures.has(feature);
 
 /** The view to open at start: the first enabled one in ALL_VIEWS order. */
