@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { ModuleViewKey } from "./AppSidebar";
 import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
+import { Icons } from "../../design-system/Icons";
 
 // Plain application frame: header, text-only navigation, content. No icons, badges, gradients, shadows,
 // animation, command palette, AI drawer or persona switcher. Neutral greys with one accent colour.
@@ -67,16 +68,19 @@ const CSS = `
 .ps-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
   padding: 0.75rem 1.5rem; background: ${C.surface}; border-bottom: 1px solid ${C.border}; }
 .ps-body { display: flex; flex: 1; min-height: 0; }
-.ps-nav { width: 220px; flex-shrink: 0; padding: 1.5rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
-.ps-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.ps-nav button { width: 100%; text-align: left; padding: 0.6rem 0.75rem; min-height: 44px; border: 1px solid transparent;
-  border-radius: 4px; background: transparent; color: ${C.text}; font: inherit; cursor: pointer; }
+.ps-nav { width: 248px; flex-shrink: 0; padding: 1.25rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
+.ps-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.ps-nav button { width: 100%; text-align: left; padding: 0 0.75rem; min-height: 36px; border: none; border-radius: 8px;
+  background: transparent; color: ${C.text}; font: inherit; font-size: 14px; cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out; }
 .ps-nav button:hover { background: ${C.page}; }
-.ps-nav button[aria-current="page"] { background: ${C.accentSoft}; color: ${C.accent}; border-color: ${C.accent}; font-weight: 600; }
+.ps-nav button[aria-current="page"] { background: ${C.accentSoft}; color: ${C.accent}; font-weight: 600; }
 .ps-main { flex: 1; min-width: 0; }
-.ps-nav .ps-group { font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-.ps-sub { margin: 0.25rem 0 0.5rem 0.5rem; padding-left: 0.5rem; border-left: 2px solid ${C.border}; }
-.ps-sub button { padding-left: 0.75rem; font-size: 14px; }
+.ps-nav .ps-group { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 12px; font-weight: 600; color: ${C.muted}; }
+.ps-group-chev { display: flex; transition: transform 150ms ease-out; }
+.ps-group[aria-expanded="false"] .ps-group-chev { transform: rotate(-90deg); }
+.ps-sub { margin: 2px 0 0 0; padding-left: 0.25rem; }
+@media (prefers-reduced-motion: reduce) { .ps-nav button, .ps-group-chev { transition: none; } }
 .ps-signout { min-height: 44px; padding: 0 1rem; border: 1px solid ${C.border}; border-radius: 4px; background: ${C.surface};
   color: ${C.text}; font: inherit; cursor: pointer; }
 .ps-signout:hover { background: ${C.page}; }
@@ -170,7 +174,9 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
                     onClick={() => setOpenState({ ...openState, [g.label]: !expanded })}
                   >
                     <span>{g.label}</span>
-                    <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+                    <span className="ps-group-chev" aria-hidden="true">
+                      <Icons.ChevronDown size={14} />
+                    </span>
                   </button>
                   {expanded && (
                     <ul id={id} className="ps-sub">
