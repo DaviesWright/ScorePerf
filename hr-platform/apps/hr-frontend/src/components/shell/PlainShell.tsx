@@ -51,13 +51,13 @@ const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
 ];
 
 const C = {
-  text: "#1f2937",
-  muted: "#4b5563",
-  border: "#d1d5db",
+  text: "#1c1b19",
+  muted: "#79756c",
+  border: "#e4e1da",
   surface: "#ffffff",
-  page: "#f9fafb",
-  accent: "#1d4ed8",
-  accentSoft: "#eff6ff",
+  page: "#f7f6f3",
+  accent: "#0f5c4d",
+  accentSoft: "#e7f0ed",
 };
 
 // Focus ring and the narrow-screen layout live in CSS because inline styles cannot express them.

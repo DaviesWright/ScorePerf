@@ -80,9 +80,8 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "1.5rem",
-        // Background from bluewave.html: a soft mint radial wash over white.
-        background: "radial-gradient(ellipse at 30% 20%, #eef8f3 0%, #ffffff 70%)",
-        fontFamily: 'Outfit, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        backgroundColor: colors.bgApp,
+        fontFamily: typography.fontFamily,
       }}
     >
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "440px", backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, boxShadow: shadows.lg, padding: "2rem" }}>
@@ -91,14 +90,14 @@ export default function LoginPage() {
             SR
           </div>
           <div>
-            <div style={{ fontSize: "16px", fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.02em" }}>ScoReview HR</div>
+            <div style={{ fontSize: "16px", fontWeight: typography.weights.semibold, color: colors.textPrimary }}>ScoReview HR</div>
             <div style={{ fontSize: "11px", color: colors.textMuted }}>Performance and workforce intelligence</div>
           </div>
         </div>
 
         {status === "sent" ? (
           <div role="status">
-            <h1 style={{ fontSize: typography.sizes.lg, margin: "0 0 0.5rem 0", color: colors.textPrimary }}>Check your email</h1>
+            <h1 style={{ fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, margin: "0 0 0.5rem 0", color: colors.textPrimary }}>Check your email</h1>
             <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.sm, color: colors.textSecondary, lineHeight: 1.5 }}>
               If <strong>{email.trim()}</strong> belongs to an active account, a sign-in link is on its way. It works once and expires in 10 minutes.
             </p>
@@ -113,7 +112,7 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={handleReviewer}>
-            <h1 style={{ fontSize: typography.sizes.lg, margin: "0 0 0.25rem 0", color: colors.textPrimary }}>Review ScoReview HR</h1>
+            <h1 style={{ fontSize: typography.sizes.lg, fontWeight: typography.weights.semibold, margin: "0 0 0.25rem 0", color: colors.textPrimary }}>Review ScoReview HR</h1>
             <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted, lineHeight: 1.5 }}>
               Tell us who you are, then choose a demo persona to explore.
             </p>

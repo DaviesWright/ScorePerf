@@ -6,33 +6,34 @@
 
 export const colors = {
   // Base & Surface (Clean white / light gray canvas)
-  bgApp: "#f8fafc",          // Soft off-white / light neutral canvas
-  surface: "#ffffff",        // Crisp white card and panel surface
-  surfaceSubtle: "#f1f5f9",  // Subtle table headers / secondary backgrounds
-  surfaceHover: "#f8fafc",   // Row and item hover state
-  surfaceActive: "#e2e8f0",  // Clicked / active state
+  bgApp: "#f7f6f3",          // Warm paper canvas
+  surface: "#ffffff",        // Card and panel surface
+  surfaceSubtle: "#f2f1ed",  // Table headers / secondary backgrounds
+  surfaceHover: "#f7f6f3",   // Row and item hover state
+  surfaceActive: "#e9e7e1",  // Clicked / active state
 
-  // Borders & Dividers (Razor-sharp high contrast hairline borders)
-  borderSubtle: "#f1f5f9",   // Hairline section dividers
-  border: "#e2e8f0",         // Card and container borders
-  borderStrong: "#cbd5e1",   // Input outlines and distinct separators
-  borderFocus: "#4338ca",    // Primary input focus ring (Deep Indigo)
+  // Borders & Dividers (quiet hairlines)
+  borderSubtle: "#efede8",   // Hairline section dividers
+  border: "#e4e1da",         // Card and container borders
+  borderStrong: "#c9c5bb",   // Input outlines and distinct separators
+  borderFocus: "#0f5c4d",    // Primary input focus ring (single accent)
 
-  // Text Hierarchy (High-contrast typography)
-  textPrimary: "#0f172a",    // Slate 900: High-contrast primary headings & values
-  textSecondary: "#334155",  // Slate 700: Body copy and table cell text
-  textMuted: "#64748b",      // Slate 500: Subtitles, metadata, timestamps
-  textDisabled: "#94a3b8",   // Slate 400: Placeholders and inactive elements
-  textInverse: "#ffffff",    // Pure white for dark buttons & badges
+  // Text Hierarchy (three roles)
+  textPrimary: "#1c1b19",    // Headings and values
+  textSecondary: "#44423d",  // Body copy and table cell text
+  textMuted: "#79756c",      // Subtitles, metadata, timestamps
+  textDisabled: "#a8a399",   // Placeholders and inactive elements
+  textInverse: "#ffffff",    // Text on accent buttons
 
   // 1. Deep Indigo (Trust, Authority, Structure)
-  indigoPrimary: "#1e1b4b",  // Deepest Midnight Indigo
-  indigoDark: "#312e81",     // Deep Indigo 900 (Sidebar & Header highlights)
-  indigoMedium: "#3730a3",   // Indigo 800
-  indigoAccent: "#4338ca",   // Indigo 700 (Primary buttons & brand elements)
-  indigoAction: "#4f46e5",   // Electric Indigo 600 (Interactive focus & triggers)
-  indigoSubtle: "#eef2ff",   // Indigo 50 (Active tab backgrounds & soft pills)
-  indigoBorder: "#c7d2fe",   // Indigo 200
+  // The single accent. Names kept from the old indigo ramp so every screen picks it up.
+  indigoPrimary: "#0b3f35",  // Accent, deepest
+  indigoDark: "#0b3f35",     // Accent, deepest (sidebar highlights)
+  indigoMedium: "#0f5c4d",   // Accent
+  indigoAccent: "#0f5c4d",   // Primary buttons and brand marks
+  indigoAction: "#0f5c4d",   // Interactive focus and triggers
+  indigoSubtle: "#e7f0ed",   // Accent tint for active rows and soft pills
+  indigoBorder: "#bcd6cd",   // Accent hairline
 
   // 2. Emerald Green (Growth, Progression, Health)
   emeraldDark: "#047857",    // Emerald 700
@@ -110,10 +111,10 @@ export const typography = {
 
 export const shadows = {
   none: "none",
-  xs: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-  sm: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-  md: "0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.04)",
-  lg: "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)",
+  xs: "0 1px 1px 0 rgba(28, 27, 25, 0.04)",
+  sm: "0 1px 2px 0 rgba(28, 27, 25, 0.05)",
+  md: "0 2px 6px 0 rgba(28, 27, 25, 0.06)",
+  lg: "0 6px 16px 0 rgba(28, 27, 25, 0.08)",
   drawer: "-4px 0 24px rgba(0, 0, 0, 0.12)",
   modal: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
 };
@@ -133,4 +134,4 @@ export const transitions = {
 };
 
 // Keyboard focus ring: a white gap then Deep Indigo, visible on every surface.
-export const focusRing = "0 0 0 2px #ffffff, 0 0 0 4px #4338ca";
+export const focusRing = "0 0 0 2px #ffffff, 0 0 0 4px #0f5c4d";

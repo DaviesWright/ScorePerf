@@ -25,7 +25,7 @@ interface DashboardData {
   upcomingLeave: { startDate: string; endDate: string; leaveType: string; employeeName: string; department: string | null }[] | null;
 }
 
-const C = { text: "#1f2937", muted: "#4b5563", border: "#d1d5db", surface: "#ffffff", page: "#f9fafb", accent: "#1d4ed8", danger: "#b91c1c", warn: "#92400e" };
+const C = { text: "#1c1b19", muted: "#79756c", border: "#e4e1da", surface: "#ffffff", page: "#f7f6f3", accent: "#0f5c4d", danger: "#b91c1c", warn: "#92400e" };
 
 const S = {
   page: { padding: "1.5rem", maxWidth: "1100px" } as React.CSSProperties,
@@ -33,7 +33,7 @@ const S = {
   h2: { margin: "1.5rem 0 0.5rem", fontSize: "17px" } as React.CSSProperties,
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" } as React.CSSProperties,
   card: { border: `1px solid ${C.border}`, padding: "0.9rem 1rem", borderRadius: "6px", minHeight: "104px" } as React.CSSProperties,
-  big: { fontSize: "26px", fontWeight: 700, margin: "0.25rem 0" } as React.CSSProperties,
+  big: { fontSize: "26px", fontWeight: 600, margin: "0.25rem 0", fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
   table: { width: "100%", borderCollapse: "collapse", background: C.surface, border: `1px solid ${C.border}` } as React.CSSProperties,
   th: { textAlign: "left", padding: "0.6rem 0.75rem", borderBottom: `1px solid ${C.border}`, background: C.page, fontWeight: 600 } as React.CSSProperties,
   td: { padding: "0.6rem 0.75rem", borderBottom: `1px solid ${C.border}`, verticalAlign: "top" } as React.CSSProperties,
@@ -45,15 +45,16 @@ const Caption = ({ children }: { children: string }) => <caption style={{ textAl
 const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
 
 type Tone = "blue" | "green" | "amber" | "violet" | "rose" | "teal" | "indigo" | "orange";
+// One neutral surface and one accent for every tile. The tone prop is kept so call sites do not change.
 const TONES: Record<Tone, { edge: string; bg: string; text: string }> = {
-  blue: { edge: "#2563eb", bg: "#eff6ff", text: "#1e40af" },
-  green: { edge: "#16a34a", bg: "#f0fdf4", text: "#166534" },
-  amber: { edge: "#d97706", bg: "#fffbeb", text: "#92400e" },
-  violet: { edge: "#7c3aed", bg: "#f5f3ff", text: "#5b21b6" },
-  rose: { edge: "#e11d48", bg: "#fff1f2", text: "#9f1239" },
-  teal: { edge: "#0d9488", bg: "#f0fdfa", text: "#115e59" },
-  indigo: { edge: "#4f46e5", bg: "#eef2ff", text: "#3730a3" },
-  orange: { edge: "#ea580c", bg: "#fff7ed", text: "#9a3412" },
+  blue: { edge: C.accent, bg: C.surface, text: C.text },
+  green: { edge: C.accent, bg: C.surface, text: C.text },
+  amber: { edge: C.accent, bg: C.surface, text: C.text },
+  violet: { edge: C.accent, bg: C.surface, text: C.text },
+  rose: { edge: C.accent, bg: C.surface, text: C.text },
+  teal: { edge: C.accent, bg: C.surface, text: C.text },
+  indigo: { edge: C.accent, bg: C.surface, text: C.text },
+  orange: { edge: C.accent, bg: C.surface, text: C.text },
 };
 
 /** A coloured tile. With onOpen it is a button that opens the page behind it. */
@@ -133,8 +134,8 @@ export const DashboardScreen: React.FC<{
 
   return (
     <div style={S.page}>
-      <div style={{ background: "linear-gradient(135deg, #4f46e5 0%, #0891b2 100%)", color: "#ffffff", padding: "1.25rem 1.5rem", borderRadius: "8px", marginBottom: "0.5rem" }}>
-        <h1 style={{ ...S.h1, color: "#ffffff", margin: 0 }}>Dashboard</h1>
+      <div style={{ borderBottom: `1px solid ${C.border}`, color: C.text, padding: "0.25rem 0 1rem", marginBottom: "0.5rem" }}>
+        <h1 style={{ ...S.h1, color: C.text, fontWeight: 600, margin: 0 }}>Dashboard</h1>
         <p style={{ margin: "0.35rem 0 0", opacity: 0.92 }}>{data?.cycle ? `Cycle: ${data.cycle.title}` : "No performance cycle is open for goal setting."}</p>
       </div>
 
