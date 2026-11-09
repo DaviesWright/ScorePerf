@@ -35,8 +35,8 @@ export interface DemoStaff {
 export const DEMO_STAFF: DemoStaff[] = [
   { id: "EMP-001", name: "Paa Kwesi Barnes", jobTitle: "Managing Principal", department: "Executive Command", site: "ACC", email: "paa.barnes@bscscoreview.com" },
   { id: "EMP-002", name: "Benedicta Agbesi", jobTitle: "Lead Software Engineer", department: "Engineering & Cloud", site: "LON", email: "benedicta.agbesi@bscscoreview.com" },
-  { id: "EMP-003", name: "Richard Mamphey", jobTitle: "Head, Human Resources", department: "People Operations", site: "ACC", email: "richard.mamphey@bscscoreview.com" },
-  { id: "EMP-004", name: "Adjoa Asare", jobTitle: "HR Analytics Specialist", department: "People Analytics", site: "ACC", email: "adjoa.asare@bscscoreview.com" },
+  { id: "EMP-003", name: "Richard Amoah", jobTitle: "Head, Human Resources", department: "People Operations", site: "ACC", email: "richard.amoah@bscscoreview.com" },
+  { id: "EMP-004", name: "Belinda Ama Asare", jobTitle: "HR Analytics Specialist", department: "People Analytics", site: "ACC", email: "belinda.asare@bscscoreview.com" },
   { id: "EMP-005", name: "Philip Aryee", jobTitle: "Cloud Engineer", department: "Engineering & Cloud", site: "WDH", email: "philip.aryee@bscscoreview.com" },
   { id: "EMP-006", name: "Ndapewa Shikongo", jobTitle: "Solutions Architect", department: "Advisory", site: "WDH", email: "ndapewa.shikongo@bscscoreview.com" },
   { id: "EMP-007", name: "Tangeni Haufiku", jobTitle: "Delivery Manager", department: "Advisory", site: "WDH", email: "tangeni.haufiku@bscscoreview.com" },
@@ -81,8 +81,8 @@ export const DEFAULT_EMPLOYEES: EmployeeRecord[] = [
   {
     id: 3,
     first_name: "Richard",
-    last_name: "Mamphey",
-    email: "richard.mamphey@bscscoreview.com",
+    last_name: "Amoah",
+    email: "richard.amoah@bscscoreview.com",
     role: "hr_director",
     is_active: true,
     department_name: "People & Culture",
@@ -95,9 +95,9 @@ export const DEFAULT_EMPLOYEES: EmployeeRecord[] = [
   },
   {
     id: 4,
-    first_name: "Adjoa",
+    first_name: "Belinda Ama",
     last_name: "Asare",
-    email: "adjoa.asare@bscscoreview.com",
+    email: "belinda.asare@bscscoreview.com",
     role: "hr_specialist",
     is_active: true,
     department_name: "People & Culture",
@@ -275,7 +275,7 @@ export const DEFAULT_EMPLOYEES: EmployeeRecord[] = [
   },
   {
     id: 16,
-    first_name: "Clara",
+    first_name: "Doreen",
     last_name: "Sampson",
     email: "clara.sampson@bscscoreview.com",
     role: "customer_success_lead",
@@ -318,7 +318,7 @@ export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 
 // Asset codes follow SEN-<VEH|LAP|MOB>-<nnn>. Shown only when the API returns no assets.
 export const DEMO_ASSETS: AssetRecord[] = [
-  { id: 1, name: "Toyota Hilux 2.8 GD-6 (GR 4821-24)", asset_code: "SEN-VEH-001", category_name: "Vehicles", status: "allocated", first_name: "Richard", last_name: "Mamphey" },
+  { id: 1, name: "Toyota Hilux 2.8 GD-6 (GR 4821-24)", asset_code: "SEN-VEH-001", category_name: "Vehicles", status: "allocated", first_name: "Richard", last_name: "Amoah" },
   { id: 2, name: "Toyota Land Cruiser Prado (N 21874 W)", asset_code: "SEN-VEH-002", category_name: "Vehicles", status: "allocated", first_name: "Tangeni", last_name: "Haufiku" },
   { id: 3, name: "Ford Ranger XLT (GT 1190-25)", asset_code: "SEN-VEH-003", category_name: "Vehicles", status: "available" },
   { id: 4, name: "Toyota Corolla Cross (LK25 TRW)", asset_code: "SEN-VEH-004", category_name: "Vehicles", status: "allocated", first_name: "James", last_name: "Whitfield" },

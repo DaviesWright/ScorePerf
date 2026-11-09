@@ -105,7 +105,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     {
       id: 901,
       first_name: "Richard",
-      last_name: "Mamphey",
+      last_name: "Amoah",
       staff_id: "SHR/GH/038",
       department: "Human Resources",
       leave_type_name: "Annual Leave",
@@ -119,8 +119,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 902,
-      first_name: "Clara",
-      last_name: "Nukunu",
+      first_name: "Doreen",
+      last_name: "Wesley",
       staff_id: "SCG153",
       department: "Customer Service",
       leave_type_name: "Casual Leave",
@@ -129,11 +129,11 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       requested_days: "1.0",
       status: "PENDING",
       reason: "Personal urgent appointment in Accra",
-      approver: "Richard Mamphey",
+      approver: "Richard Amoah",
     },
     {
       id: 903,
-      first_name: "Adjoa",
+      first_name: "Belinda Ama",
       last_name: "Asare",
       staff_id: "GH/2017/6/13/094",
       department: "People & Culture",
@@ -167,7 +167,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [resumptions, setResumptions] = useState<LeaveResumptionRecord[]>([
     {
       id: 1,
-      employeeName: "Adjoa Asare",
+      employeeName: "Belinda Ama Asare",
       staffId: "GH/2017/6/13/094",
       department: "People & Culture",
       leaveType: "Maternity Leave (14 Weeks)",
@@ -230,7 +230,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 2,
-      employeeName: "Richard Mamphey",
+      employeeName: "Richard Amoah",
       staffId: "SHR/GH/038",
       department: "Human Resources",
       annualEntitlement: 22,
@@ -272,7 +272,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 5,
-      employeeName: "Clara Nukunu",
+      employeeName: "Doreen Wesley",
       staffId: "SCG153",
       department: "Customer Service",
       annualEntitlement: 21,
@@ -575,7 +575,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 2 Staff
               </div>
               <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.4rem" }}>
-                Kwame Mensah & Adjoa Asare
+                Kwame Mensah & Belinda Ama Asare
               </div>
             </div>
 
@@ -601,7 +601,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 {pendingLeavesCount} Request
               </div>
               <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.4rem" }}>
-                Clara Nukunu (Casual Leave)
+                Doreen Wesley (Casual Leave)
               </div>
             </div>
 
@@ -694,7 +694,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <Badge variant="info" size="sm">Smart Suggestion</Badge>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                I detected an upcoming 3-day weekend approaching for Ghana Practice (Independence Day on <strong>06 Mar 2026</strong>). <strong>Richard Mamphey</strong> and <strong>Philip Aryee</strong> currently hold over 17 days of unutilized annual leave. No critical project deliverables or client milestones are scheduled for that week. Would you like me to draft pre-approved leave requests to mitigate Q4 leave liability spikes?
+                I detected an upcoming 3-day weekend approaching for Ghana Practice (Independence Day on <strong>06 Mar 2026</strong>). <strong>Richard Amoah</strong> and <strong>Philip Aryee</strong> currently hold over 17 days of unutilized annual leave. No critical project deliverables or client milestones are scheduled for that week. Would you like me to draft pre-approved leave requests to mitigate Q4 leave liability spikes?
               </p>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
                 <button
@@ -1506,8 +1506,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               </thead>
               <tbody>
                 {[
-                  { id: "BATCH-2026-09", file: "Workforce_Ghana_2025_Final.csv", rows: "348 records", date: "2026-01-15", operator: "Richard Mamphey", status: "Verified 100%" },
-                  { id: "BATCH-2026-04", file: "Henley_Resources_Accra_Q1.xlsx", rows: "92 records", date: "2026-04-02", operator: "Adjoa Asare", status: "Verified 100%" },
+                  { id: "BATCH-2026-09", file: "Workforce_Ghana_2025_Final.csv", rows: "348 records", date: "2026-01-15", operator: "Richard Amoah", status: "Verified 100%" },
+                  { id: "BATCH-2026-04", file: "Henley_Resources_Accra_Q1.xlsx", rows: "92 records", date: "2026-04-02", operator: "Belinda Ama Asare", status: "Verified 100%" },
                   { id: "BATCH-2026-11", file: "UK_Advisory_Leave_Sync.csv", rows: "45 records", date: "2026-11-01", operator: "Paa Kwesi Barnes", status: "Verified 100%" },
                 ].map((b) => (
                   <tr key={b.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
@@ -1731,7 +1731,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 {[
                   { title: "Executive Wellness & Mental Health Grant", days: "+3.0 Days", pool: "All Active Staff (91 Employees)", expiry: "31 Dec 2026", auth: "Paa Kwesi Barnes (Managing Principal)", status: "Active" },
                   { title: "Professional Examination Study Grant", days: "+5.0 Days", pool: "Advisory & Engineering Analysts", expiry: "30 Nov 2026", auth: "Sarah Jenkins (VP People)", status: "Active" },
-                  { title: "Paternity Compassionate Extension", days: "+5.0 Days", pool: "Eligible New Fathers", expiry: "31 Dec 2026", auth: "Richard Mamphey (HR Head)", status: "Active" },
+                  { title: "Paternity Compassionate Extension", days: "+5.0 Days", pool: "Eligible New Fathers", expiry: "31 Dec 2026", auth: "Richard Amoah (HR Head)", status: "Active" },
                 ].map((g, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                     <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.textPrimary }}>{g.title}</td>
@@ -2221,10 +2221,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                 >
                   <option value="Paa Kwesi Barnes">Paa Kwesi Barnes (Managing Principal)</option>
-                  <option value="Richard Mamphey">Richard Mamphey (HR Head)</option>
+                  <option value="Richard Amoah">Richard Amoah (HR Head)</option>
                   <option value="Benedicta Agbesi">Benedicta Agbesi (People & Culture)</option>
                   <option value="Philip Aryee">Philip Aryee (Cloud Engineering)</option>
-                  <option value="Clara Nukunu">Clara Nukunu (Customer Service)</option>
+                  <option value="Doreen Wesley">Doreen Wesley (Customer Service)</option>
                 </select>
               </div>
 

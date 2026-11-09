@@ -944,7 +944,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary }}>
-                      ⭐ Peer Kudos from Adjoa Asare
+                      ⭐ Peer Kudos from Belinda Ama Asare
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
                       &ldquo;Mentored the data engineering squad through mathematical rating calibration standards.&rdquo;

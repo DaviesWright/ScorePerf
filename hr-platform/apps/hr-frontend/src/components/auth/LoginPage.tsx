@@ -17,7 +17,18 @@ export interface AuthenticatedUser {
   location: string;
 }
 
+// The first entry is the default demo user, so the HR manager opens first.
 export const PRESET_USERS: AuthenticatedUser[] = [
+  {
+    id: "EMP-003",
+    name: "Richard Amoah",
+    email: "richard.amoah@bscscoreview.com",
+    role: "HR Manager",
+    persona: "hr_admin",
+    avatarText: "RA",
+    department: "People Operations",
+    location: "Accra Global Hub",
+  },
   {
     id: "EMP-001",
     name: "Paa Kwesi Barnes",
@@ -49,19 +60,9 @@ export const PRESET_USERS: AuthenticatedUser[] = [
     location: "Windhoek Hub",
   },
   {
-    id: "EMP-003",
-    name: "Richard Mamphey",
-    email: "richard.mamphey@bscscoreview.com",
-    role: "Head, Human Resources",
-    persona: "hr_admin",
-    avatarText: "RM",
-    department: "People Operations",
-    location: "Accra Global Hub",
-  },
-  {
     id: "EMP-004",
-    name: "Adjoa Asare",
-    email: "adjoa.asare@bscscoreview.com",
+    name: "Belinda Ama Asare",
+    email: "belinda.asare@bscscoreview.com",
     role: "HR Analytics Specialist",
     persona: "line_manager",
     avatarText: "AA",

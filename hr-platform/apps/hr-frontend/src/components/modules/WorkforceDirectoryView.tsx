@@ -167,7 +167,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       id: 4,
       name: "Customer Success & Service Quality Guild",
       type: "CROSS_FUNCTIONAL",
-      leadName: "Clara Nukunu",
+      leadName: "Doreen Wesley",
       memberCount: 9,
       currentMission: "Sub-4 minute first touch ticket resolution across enterprise clients.",
       activeSprint: "NPS Growth Cycle",
@@ -189,7 +189,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
     },
     {
       id: 2,
-      employeeName: "Richard Mamphey",
+      employeeName: "Richard Amoah",
       staffId: "SHR/GH/038",
       contractType: "Permanent",
       startDate: "2021-03-01",
@@ -237,12 +237,12 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   const [profileRequests, setProfileRequests] = useState<ProfileChangeRequest[]>([
     {
       id: 101,
-      employeeName: "Clara Nukunu",
+      employeeName: "Doreen Wesley",
       staffId: "SCG153",
       department: "Customer Service",
       fieldChanged: "Emergency Contact / Next of Kin",
-      previousValue: "Grace Nukunu (Mother) - +233 24 000 0000",
-      requestedValue: "Michael Nukunu (Spouse) - +233 20 888 9999",
+      previousValue: "Grace Wesley (Mother) - +233 24 000 0000",
+      requestedValue: "Michael Wesley (Spouse) - +233 20 888 9999",
       reason: "Recent marriage statutory registration",
       status: "PENDING_HR",
       submittedDate: "2026-11-02",

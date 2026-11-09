@@ -31,8 +31,8 @@ const POLICY_CATEGORIES = ["Conduct", "Leave & Attendance", "Information Securit
 
 // Synthetic demo documents.
 const INITIAL_POLICIES: PolicyDoc[] = [
-  { id: 1, title: "Code of Conduct", category: "Conduct", version: "3.1", owner: "Richard Mamphey", effective: "2026-01-01", status: "Published" },
-  { id: 2, title: "Remote & Hybrid Working", category: "Leave & Attendance", version: "2.0", owner: "Richard Mamphey", effective: "2026-03-01", status: "Published" },
+  { id: 1, title: "Code of Conduct", category: "Conduct", version: "3.1", owner: "Richard Amoah", effective: "2026-01-01", status: "Published" },
+  { id: 2, title: "Remote & Hybrid Working", category: "Leave & Attendance", version: "2.0", owner: "Richard Amoah", effective: "2026-03-01", status: "Published" },
   { id: 3, title: "Acceptable Use of Company Devices", category: "Information Security", version: "1.4", owner: "Philip Aryee", effective: "2026-05-15", status: "Published" },
   { id: 4, title: "Company Vehicle Use", category: "Health & Safety", version: "1.0", owner: "Tangeni Haufiku", effective: "2026-09-01", status: "Published" },
   { id: 5, title: "Travel & Expenses", category: "Travel & Expenses", version: "0.9", owner: "Kojo Antwi", effective: "2026-12-01", status: "Draft" },

@@ -12,8 +12,8 @@ export const AdminNerveCenterView: React.FC = () => {
 
   // Manager Digest Pending Action Items State
   const [pendingApprovals, setPendingApprovals] = useState([
-    { id: 1, type: "Objective Request", staff: "Clara Nukunu (SCG153)", role: "Customer Service Exec", action: "Review OKRs", urgency: "High", time: "2 hours ago" },
-    { id: 2, type: "Leave Request", staff: "Adjoa Asare (GH/094)", role: "HR Analytics Specialist", action: "Annual Leave (3 days)", urgency: "Normal", time: "5 hours ago" },
+    { id: 1, type: "Objective Request", staff: "Doreen Wesley (SCG153)", role: "Customer Service Exec", action: "Review OKRs", urgency: "High", time: "2 hours ago" },
+    { id: 2, type: "Leave Request", staff: "Belinda Ama Asare (GH/094)", role: "HR Analytics Specialist", action: "Annual Leave (3 days)", urgency: "Normal", time: "5 hours ago" },
     { id: 3, type: "Probation Review", staff: "Kwame Mensah (KSP/0220)", role: "Assembly Worker", action: "Probation Ends in 8 Days", urgency: "Action Due", time: "Today" },
     { id: 4, type: "1-on-1 Check-in", staff: "Philip Aryee (SEN-005)", role: "Senior Cloud Consultant", action: "Sprint Pulse Due", urgency: "Today 3:00 PM", time: "Scheduled" },
   ]);
