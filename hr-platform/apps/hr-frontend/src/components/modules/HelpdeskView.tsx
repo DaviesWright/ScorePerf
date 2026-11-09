@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
+import { HelpdeskMiniDashboard } from "./HelpdeskMiniDashboard";
 
 export interface TicketRecord {
   id: number;
@@ -26,6 +27,7 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({ initialTickets }) =>
   const [category, setCategory] = useState("Hardware");
   const [priority, setPriority] = useState("medium");
   const [description, setDescription] = useState("");
+  const listRef = useRef<HTMLDivElement>(null);
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,13 +149,17 @@ export const HelpdeskView: React.FC<HelpdeskViewProps> = ({ initialTickets }) =>
         </Button>
       </div>
 
+      <HelpdeskMiniDashboard tickets={tickets} onOpenFull={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+
       {/* Ticket Table */}
-      <DataTable
-        columns={columns}
-        data={tickets}
-        keyExtractor={(t) => t.id}
-        emptyMessage="No open support tickets."
-      />
+      <div ref={listRef}>
+        <DataTable
+          columns={columns}
+          data={tickets}
+          keyExtractor={(t) => t.id}
+          emptyMessage="No open support tickets."
+        />
+      </div>
 
       {/* Ticket Modal */}
       {showModal && (

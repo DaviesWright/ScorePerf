@@ -5,6 +5,7 @@ import { countWorkingDays, isDecider, type AccessRole } from "@hr-platform/share
 import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, type LeaveRequestView } from "../../lib/leaveApi";
 import { formatDate } from "../../utils/date";
 import { LeaveLoadStrip } from "./LeaveLoadStrip";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
@@ -103,6 +104,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
   return (
     <div style={S.page}>
       <h1 style={S.h1}>Leave</h1>
+      <LeaveMiniDashboard api={api} onOpenFull={() => setTab("mine")} />
       <div role="tablist" aria-label="Leave sections" style={S.tabs}>
         {tabs.map((t) => (
           <button

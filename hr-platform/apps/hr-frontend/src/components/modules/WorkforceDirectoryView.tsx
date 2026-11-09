@@ -8,6 +8,7 @@ import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
+import { WorkforceMiniDashboard } from "./WorkforceMiniDashboard";
 
 export interface EmployeeRecord {
   id: number;
@@ -24,6 +25,7 @@ export interface EmployeeRecord {
   join_date?: string;
   age?: number;
   contract_type?: string;
+  office?: string | null;
 }
 
 export interface AssetRecord {
@@ -528,6 +530,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === "overview" && (
         <div>
+          <WorkforceMiniDashboard employees={employees} onOpenFull={() => setActiveTab("employees")} />
           {/* Welcome Hero Banner (Screenshot) */}
           <div
             style={{
