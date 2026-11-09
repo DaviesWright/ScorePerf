@@ -1032,7 +1032,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                   <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
                     {squad.name}
                   </h3>
-                  <Badge variant="info" size="sm">{squad.type.replace("_", " ")}</Badge>
                 </div>
                 <div style={{ fontSize: "11px", color: colors.textMuted, marginBottom: "0.75rem" }}>
                   Lead: <strong>{squad.leadName}</strong> • {squad.memberCount} Team Members
@@ -1231,7 +1230,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
               <thead>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STAFF MEMBER</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>REDEPLOYMENT NATURE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FROM PRACTICE / ROLE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>TO PRACTICE / ROLE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EFFECTIVE DATE</th>
@@ -1244,9 +1242,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <div style={{ fontWeight: 700, color: colors.textPrimary }}>{r.employeeName}</div>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{r.staffId}</div>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem" }}>
-                      <Badge variant="info" size="sm">{r.type.replace("_", " ")}</Badge>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textMuted }}>
                       {r.currentDepartment} • {r.currentRole}

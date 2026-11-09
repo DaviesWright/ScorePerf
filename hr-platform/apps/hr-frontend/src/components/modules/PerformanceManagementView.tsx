@@ -1971,44 +1971,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "military_chain" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {/* Header Banner */}
-          <div
-            style={{
-              padding: "1rem 1.25rem",
-              borderRadius: radii.lg,
-              backgroundColor: "#f8fafc",
-              border: `1px solid ${colors.borderStrong}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Icons.ShieldCheck size={18} color="#0f172a" />
-                <h2 style={{ fontSize: typography.sizes.base, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                  Sequential Hierarchical Appraisal Workflow (5-Tier Chain)
-                </h2>
-              </div>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Multi-tier sequential appraisal protocol: Immutable score locks at each level, employee credential verification, cryptographic digital stamps, and automated executive PDF dossier generation.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setMilitaryPdfGenerated(true);
-                  setStatusMessage({ text: "Official Executive Appraisal PDF generated with cryptographic digital stamps." });
-                }}
-              >
-                <Icons.FileText size={14} />
-                <span>Generate Stamped PDF</span>
-              </Button>
-            </div>
-          </div>
-
           {/* Sequential 5-Tier Command Sign-Off Chain */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {militaryChain.map((step) => {
@@ -2110,31 +2072,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             })}
           </div>
 
-          {/* Stamped Executive PDF Preview Modal Banner */}
-          {militaryPdfGenerated && (
-            <div
-              style={{
-                padding: "1.25rem 1.5rem",
-                borderRadius: radii.lg,
-                backgroundColor: "#f8fafc",
-                border: "2px solid #0f172a",
-                boxShadow: shadows.md,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Icons.Award size={18} color="#0f172a" />
-                  <span style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>
-                    Official Form EXEC-GH/APPRAISAL/2026 Ready
-                  </span>
-                </div>
-                <Badge variant="success" size="sm">Tamper-Proof Audit Hash Verified</Badge>
-              </div>
-              <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                The appraisal dossier for <strong>Emmanuel K. Quarshie</strong> has been bundled with locked self-scores, line manager grades, and cryptographic digital stamps. This document complies with statutory health service guidelines and ISO 27001 audit standards.
-              </p>
-            </div>
-          )}
         </div>
       )}
 
@@ -5105,9 +5042,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>Cycle & Subsidiary</span>
-                <Badge variant={selectedRequestForDetail.objectiveType === "BSC" ? "bsc" : "okr"} size="sm">
-                  {selectedRequestForDetail.objectiveType} Pure
-                </Badge>
               </div>
               <div style={{ fontWeight: 700, fontSize: typography.sizes.sm, color: colors.textPrimary }}>
                 {selectedRequestForDetail.appraisalCycle}

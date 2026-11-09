@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { formatDateTime } from "../../utils/date";
 
 // Performance setup: HR loads the corporate strategy goals and the reporting lines from CSV. Everyone can read both.
 // A load replaces the whole set on the server, so the upload area says so before HR submits.
@@ -131,7 +132,7 @@ const StrategySection: React.FC<{ canLoad: boolean }> = ({ canLoad }) => {
         Corporate strategy
       </h2>
       <p style={{ color: C.muted, margin: "0 0 0.75rem" }}>
-        {loadedAt ? `Last loaded ${new Date(loadedAt).toLocaleString()}.` : "No strategy loaded yet."} Columns: perspective, objective, measure, target, owner, weight.
+        {loadedAt ? `Last loaded ${formatDateTime(loadedAt)}.` : "No strategy loaded yet."} Columns: perspective, objective, measure, target, owner, weight.
       </p>
       {goals.length > 0 && (
         <div style={{ overflowX: "auto" }}>

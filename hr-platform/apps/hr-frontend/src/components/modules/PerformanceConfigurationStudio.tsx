@@ -748,7 +748,6 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                         Scope: {scale.departmentScope}
                       </span>
                     </div>
-                    <Badge variant="neutral" size="sm">{scale.type.toUpperCase()}</Badge>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.6rem" }}>

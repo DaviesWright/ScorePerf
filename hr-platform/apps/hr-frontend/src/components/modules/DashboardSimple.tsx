@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import type { AccessRole } from "@hr-platform/shared";
 import type { ModuleViewKey } from "../shell/AppSidebar";
+import { formatDate } from "../../utils/date";
 import { HomePanels, NotificationsPanel } from "./HomePanels";
 import { OrgPosition } from "./OrgPosition";
 
@@ -42,7 +43,7 @@ const S = {
 
 const Caption = ({ children }: { children: string }) => <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{children}</caption>;
 
-const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
+const fmt = (iso: string) => formatDate(iso);
 
 type Tone = "blue" | "green" | "amber" | "violet" | "rose" | "teal" | "indigo" | "orange";
 // One neutral surface and one accent for every tile. The tone prop is kept so call sites do not change.

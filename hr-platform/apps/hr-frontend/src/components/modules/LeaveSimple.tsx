@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { countWorkingDays, isDecider, type AccessRole } from "@hr-platform/shared";
 import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, type LeaveRequestView } from "../../lib/leaveApi";
+import { formatDate } from "../../utils/date";
+import { LeaveLoadStrip } from "./LeaveLoadStrip";
 
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
@@ -43,8 +45,7 @@ function Status({ value }: { value: string }) {
   );
 }
 
-const fmt = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+const fmt = (iso: string) => formatDate(iso);
 const range = (r: { startDate: string; endDate: string }) => (r.startDate === r.endDate ? fmt(r.startDate) : `${fmt(r.startDate)} to ${fmt(r.endDate)}`);
 
 function useLoad<T>(load: () => Promise<T>, deps: React.DependencyList) {
@@ -987,7 +988,7 @@ function BalanceAdjust() {
               <tbody>
                 {history.map((h) => (
                   <tr key={h.id}>
-                    <td style={S.td}>{new Date(h.createdAt).toLocaleDateString("en-GB")}</td>
+                    <td style={S.td}>{formatDate(h.createdAt)}</td>
                     <td style={S.td}>{h.leaveType}</td>
                     <td style={S.td}>{h.year}</td>
                     <td style={S.td}>{h.days > 0 ? `+${h.days}` : h.days}</td>
@@ -1177,6 +1178,14 @@ function LeaveRoster({ scope, from, to }: { scope: "team" | "company"; from: str
       {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
       {rows === null && !error && <p role="status">Loading…</p>}
       {rows && rows.length === 0 && <p style={S.note}>No leave in this period.</p>}
+      {rows && rows.length > 0 && (
+        <LeaveLoadStrip
+          rows={rows}
+          from={from}
+          to={to}
+          caption={scope === "team" ? "Team leave load by day: darker means more people off" : "Company leave load by day: darker means more people off"}
+        />
+      )}
       {rows && rows.length > 0 && (
         <table style={S.table}>
           <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{scope === "team" ? "My team leave" : "Company leave"}</caption>

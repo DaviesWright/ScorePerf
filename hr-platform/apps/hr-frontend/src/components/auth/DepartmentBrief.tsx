@@ -6,6 +6,7 @@ import type { AuthenticatedUser } from "./LoginPage";
 import type { ModuleViewKey } from "../shell/AppSidebar";
 import { isViewEnabled } from "../../config/modules";
 import { DEMO_ATTENTION, DEMO_EVENTS, DEMO_LEAVES, DEMO_STAFF, PROFILE_MISSING } from "../../data/demoData";
+import { formatDate } from "../../utils/date";
 
 interface DepartmentBriefProps {
   user: AuthenticatedUser;
@@ -21,7 +22,7 @@ function dayLabel(base: Date, offset: number, inSentence = false): string {
   if (offset === 1) return inSentence ? "tomorrow" : "Tomorrow";
   const d = new Date(base);
   d.setDate(d.getDate() + offset);
-  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
+  return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${formatDate(d, { format: "dayMonth" })}`;
 }
 
 const card: React.CSSProperties = {

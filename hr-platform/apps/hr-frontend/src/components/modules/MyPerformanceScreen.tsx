@@ -2,6 +2,7 @@
 
 import React from "react";
 import { C, Muted, Notice, card, cell, useLoad } from "./selfServiceUi";
+import { formatDate } from "../../utils/date";
 
 // Personal performance. Read only: my objectives in the cycle, their weighted progress and where my review stands.
 
@@ -99,7 +100,7 @@ export const MyPerformanceScreen: React.FC<{ user: { id: string; persona: string
               <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
                 {page.data.reviews.map((r, i) => (
                   <li key={i}>
-                    {r.status} (updated {new Date(r.updatedAt).toLocaleDateString()})
+                    {r.status} (updated {formatDate(r.updatedAt)})
                   </li>
                 ))}
               </ul>

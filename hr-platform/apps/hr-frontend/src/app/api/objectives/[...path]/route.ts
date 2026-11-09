@@ -5,7 +5,7 @@ import { API_BASE, SESSION_COOKIE } from "../../../../lib/session";
 // reads it on the server and forwards the call to the API as a Bearer token. Only the objectives endpoints are
 // reachable, and state-changing calls must come from this site. "create" maps to POST /api/v1/objectives.
 
-const ALLOWED = /^(me|all|pending|amendments|create|submit|decision|\d{1,9}\/(update|delete|progress|amend))$/;
+const ALLOWED = /^(me|all|team-progress|pending|amendments|create|submit|decision|\d{1,9}\/(update|delete|progress|amend))$/;
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");

@@ -92,8 +92,17 @@ const CSS = `
 }
 `;
 
+// Role descriptions shown in the header. Demo sessions show these instead of a person's name.
+const ROLE_TITLES: Record<string, string> = {
+  employee: "Employee (self-service)",
+  line_manager: "Line manager",
+  hr_admin: "HR administrator",
+  hr_director: "HR director",
+};
+
 interface PlainShellProps {
   user: { name: string; email: string; role: string };
+  showName?: boolean;
   currentView: ModuleViewKey;
   onNavigate: (view: ModuleViewKey) => void;
   onSignOut: () => void;
@@ -102,7 +111,7 @@ interface PlainShellProps {
   children: React.ReactNode;
 }
 
-export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNavigate, onSignOut, onOpenDede, onOpenSearch, children }) => {
+export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, currentView, onNavigate, onSignOut, onOpenDede, onOpenSearch, children }) => {
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
   const enabled = ALL_VIEWS.filter((v) => isViewEnabled(v));
   const grouped = GROUPS.map((g) => ({ label: g.label, views: g.views.filter((v) => enabled.includes(v)) })).filter((g) => g.views.length > 0);
@@ -121,8 +130,14 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, currentView, onNav
         <strong style={{ fontSize: "17px" }}>ScoReview HR</strong>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
           <span>
-            {user.name}
-            {user.role ? <span style={{ color: C.muted }}> ({user.role})</span> : null}
+            {showName ? (
+              <>
+                {user.name}
+                {user.role ? <span style={{ color: C.muted }}> ({ROLE_TITLES[user.role] ?? user.role})</span> : null}
+              </>
+            ) : (
+              ROLE_TITLES[user.role] ?? user.role
+            )}
           </span>
           {onOpenSearch && (
             <button type="button" className="ps-signout" onClick={onOpenSearch}>

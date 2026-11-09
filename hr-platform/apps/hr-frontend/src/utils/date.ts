@@ -1,13 +1,19 @@
 /**
- * Enterprise Date Formatting Utilities for ScoReview HR
- * Simplifies ISO 8601 timestamps (e.g. "2026-04-01T00:00:00.000Z") into clean, human-readable formats.
+ * Date formatting for ScoReview HR. Every date shows as DD/MM/YYYY.
+ * Date-times add a 24-hour HH:mm after the date.
  */
 
-const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** A usable Date from a string or Date, or null when it does not parse. */
+function asDate(input: string | Date): Date | null {
+  const d = input instanceof Date ? input : new Date(input);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 /**
- * Parses any ISO 8601 string or Date object and returns a simplified date string:
- * e.g. "2026-04-01T00:00:00.000Z" -> "01 Apr 2026"
+ * Formats a date as DD/MM/YYYY (or DD/MM, MM/YYYY with the format option).
+ * A string that starts with YYYY-MM-DD uses those digits as written, so a UTC-midnight value never shifts a day.
  */
 export function formatDate(
   dateInput: string | Date | null | undefined,
@@ -18,51 +24,38 @@ export function formatDate(
 ): string {
   if (!dateInput) return "—";
 
-  try {
-    // If it's a string like "2026-04-01T00:00:00.000Z" or "2026-04-01"
-    const str = typeof dateInput === "string" ? dateInput.trim() : dateInput.toISOString();
-    
-    // Extract year, month, day directly to avoid timezone shift issues
-    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (match) {
-      const year = match[1];
-      const monthIdx = parseInt(match[2], 10) - 1;
-      const day = match[3];
-      const monthName = MONTHS_SHORT[monthIdx] || match[2];
-
-      if (options?.format === "short") {
-        return `${year}-${match[2]}-${day}`;
-      }
-
-      if (options?.format === "dayMonth") {
-        return `${day} ${monthName}`;
-      }
-
-      if (options?.format === "monthYear") {
-        return `${monthName} ${year}`;
-      }
-
-      // Default "readable": "01 Apr 2026"
-      return `${day} ${monthName} ${year}`;
-    }
-
-    // Fallback to standard Date parsing if format differs
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return String(dateInput);
-
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = MONTHS_SHORT[d.getMonth()];
-    const year = d.getFullYear();
-
-    return `${day} ${month} ${year}`;
-  } catch {
-    return typeof dateInput === "string" ? dateInput.split("T")[0] : "—";
+  const literal = typeof dateInput === "string" ? dateInput.trim().match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
+  let year: number;
+  let month: number;
+  let day: number;
+  if (literal) {
+    year = Number(literal[1]);
+    month = Number(literal[2]);
+    day = Number(literal[3]);
+  } else {
+    const d = asDate(dateInput);
+    if (!d) return String(dateInput);
+    year = d.getFullYear();
+    month = d.getMonth() + 1;
+    day = d.getDate();
   }
+
+  if (options?.format === "dayMonth") return `${pad(day)}/${pad(month)}`;
+  if (options?.format === "monthYear") return `${pad(month)}/${year}`;
+  return `${pad(day)}/${pad(month)}/${year}`;
+}
+
+/** Date and 24-hour time, e.g. "09/11/2026 14:05". A date-only value shows the date alone. */
+export function formatDateTime(dateInput: string | Date | null | undefined): string {
+  if (!dateInput) return "—";
+  const d = asDate(dateInput);
+  if (!d) return String(dateInput);
+  if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) return formatDate(dateInput);
+  return `${formatDate(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**
- * Formats a start and end date range cleanly:
- * e.g. "2026-04-01T00:00:00.000Z" and "2026-06-30T00:00:00.000Z" -> "01 Apr 2026 – 30 Jun 2026"
+ * Formats a start and end date range: "01/04/2026 – 30/06/2026".
  */
 export function formatDateRange(
   startDate?: string | Date | null,
@@ -71,24 +64,11 @@ export function formatDateRange(
   if (!startDate && !endDate) return "—";
   if (!endDate) return formatDate(startDate);
   if (!startDate) return formatDate(endDate);
-
-  const startFormatted = formatDate(startDate);
-  const endFormatted = formatDate(endDate);
-
-  // If same year, we can keep it ultra clean: "01 Apr – 30 Jun 2026"
-  const startParts = startFormatted.split(" ");
-  const endParts = endFormatted.split(" ");
-
-  if (startParts.length === 3 && endParts.length === 3 && startParts[2] === endParts[2]) {
-    return `${startParts[0]} ${startParts[1]} – ${endParts[0]} ${endParts[1]} ${endParts[2]}`;
-  }
-
-  return `${startFormatted} – ${endFormatted}`;
+  return `${formatDate(startDate)} – ${formatDate(endDate)}`;
 }
 
 /**
- * Safely formats any table cell value: if it is an ISO date string (e.g. "2026-04-01T00:00:00.000Z" or "2026-11-01"),
- * it transforms it into a clean human readable format (e.g. "01 Apr 2026"). Otherwise returns original string.
+ * Safely formats any table cell value: an ISO date string becomes DD/MM/YYYY. Other values are returned as they are.
  */
 export function formatCellIfDate(val: unknown): string {
   if (val === null || val === undefined) return "—";
@@ -102,12 +82,12 @@ export function formatCellIfDate(val: unknown): string {
 }
 
 /**
- * Returns a short relative date or clean calendar date
+ * Returns "Today", "Yesterday", "N days ago" for recent dates, otherwise DD/MM/YYYY.
  */
 export function formatTimeAgo(dateInput: string | Date | null | undefined): string {
   if (!dateInput) return "—";
-  const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
-  if (isNaN(d.getTime())) return formatDate(dateInput);
+  const d = asDate(dateInput);
+  if (!d) return formatDate(dateInput);
 
   const diffMs = Date.now() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { formatDate as formatDateOf } from "../../utils/date";
 
 // Shared look and fetch helpers for the self-service screens. The visual language matches PlainShell.
 
@@ -63,4 +64,4 @@ export const Notice: React.FC<{ kind: "ok" | "error"; text: string | null }> = (
 
 export const Muted: React.FC<{ children: React.ReactNode }> = ({ children }) => <p style={{ color: C.muted, margin: "0 0 0.75rem" }}>{children}</p>;
 
-export const formatDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : "");
+export const formatDate = (iso: string | null) => (iso ? formatDateOf(iso) : "");

@@ -1646,6 +1646,35 @@ app.get("/api/v1/objectives/all", async (c) => {
   return c.json({ cycle, results: rows.map(toObjective) });
 });
 
+// HR's progress heatmap: every approved objective in a cycle with its progress, one row per objective per person.
+app.get("/api/v1/objectives/team-progress", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHr(role)) return c.json({ error: "Forbidden" }, 403);
+  const sql = getSql(c.env);
+  const cycle = await objectiveCycle(sql, companyId, queryCycleId(c.req.query("cycleId")));
+  if (!cycle) return c.json({ cycle: null, results: [] });
+  const rows = await sql`
+    SELECT o.id, o.employee_id, o.title, o.weight, o.progress_percentage, e.first_name, e.last_name, d.name AS department
+    FROM employee_objectives o
+    JOIN employees e ON e.id = o.employee_id
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE o.company_id = ${companyId} AND o.cycle_id = ${cycle.id} AND o.status = 'approved'
+    ORDER BY e.last_name, e.first_name, o.id LIMIT 1000
+  `;
+  return c.json({
+    cycle,
+    results: rows.map((r) => ({
+      id: Number(r.id),
+      employeeId: Number(r.employee_id),
+      employeeName: `${r.first_name} ${r.last_name}`,
+      department: r.department ?? null,
+      title: r.title,
+      weight: Number(r.weight),
+      progress: Number(r.progress_percentage),
+    })),
+  });
+});
+
 app.get("/api/v1/objectives/amendments", async (c) => {
   const { companyId, role } = c.get("tenant");
   if (!isHr(role)) return c.json({ error: "Forbidden" }, 403);

@@ -521,6 +521,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       <>
         <PlainShell
           user={currentUser}
+          showName={!!initialUser}
           currentView={currentView}
           onNavigate={setCurrentView}
           onSignOut={handleSignOut}

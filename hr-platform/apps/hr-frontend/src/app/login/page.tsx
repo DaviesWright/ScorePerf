@@ -155,8 +155,8 @@ export default function LoginPage() {
             </Button>
           </form>
         )}
-        <p style={{ margin: "1.25rem 0 0 0", fontSize: typography.sizes.sm, textAlign: "center" }}>
-          <a href="/?demo=1" style={{ color: colors.indigoAction, fontWeight: 600 }}>Skip to the demo personas</a>
+        <p style={{ margin: "1.5rem 0 0 0", fontSize: typography.sizes.xs, textAlign: "center" }}>
+          <a href="/?demo=1" style={{ color: colors.textMuted, fontWeight: typography.weights.regular, textDecoration: "underline", textUnderlineOffset: "2px" }}>Skip to the demo personas</a>
         </p>
       </div>
     </main>

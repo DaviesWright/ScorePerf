@@ -6,7 +6,7 @@ import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
-import { formatCellIfDate } from "../../utils/date";
+import { formatCellIfDate, formatDate } from "../../utils/date";
 
 export interface ReportItem {
   id: number;
@@ -1292,8 +1292,8 @@ export const ReportsAnalyticsView: React.FC = () => {
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(9.5);
         doc.setFont("helvetica", "normal");
-        doc.text(`Category: ${report.category}  |  Pack: ${report.pack}  |  Report ID: #${report.id}`, 14, 41);
-        doc.text(`Generated: ${new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`, 14, 46);
+        doc.text(`Category: ${report.category}  |  Report ID: #${report.id}`, 14, 41);
+        doc.text(`Generated: ${formatDate(new Date())}`, 14, 46);
 
         // Divider
         doc.setDrawColor(226, 232, 240);
@@ -1949,35 +1949,6 @@ export const ReportsAnalyticsView: React.FC = () => {
                   #{report.id}
                 </span>
 
-                <div style={{ display: "flex", gap: "0.35rem" }}>
-                  <span
-                    style={{
-                      fontSize: "9px",
-                      fontWeight: 600,
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: radii.full,
-                      backgroundColor: report.type === "Strategic Dashboard" ? colors.emeraldSubtle : colors.surfaceSubtle,
-                      color: report.type === "Strategic Dashboard" ? colors.emeraldDark : colors.textSecondary,
-                      border: `1px solid ${report.type === "Strategic Dashboard" ? colors.emeraldBorder : colors.border}`,
-                    }}
-                  >
-                    {report.type}
-                  </span>
-                  {report.pack !== "General" && (
-                    <span
-                      style={{
-                        fontSize: "9px",
-                        fontWeight: 600,
-                        padding: "0.1rem 0.4rem",
-                        borderRadius: radii.full,
-                        backgroundColor: colors.indigoSubtle,
-                        color: colors.indigoPrimary,
-                      }}
-                    >
-                      {report.pack}
-                    </span>
-                  )}
-                </div>
               </div>
 
               {/* Title & Description */}
@@ -2389,7 +2360,6 @@ export const ReportsAnalyticsView: React.FC = () => {
                     REPORT #{activeReportModal.id}
                   </span>
                   <Badge variant="neutral" size="sm">{activeReportModal.category}</Badge>
-                  <Badge variant="success" size="sm">{activeReportModal.type}</Badge>
                 </div>
                 <h2 style={{ margin: "4px 0 0 0", fontSize: typography.sizes.lg, fontWeight: 700, color: colors.indigoPrimary }}>
                   {activeReportModal.name}

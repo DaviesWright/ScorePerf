@@ -699,7 +699,6 @@ export const AdminNerveCenterView: React.FC = () => {
                       <span style={{ fontWeight: typography.weights.semibold, color: colors.textPrimary, fontSize: typography.sizes.sm }}>
                         {node.title}
                       </span>
-                      <Badge variant="neutral" size="sm">{node.type}</Badge>
                     </div>
                     <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted, marginTop: "0.15rem" }}>
                       {node.desc}

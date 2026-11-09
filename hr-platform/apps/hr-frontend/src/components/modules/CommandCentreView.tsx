@@ -6,6 +6,7 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
 import { EmployeeRecord, AssetRecord } from "./WorkforceDirectoryView";
+import { formatDate } from "../../utils/date";
 import { CycleRecord } from "./PerformanceManagementView";
 import { ModuleViewKey } from "../shell/AppSidebar";
 
@@ -186,7 +187,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.45rem" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <Icons.Sparkles size={14} color={colors.indigoAction} />
-              <span>Dede — AI Daily Brief • {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</span>
+              <span>Dede — AI Daily Brief • {formatDate(new Date())}</span>
             </span>
             <Badge variant="success" size="sm">Sentiment +5%</Badge>
           </div>
