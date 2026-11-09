@@ -1607,11 +1607,53 @@ app.get("/api/v1/dashboard", async (c) => {
     };
   }
 
+  // Chart series: aggregates only, company-wide, for everyone who can open the dashboard.
+  const [leaveByMonth, headcount, objectivesByDepartment] = await Promise.all([
+    sql`
+      SELECT to_char(date_trunc('month', start_date), 'YYYY-MM') AS month,
+        count(*) FILTER (WHERE status = 'approved')::int AS approved,
+        count(*) FILTER (WHERE status = 'pending')::int AS pending
+      FROM leave_requests
+      WHERE company_id = ${companyId} AND status IN ('approved', 'pending')
+        AND start_date >= date_trunc('month', CURRENT_DATE) - interval '11 months'
+      GROUP BY 1 ORDER BY 1
+    `,
+    sql`
+      SELECT COALESCE(d.name, 'Unassigned') AS department, COALESCE(e.office, 'Unassigned') AS office, count(*)::int AS n
+      FROM employees e
+      LEFT JOIN departments d ON d.id = e.department_id
+      WHERE e.company_id = ${companyId} AND e.is_active
+      GROUP BY 1, 2 ORDER BY 1, 2
+    `,
+    cycleRows[0]
+      ? sql`
+          SELECT COALESCE(d.name, 'Unassigned') AS department, count(*)::int AS total,
+            count(*) FILTER (WHERE o.status = 'approved')::int AS approved,
+            COALESCE(round(avg(o.progress_percentage) FILTER (WHERE o.status = 'approved'))::int, 0) AS avg_progress
+          FROM employee_objectives o
+          JOIN employees e ON e.id = o.employee_id
+          LEFT JOIN departments d ON d.id = e.department_id
+          WHERE o.company_id = ${companyId} AND o.cycle_id = ${Number(cycleRows[0].id)}
+          GROUP BY 1 ORDER BY 1
+        `
+      : Promise.resolve([]),
+  ]);
+
   return c.json({
     onLeaveToday: Number(away[0].n),
     myPendingLeave: Number(myPending[0].n),
     cycle,
     objectives: { company, mine },
+    charts: {
+      leaveByMonth: leaveByMonth.map((r) => ({ month: String(r.month), approved: Number(r.approved), pending: Number(r.pending) })),
+      headcount: headcount.map((r) => ({ department: String(r.department), office: String(r.office), n: Number(r.n) })),
+      objectivesByDepartment: objectivesByDepartment.map((r) => ({
+        department: String(r.department),
+        total: Number(r.total),
+        approved: Number(r.approved),
+        avgProgress: Number(r.avg_progress),
+      })),
+    },
     approvals: approvalCounts
       ? { leavePending: Number(approvalCounts[0].leave_pending), peopleWaiting: Number(approvalCounts[0].people_waiting) }
       : null,
