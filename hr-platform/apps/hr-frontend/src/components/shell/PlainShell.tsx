@@ -60,6 +60,24 @@ const C = {
   accent: "#0f5c4d",
   accentSoft: "#e7f0ed",
   borderStrong: "#c9c5bb",
+  // Rail colours: the app's teal accent, darkened, with light text.
+  railBg: "#0b3f35",
+  railText: "#f2f7f5",
+  railMuted: "#a9cbc1",
+  railHover: "rgba(255, 255, 255, 0.08)",
+  railActive: "rgba(255, 255, 255, 0.16)",
+};
+
+// One icon per sidebar group heading.
+const GROUP_ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+  Dashboard: Icons.Activity,
+  "My Self-Service": Icons.Smile,
+  People: Icons.Users,
+  "Time & Performance": Icons.Clock,
+  "Assets & IT": Icons.Laptop,
+  "Projects & Talent": Icons.Briefcase,
+  "Reports & Governance": Icons.BarChart,
+  "Company Admin": Icons.Building,
 };
 
 // Focus ring and the narrow-screen layout live in CSS because inline styles cannot express them.
@@ -85,18 +103,23 @@ const CSS = `
 .ps-user-name { font-size: 14px; font-weight: 600; color: ${C.text}; }
 .ps-user-role { font-size: 12px; color: ${C.muted}; }
 .ps-body { display: flex; flex: 1; min-height: 0; }
-.ps-nav { width: 248px; flex-shrink: 0; padding: 1.25rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
+.ps-nav { width: 248px; flex-shrink: 0; padding: 1.25rem 0.75rem; background: ${C.railBg}; color: ${C.railText}; }
+.ps-rail-brand { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0.5rem 1.25rem; font-size: 16px; font-weight: 600; color: ${C.railText}; white-space: nowrap; }
+.ps-rail-brand .ps-mark { background: #ffffff; color: ${C.railBg}; }
 .ps-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .ps-nav button { width: 100%; text-align: left; padding: 0 0.75rem; min-height: 36px; border: none; border-radius: 8px;
-  background: transparent; color: ${C.text}; font: inherit; font-size: 14px; cursor: pointer;
+  background: transparent; color: ${C.railText}; font: inherit; font-size: 14px; cursor: pointer;
   transition: background-color 150ms ease-out, color 150ms ease-out; }
-.ps-nav button:hover { background: ${C.page}; }
-.ps-nav button[aria-current="page"] { background: ${C.accentSoft}; color: ${C.accent}; font-weight: 600; }
+.ps-nav button:hover { background: ${C.railHover}; }
+.ps-nav button[aria-current="page"] { background: ${C.railActive}; color: #ffffff; font-weight: 600; }
 .ps-main { flex: 1; min-width: 0; }
-.ps-nav .ps-group { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 12px; font-weight: 600; color: ${C.muted}; }
-.ps-group-chev { display: flex; transition: transform 150ms ease-out; }
+.ps-nav .ps-group { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; margin-top: 0.75rem; font-size: 14px; font-weight: 600; color: ${C.railText}; }
+.ps-group-label { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.ps-group-chev { display: flex; color: ${C.railMuted}; transition: transform 150ms ease-out; }
 .ps-group[aria-expanded="false"] .ps-group-chev { transform: rotate(-90deg); }
-.ps-sub { margin: 2px 0 0 0; padding-left: 0.25rem; }
+.ps-sub { margin: 2px 0 0 0; padding-left: 0.5rem; }
+.ps-sub button { padding-left: 2.1rem; font-size: 13.5px; color: ${C.railMuted}; }
+.ps-sub button[aria-current="page"] { color: #ffffff; }
 @media (prefers-reduced-motion: reduce) { .ps-nav button, .ps-group-chev { transition: none; } }
 .ps-signout { min-height: 36px; padding: 0 0.6rem; border: none; border-radius: 6px; background: transparent;
   color: ${C.muted}; font: inherit; font-size: 13px; cursor: pointer; }
@@ -107,7 +130,8 @@ const CSS = `
 .ps-root textarea:focus-visible { outline: 3px solid ${C.accent}; outline-offset: 2px; }
 @media (max-width: 1023px) {
   .ps-body { flex-direction: column; }
-  .ps-nav { width: auto; border-right: none; border-bottom: 1px solid ${C.border}; padding: 0.5rem 0.75rem; }
+  .ps-nav { width: auto; padding: 0.5rem 0.75rem; }
+  .ps-rail-brand { display: none; }
   .ps-nav ul { flex-direction: row; flex-wrap: wrap; }
   .ps-nav button { width: auto; }
 }
@@ -156,10 +180,6 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
         Skip to content
       </a>
       <header className="ps-header">
-        <div className="ps-brand">
-          <span className="ps-mark" aria-hidden="true">SR</span>
-          <span>ScoReview HR</span>
-        </div>
         {onOpenSearch && (
           <button type="button" className="ps-search" onClick={onOpenSearch}>
             Search people, pages and reports
@@ -185,6 +205,10 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
       </header>
       <div className="ps-body">
         <nav className="ps-nav" aria-label="Main">
+          <div className="ps-rail-brand">
+            <span className="ps-mark" aria-hidden="true">SR</span>
+            <span>ScoReview HR</span>
+          </div>
           <ul>
             {grouped.map((g) => {
               const expanded = isOpen(g.label);
@@ -198,7 +222,13 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
                     aria-controls={id}
                     onClick={() => setOpenState({ ...openState, [g.label]: !expanded })}
                   >
-                    <span>{g.label}</span>
+                    <span className="ps-group-label">
+                      {(() => {
+                        const GroupIcon = GROUP_ICONS[g.label];
+                        return GroupIcon ? <GroupIcon size={16} color={C.railText} /> : null;
+                      })()}
+                      <span>{g.label}</span>
+                    </span>
                     <span className="ps-group-chev" aria-hidden="true">
                       <Icons.ChevronDown size={14} />
                     </span>
