@@ -59,14 +59,31 @@ const C = {
   page: "#f7f6f3",
   accent: "#0f5c4d",
   accentSoft: "#e7f0ed",
+  borderStrong: "#c9c5bb",
 };
 
 // Focus ring and the narrow-screen layout live in CSS because inline styles cannot express them.
 const CSS = `
 .ps-root { display: flex; flex-direction: column; min-height: 100vh; background: ${C.page}; color: ${C.text};
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; }
-.ps-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
-  padding: 0.75rem 1.5rem; background: ${C.surface}; border-bottom: 1px solid ${C.border}; }
+.ps-header { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; min-height: 64px;
+  padding: 0.5rem 1.5rem; background: ${C.surface}; border-bottom: 1px solid ${C.border}; }
+.ps-brand { display: flex; align-items: center; gap: 0.6rem; font-size: 16px; font-weight: 600; color: ${C.text}; white-space: nowrap; }
+.ps-mark { width: 28px; height: 28px; border-radius: 8px; background: ${C.accent}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.ps-search { flex: 0 1 360px; margin-left: auto; min-height: 36px; padding: 0 0.75rem; border: 1px solid ${C.border}; border-radius: 8px;
+  background: ${C.page}; color: ${C.muted}; font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.ps-search:hover { border-color: ${C.borderStrong}; background: ${C.surface}; }
+.ps-header-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.ps-ask { min-height: 36px; padding: 0 0.9rem; border: 1px solid ${C.accent}; border-radius: 8px; background: ${C.surface}; color: ${C.accent};
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms ease-out; }
+.ps-ask:hover { background: ${C.accentSoft}; }
+.ps-user { display: flex; align-items: center; gap: 0.6rem; padding-left: 0.75rem; border-left: 1px solid ${C.border}; }
+.ps-avatar { width: 34px; height: 34px; border-radius: 999px; background: ${C.accentSoft}; color: ${C.accent};
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+.ps-user-text { display: flex; flex-direction: column; line-height: 1.25; }
+.ps-user-name { font-size: 14px; font-weight: 600; color: ${C.text}; }
+.ps-user-role { font-size: 12px; color: ${C.muted}; }
 .ps-body { display: flex; flex: 1; min-height: 0; }
 .ps-nav { width: 248px; flex-shrink: 0; padding: 1.25rem 0.75rem; background: ${C.surface}; border-right: 1px solid ${C.border}; }
 .ps-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -81,9 +98,9 @@ const CSS = `
 .ps-group[aria-expanded="false"] .ps-group-chev { transform: rotate(-90deg); }
 .ps-sub { margin: 2px 0 0 0; padding-left: 0.25rem; }
 @media (prefers-reduced-motion: reduce) { .ps-nav button, .ps-group-chev { transition: none; } }
-.ps-signout { min-height: 44px; padding: 0 1rem; border: 1px solid ${C.border}; border-radius: 4px; background: ${C.surface};
-  color: ${C.text}; font: inherit; cursor: pointer; }
-.ps-signout:hover { background: ${C.page}; }
+.ps-signout { min-height: 36px; padding: 0 0.6rem; border: none; border-radius: 6px; background: transparent;
+  color: ${C.muted}; font: inherit; font-size: 13px; cursor: pointer; }
+.ps-signout:hover { background: ${C.page}; color: ${C.text}; }
 .ps-skip { position: absolute; left: -9999px; top: 0; padding: 0.5rem 1rem; background: ${C.surface}; border: 2px solid ${C.accent}; z-index: 100; }
 .ps-skip:focus { left: 0.5rem; top: 0.5rem; }
 .ps-root button:focus-visible, .ps-root a:focus-visible, .ps-root input:focus-visible, .ps-root select:focus-visible,
@@ -124,6 +141,14 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
   if (other.length > 0) grouped.push({ label: "Other", views: other });
   // Every section starts open so each page is visible in the sidebar; the user can collapse any section.
   const isOpen = (label: string) => openState[label] ?? true;
+  const roleTitle = ROLE_TITLES[user.role] ?? user.role;
+  const initials = (showName ? user.name : roleTitle)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
   return (
     <div className="ps-root">
       <style>{CSS}</style>
@@ -131,28 +156,28 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
         Skip to content
       </a>
       <header className="ps-header">
-        <strong style={{ fontSize: "17px" }}>ScoReview HR</strong>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <span>
-            {showName ? (
-              <>
-                {user.name}
-                {user.role ? <span style={{ color: C.muted }}> ({ROLE_TITLES[user.role] ?? user.role})</span> : null}
-              </>
-            ) : (
-              ROLE_TITLES[user.role] ?? user.role
-            )}
-          </span>
-          {onOpenSearch && (
-            <button type="button" className="ps-signout" onClick={onOpenSearch}>
-              Search
-            </button>
-          )}
+        <div className="ps-brand">
+          <span className="ps-mark" aria-hidden="true">SR</span>
+          <span>ScoReview HR</span>
+        </div>
+        {onOpenSearch && (
+          <button type="button" className="ps-search" onClick={onOpenSearch}>
+            Search people, pages and reports
+          </button>
+        )}
+        <div className="ps-header-actions">
           {onOpenDede && (
-            <button type="button" className="ps-signout" onClick={onOpenDede}>
+            <button type="button" className="ps-ask" onClick={onOpenDede}>
               Ask Dede
             </button>
           )}
+          <div className="ps-user">
+            <span className="ps-avatar" aria-hidden="true">{initials}</span>
+            <span className="ps-user-text">
+              <span className="ps-user-name">{showName ? user.name : roleTitle}</span>
+              {showName && user.role ? <span className="ps-user-role">{roleTitle}</span> : null}
+            </span>
+          </div>
           <button type="button" className="ps-signout" onClick={onSignOut}>
             Sign out
           </button>
