@@ -282,10 +282,11 @@ app.get("/api/v1/employees", async (c) => {
   const { companyId } = c.get("tenant");
   const sql = getSql(c.env);
   const rows = await sql`
-    SELECT id, first_name, last_name, email, role, is_active
-    FROM employees
-    WHERE company_id = ${companyId}
-    ORDER BY id ASC
+    SELECT e.id, e.first_name, e.last_name, e.email, e.role, e.is_active, e.office, d.name AS department_name
+    FROM employees e
+    LEFT JOIN departments d ON d.id = e.department_id
+    WHERE e.company_id = ${companyId}
+    ORDER BY e.id ASC
   `;
   return c.json({ count: rows.length, results: rows });
 });
