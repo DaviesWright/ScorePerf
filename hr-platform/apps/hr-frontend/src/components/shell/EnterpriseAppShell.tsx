@@ -6,6 +6,7 @@ import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CommandPalette } from "../../design-system/CommandPalette";
 import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
+import { DedeWidget } from "../ai/DedeWidget";
 import { WorkforceDirectoryView, EmployeeRecord, AssetRecord } from "../modules/WorkforceDirectoryView";
 import { PerformanceManagementView, CycleRecord } from "../modules/PerformanceManagementView";
 import { SkillsMarketplaceView } from "../modules/SkillsMarketplaceView";
@@ -525,14 +526,12 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           currentView={currentView}
           onNavigate={setCurrentView}
           onSignOut={handleSignOut}
-          onOpenDede={() => {
-            setOmniInitialTab("prompts");
-            setIsOmniAgentOpen(true);
-          }}
+          onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
           onOpenSearch={() => setIsCommandPaletteOpen(true)}
         >
           {viewContent}
         </PlainShell>
+        <DedeWidget />
         <OmniAgentDrawer
           isOpen={isOmniAgentOpen}
           onClose={() => setIsOmniAgentOpen(false)}
