@@ -10,6 +10,7 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { PerformanceConfigurationStudio } from "./PerformanceConfigurationStudio";
+import { GeneralAppraisalSettingsView } from "./GeneralAppraisalSettingsView";
 
 export interface CycleRecord {
   id: number;
@@ -202,6 +203,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
   // Performance Management Governance & Settings State
   const [settingsPrimaryTab, setSettingsPrimaryTab] = useState<
+    | "General Appraisal"
     | "Framework & Methodology"
     | "Multi-Tier Sign-Off Chains"
     | "Competency & Trait Matrix"
@@ -209,7 +211,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     | "Nine-Box Talent Matrix"
     | "PIP & Governance Exceptions"
     | "Configuration Studio (Rules Engine)"
-  >("Framework & Methodology");
+  >("General Appraisal");
 
   // Search & Filter in Requests Table (Screenshot 4)
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
@@ -4198,6 +4200,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             }}
           >
             {[
+              "General Appraisal",
               "Framework & Methodology",
               "Multi-Tier Sign-Off Chains",
               "Competency & Trait Matrix",
@@ -4241,6 +4244,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               );
             })}
           </div>
+
+          {/* TAB 0: GENERAL APPRAISAL */}
+          {settingsPrimaryTab === "General Appraisal" && (
+            <GeneralAppraisalSettingsView />
+          )}
 
           {/* TAB 1: FRAMEWORK & METHODOLOGY */}
           {settingsPrimaryTab === "Framework & Methodology" && (

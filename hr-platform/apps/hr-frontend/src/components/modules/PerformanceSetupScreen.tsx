@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { formatDateTime } from "../../utils/date";
 import { PerformanceConfigurationStudio } from "./PerformanceConfigurationStudio";
+import { GeneralAppraisalSettingsView } from "./GeneralAppraisalSettingsView";
 
 // Performance setup: HR loads the corporate strategy goals and the reporting lines from CSV. Everyone can read both.
 // A load replaces the whole set on the server, so the upload area says so before HR submits.
@@ -338,7 +339,7 @@ const ReportingSection: React.FC<{ canLoad: boolean; realSession: boolean }> = (
 };
 
 export const PerformanceSetupScreen: React.FC<{ user: { id: string; persona: Persona }; realSession: boolean }> = ({ user, realSession }) => {
-  const [tab, setTab] = useState<"framework_studio" | "strategy_import" | "reporting_lines">("framework_studio");
+  const [tab, setTab] = useState<"general_appraisal" | "framework_studio" | "strategy_import" | "reporting_lines">("general_appraisal");
   const canLoad = !realSession || isHr(user.persona);
 
   return (
@@ -348,11 +349,27 @@ export const PerformanceSetupScreen: React.FC<{ user: { id: string; persona: Per
           Performance Setup & Strategy Studio
         </h1>
         <p style={{ color: C.muted, margin: 0, fontSize: 14 }}>
-          Configure appraisal cycle stages, custom rating scales, corporate strategy directives, and hierarchical reporting lines.
+          Configure appraisal cycle stages, general appraisal policies, rating scales, corporate strategy directives, and hierarchical reporting lines.
         </p>
       </div>
 
       <div style={{ display: "flex", gap: "0.5rem", borderBottom: `1px solid ${C.border}`, marginBottom: "1.5rem" }}>
+        <button
+          type="button"
+          onClick={() => setTab("general_appraisal")}
+          style={{
+            padding: "0.6rem 1rem",
+            background: "none",
+            border: "none",
+            borderBottom: `3px solid ${tab === "general_appraisal" ? "#4f46e5" : "transparent"}`,
+            fontWeight: tab === "general_appraisal" ? 700 : 500,
+            color: tab === "general_appraisal" ? "#4f46e5" : C.muted,
+            cursor: "pointer",
+            fontSize: 14,
+          }}
+        >
+          General Appraisal Settings
+        </button>
         <button
           type="button"
           onClick={() => setTab("framework_studio")}
@@ -403,6 +420,7 @@ export const PerformanceSetupScreen: React.FC<{ user: { id: string; persona: Per
         </button>
       </div>
 
+      {tab === "general_appraisal" && <GeneralAppraisalSettingsView />}
       {tab === "framework_studio" && <PerformanceConfigurationStudio />}
       {tab === "strategy_import" && <StrategySection canLoad={canLoad} realSession={realSession} />}
       {tab === "reporting_lines" && <ReportingSection canLoad={canLoad} realSession={realSession} />}
