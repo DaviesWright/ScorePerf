@@ -12,6 +12,14 @@ import { formatDate, formatDateRange } from "../../utils/date";
 import { AttendanceTimeZonesPanel } from "./AttendanceTimeZonesPanel";
 import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
 import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
+import { MyLeaveScreen } from "./MyLeaveScreen";
+
+export type LeavePrincipalExperience =
+  | "ess"
+  | "manager_workspace"
+  | "hr_administration"
+  | "workforce_planning"
+  | "management_intelligence";
 
 export interface LeaveRecord {
   id: number;
@@ -84,12 +92,19 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   onCloseNewLeaveModal,
   onNavigateToWorkflows,
 }) => {
-  // Leave Navigation Tabs (13 Modules)
+  // 5 Principal Experiences State
+  const [activeExperience, setActiveExperience] = useState<LeavePrincipalExperience>("manager_workspace");
+  const [showAllSubTabs, setShowAllSubTabs] = useState<boolean>(false);
+
+  // Leave Navigation Tabs
   const [activeTab, setActiveTab] = useState<
+    | "ess_portal"
     | "dashboard"
+    | "predictive_intelligence"
     | "department_schedules"
     | "attendance_zones"
     | "requests"
+    | "relief_coverage"
     | "resumption"
     | "plan_history"
     | "policies"
@@ -100,7 +115,47 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     | "blocked_days"
     | "allowances"
     | "settings"
-  >("dashboard");
+  >("requests");
+
+  // Relief Officer & Coverage Matrix State (Experience 2: Manager Workspace)
+  const [reliefAssignments, setReliefAssignments] = useState([
+    {
+      id: 1,
+      absentEmployee: "Jemima Richards (Head, HR)",
+      department: "Human Resources",
+      leaveWindow: "2026-11-24 → 2026-11-28 (5d)",
+      reliefOfficer: "Benedicta Agbesi (People & Culture Specialist)",
+      handoverStatus: "Verified & Active",
+      squadCoveragePct: 88,
+    },
+    {
+      id: 2,
+      absentEmployee: "Doreen Wesley (Customer Service Exec)",
+      department: "Customer Service",
+      leaveWindow: "2026-11-06 → 2026-11-06 (1d)",
+      reliefOfficer: "Philip Arthur (Customer Service Exec)",
+      handoverStatus: "Pending Manager Sign-Off",
+      squadCoveragePct: 82,
+    },
+    {
+      id: 3,
+      absentEmployee: "Adjoa Bediako (People Partner)",
+      department: "People & Culture",
+      leaveWindow: "2026-07-01 → 2026-10-06 (70d Maternity)",
+      reliefOfficer: "Ama Boateng (Senior HR Associate)",
+      handoverStatus: "Completed & Returned",
+      squadCoveragePct: 91,
+    },
+    {
+      id: 4,
+      absentEmployee: "Kwame Mensah (Hardware Ops Lead)",
+      department: "Hardware Operations",
+      leaveWindow: "2026-11-02 → 2026-11-04 (3d Sick)",
+      reliefOfficer: "Dave Nii (IT Infrastructure Officer)",
+      handoverStatus: "Verified & Active",
+      squadCoveragePct: 79,
+    },
+  ]);
 
   // Core Leaves State
   const [leaves, setLeaves] = useState<LeaveRecord[]>([
@@ -503,60 +558,187 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
           </div>
         </div>
 
-        {/* Leave Navigation Tabs */}
+        {/* 5 Principal Leave Management Experiences Architecture */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
+          {[
+            {
+              key: "ess" as LeavePrincipalExperience,
+              num: "1",
+              title: "Employee Self-Service",
+              desc: "Apply for leave, check balances, plan leave, view history and confirm resumption.",
+              defaultTab: "ess_portal" as const,
+              badge: "My Leave",
+            },
+            {
+              key: "manager_workspace" as LeavePrincipalExperience,
+              num: "2",
+              title: "Manager Workspace",
+              desc: "Approve requests, monitor team availability, plan coverage and manage relief officers.",
+              defaultTab: "requests" as const,
+              badge: `${pendingLeavesCount} Pending`,
+            },
+            {
+              key: "hr_administration" as LeavePrincipalExperience,
+              num: "3",
+              title: "HR Administration",
+              desc: "Manage policies, entitlements, accruals, allowances, imports, exceptions and compliance.",
+              defaultTab: "policies" as const,
+              badge: "Governance",
+            },
+            {
+              key: "workforce_planning" as LeavePrincipalExperience,
+              num: "4",
+              title: "Workforce Planning",
+              desc: "Interactive calendars, leave trends, capacity analysis and departmental scheduling.",
+              defaultTab: "plan_history" as const,
+              badge: "Capacity",
+            },
+            {
+              key: "management_intelligence" as LeavePrincipalExperience,
+              num: "5",
+              title: "Management Intelligence",
+              desc: "Leave utilisation, outstanding liabilities, absence trends and predictive analytics.",
+              defaultTab: "dashboard" as const,
+              badge: "Analytics",
+            },
+          ].map((exp) => {
+            const selected = activeExperience === exp.key;
+            return (
+              <button
+                key={exp.key}
+                type="button"
+                onClick={() => {
+                  setActiveExperience(exp.key);
+                  setActiveTab(exp.defaultTab);
+                }}
+                style={{
+                  textAlign: "left",
+                  padding: "0.85rem 1rem",
+                  borderRadius: radii.md,
+                  border: `1.5px solid ${selected ? colors.indigoAction : colors.border}`,
+                  backgroundColor: selected ? colors.indigoSubtle : colors.surface,
+                  boxShadow: selected ? shadows.sm : shadows.xs,
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "0.35rem",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: selected ? colors.indigoAction : colors.textMuted, textTransform: "uppercase" }}>
+                    Experience {exp.num}
+                  </span>
+                  <Badge variant={selected ? "info" : "neutral"} size="sm">
+                    {exp.badge}
+                  </Badge>
+                </div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  {exp.title}
+                </div>
+                <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.4 }}>
+                  {exp.desc}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Contextual Sub-Navigation Tabs for the Selected Experience */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "0.35rem",
+            justifyContent: "space-between",
+            gap: "0.5rem",
             borderBottom: `1px solid ${colors.border}`,
             paddingBottom: "0.35rem",
             overflowX: "auto",
           }}
         >
-          {[
-            { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
-            { key: "department_schedules", label: "Department Schedules & Rosters", icon: Icons.Clock },
-            { key: "attendance_zones", label: "Attendance by Time Zone", icon: Icons.Globe },
-            { key: "requests", label: "Leave Requests", icon: Icons.Users },
-            { key: "resumption", label: "Leave Resumption Requests", icon: Icons.FileCheck },
-            { key: "plan_history", label: "Leave Plan History", icon: Icons.Calendar },
-            { key: "policies", label: "Leave Policies", icon: Icons.FileText },
-            { key: "upload_history", label: "Upload Leave History", icon: Icons.Download },
-            { key: "balances", label: "Leave Balance", icon: Icons.Layers },
-            { key: "reserved_days", label: "Reserved Leave Days", icon: Icons.Lock },
-            { key: "additional_days", label: "Additional Leave Days", icon: Icons.ShieldCheck },
-            { key: "blocked_days", label: "Blocked Leave Days", icon: Icons.X },
-            { key: "allowances", label: "Leave Allowances", icon: Icons.Wallet },
-            { key: "settings", label: "Leave Settings", icon: Icons.Settings },
-          ].map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.45rem",
-                  padding: "0.55rem 0.9rem",
-                  borderRadius: radii.md,
-                  border: "none",
-                  backgroundColor: isActive ? colors.surfaceSubtle : "transparent",
-                  color: isActive ? colors.indigoAction : colors.textSecondary,
-                  fontWeight: isActive ? 700 : 500,
-                  fontSize: typography.sizes.xs,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
-                  borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
-                }}
-              >
-                <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", overflowX: "auto" }}>
+            {[
+              // 1. Employee Self-Service
+              { key: "ess_portal", exp: "ess", label: "My Leave Self-Service (Apply · Balances · Plan · History · Resumption)", icon: Icons.Calendar },
+
+              // 2. Manager Workspace
+              { key: "requests", exp: "manager_workspace", label: `Approve Requests (${pendingLeavesCount} Pending)`, icon: Icons.Users },
+              { key: "relief_coverage", exp: "manager_workspace", label: "Team Availability, Coverage & Relief Officers", icon: Icons.ShieldCheck },
+              { key: "resumption", exp: "manager_workspace", label: "Confirm Team Resumptions", icon: Icons.FileCheck },
+
+              // 3. HR Administration
+              { key: "policies", exp: "hr_administration", label: "Leave Policies & Entitlements", icon: Icons.FileText },
+              { key: "balances", exp: "hr_administration", label: "Accruals & Leave Balances", icon: Icons.Layers },
+              { key: "allowances", exp: "hr_administration", label: "Leave Allowances", icon: Icons.Wallet },
+              { key: "upload_history", exp: "hr_administration", label: "Historical Imports", icon: Icons.Download },
+              { key: "blocked_days", exp: "hr_administration", label: "Blocked / Blackout Exceptions", icon: Icons.X },
+              { key: "reserved_days", exp: "hr_administration", label: "Reserved Days", icon: Icons.Lock },
+              { key: "additional_days", exp: "hr_administration", label: "Additional Leave Grants", icon: Icons.Plus },
+              { key: "settings", exp: "hr_administration", label: "Compliance & Statutory Settings", icon: Icons.Settings },
+
+              // 4. Workforce Planning
+              { key: "plan_history", exp: "workforce_planning", label: "Interactive Calendars & Leave Trends", icon: Icons.Calendar },
+              { key: "department_schedules", exp: "workforce_planning", label: "Departmental Scheduling & Rosters", icon: Icons.Clock },
+              { key: "attendance_zones", exp: "workforce_planning", label: "Capacity Analysis & Time Zones", icon: Icons.Globe },
+
+              // 5. Management Intelligence
+              { key: "dashboard", exp: "management_intelligence", label: "Leave Utilisation & Executive Summary", icon: Icons.CommandCentre },
+              { key: "predictive_intelligence", exp: "management_intelligence", label: "Outstanding Liabilities, Absence Trends & Predictive Analytics", icon: Icons.TrendingUp },
+            ]
+              .filter((t) => showAllSubTabs || t.exp === activeExperience)
+              .map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      padding: "0.55rem 0.9rem",
+                      borderRadius: radii.md,
+                      border: "none",
+                      backgroundColor: isActive ? colors.surfaceSubtle : "transparent",
+                      color: isActive ? colors.indigoAction : colors.textSecondary,
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: typography.sizes.xs,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
+                    }}
+                  >
+                    <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAllSubTabs((v) => !v)}
+            style={{
+              background: "none",
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.sm,
+              padding: "0.3rem 0.65rem",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: colors.textSecondary,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {showAllSubTabs ? "Filter by Experience" : "Show All 17 Sub-Modules"}
+          </button>
         </div>
       </div>
 
@@ -2268,6 +2450,264 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
           </div>
         )}
       </SlideOver>
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 1 SUB-VIEW: EMPLOYEE SELF-SERVICE PORTAL                       */}
+      {/* ========================================================================= */}
+      {activeTab === "ess_portal" && (
+        <div style={{ marginTop: "-1rem" }}>
+          <MyLeaveScreen />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 2 SUB-VIEW: TEAM AVAILABILITY, COVERAGE & RELIEF OFFICERS      */}
+      {/* ========================================================================= */}
+      {activeTab === "relief_coverage" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Team Availability & Coverage Summary Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Active Team Availability
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.emeraldDark, marginTop: "0.25rem" }}>
+                86.4%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                Above minimum 75% squad staffing threshold
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Active Relief Officers Assigned
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.indigoPrimary, marginTop: "0.25rem" }}>
+                {reliefAssignments.length} / {reliefAssignments.length}
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                100% of approved leaves have a designated relief officer
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Overlap Collision Alerts
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.warning, marginTop: "0.25rem" }}>
+                0 Critical
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                No two key-role holders in the same squad overlap
+              </div>
+            </div>
+          </div>
+
+          {/* Relief Officer Management & Coverage Matrix Table */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: typography.sizes.md, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                  Team Coverage &amp; Relief Officer Assignment Matrix
+                </h3>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Monitor team availability, verify handover checklists, and reassign relief officers when squad coverage shifts.
+                </span>
+              </div>
+              <Badge variant="success" size="sm">Manager Workspace</Badge>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.sm }}>
+              <thead>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ON-LEAVE STAFF MEMBER</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>LEAVE WINDOW</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>DESIGNATED RELIEF OFFICER</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>SQUAD COVERAGE</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>HANDOVER STATUS</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary, textAlign: "right" }}>MANAGE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reliefAssignments.map((ra) => (
+                  <tr key={ra.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>{ra.absentEmployee}</div>
+                      <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>{ra.department}</div>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{ra.leaveWindow}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.indigoPrimary }}>{ra.reliefOfficer}</td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={ra.squadCoveragePct >= 80 ? "success" : "warning"} size="sm">
+                        {ra.squadCoveragePct}% Covered
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={ra.handoverStatus.includes("Pending") ? "warning" : "success"} size="sm">
+                        {ra.handoverStatus}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setReliefAssignments((prev) =>
+                            prev.map((item) =>
+                              item.id === ra.id ? { ...item, handoverStatus: "Verified & Active" } : item
+                            )
+                          );
+                          setFeedback(`Verified relief officer handover for ${ra.absentEmployee} (Covered by ${ra.reliefOfficer}).`);
+                        }}
+                      >
+                        Verify Coverage
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 5 SUB-VIEW: MANAGEMENT INTELLIGENCE & PREDICTIVE ANALYTICS     */}
+      {/* ========================================================================= */}
+      {activeTab === "predictive_intelligence" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Executive KPI Cards: Utilisation, Liability, Absence Rate, Burnout Risk */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "1rem" }}>
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Org Leave Utilisation Rate
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.indigoPrimary, marginTop: "0.25rem" }}>
+                68.2%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.success, marginTop: "0.25rem" }}>
+                Target: 70% by Q3 · +4.1% YoY
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Outstanding Leave Liability
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.warning, marginTop: "0.25rem" }}>
+                GH₵ 148,600
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                312 unbooked accrued days across 91 staff
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Unplanned Absence Rate
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.emeraldDark, marginTop: "0.25rem" }}>
+                1.8%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                Below 2.5% benchmark · Bradford median: 18
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Predictive Burnout / Forfeiture Alerts
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.error, marginTop: "0.25rem" }}>
+                6 Staff
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.error, marginTop: "0.25rem" }}>
+                &lt;20% leave used in 9 months · Nudge recommended
+              </div>
+            </div>
+          </div>
+
+          {/* Departmental Utilisation, Liability & Predictive Forecast Table */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: typography.sizes.md, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                  Departmental Utilisation, Financial Liabilities &amp; Predictive Absence Forecast
+                </h3>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Experience 5 · Management Intelligence: Accrued balance-sheet liability, absence trends, and Q4 capacity projections.
+                </span>
+              </div>
+              <Badge variant="info" size="sm">Management Intelligence</Badge>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.sm }}>
+              <thead>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>DEPARTMENT</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>LEAVE UTILISATION</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>UNBOOKED DAYS</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ACCRUED LIABILITY (GH₵)</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ABSENCE TREND</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>PREDICTIVE SIGNAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    dept: "Cloud & Edge Engineering",
+                    util: "58%",
+                    unbooked: "94 days",
+                    liability: "GH₵ 52,400",
+                    trend: "Stable (1.4% unplanned)",
+                    signal: "High Q4 carryover / burnout risk (3 engineers <15% used)",
+                    variant: "warning" as const,
+                  },
+                  {
+                    dept: "FinTech & Payments Product",
+                    util: "71%",
+                    unbooked: "68 days",
+                    liability: "GH₵ 38,100",
+                    trend: "Improving (−0.6% MoM)",
+                    signal: "Balanced pacing · On track for year-end cap",
+                    variant: "success" as const,
+                  },
+                  {
+                    dept: "People, Culture & Operations",
+                    util: "76%",
+                    unbooked: "42 days",
+                    liability: "GH₵ 21,900",
+                    trend: "Low absence (1.1%)",
+                    signal: "Healthy utilisation · Zero forfeiture exposure",
+                    variant: "success" as const,
+                  },
+                  {
+                    dept: "Customer Service & Regional Support",
+                    util: "64%",
+                    unbooked: "108 days",
+                    liability: "GH₵ 36,200",
+                    trend: "Elevated Mondays (2.9%)",
+                    signal: "Recommend staggered December roster lock",
+                    variant: "warning" as const,
+                  },
+                ].map((row) => (
+                  <tr key={row.dept} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.textPrimary }}>{row.dept}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.indigoPrimary }}>{row.util}</td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{row.unbooked}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.warning }}>{row.liability}</td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{row.trend}</td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={row.variant} size="sm">{row.signal}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL: SUBMIT LEAVE REQUEST                                               */}
