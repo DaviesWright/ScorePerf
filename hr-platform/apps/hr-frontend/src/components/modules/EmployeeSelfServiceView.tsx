@@ -8,6 +8,7 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { LeaveRecord } from "./TimeAndLeaveView";
 import { AssetRecord } from "./WorkforceDirectoryView";
 import { formatDateRange, formatDate } from "../../utils/date";
+import { downloadAppraisalReport } from "../../utils/pdfGenerator";
 import { ModuleViewKey } from "../shell/AppSidebar";
 import { EssShortcutsHub } from "./ess/EssShortcutsHub";
 
@@ -991,7 +992,19 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  alert(`Downloading official evaluation report for ${card.title} in PDF format.`);
+                                  downloadAppraisalReport({
+                                    cycleTitle: card.title,
+                                    period: card.period || "FY2026",
+                                    framework: "BSC",
+                                    selfRating: "4.5",
+                                    supervisorComments: card.endedNote || "Outstanding delivery and high-impact cross-functional execution.",
+                                    calibratedScore: card.score || "92%",
+                                    employeeName: currentEmployee.name,
+                                    employeeId: `GH/EMP-00${currentEmployee.id}`,
+                                    department: currentEmployee.department,
+                                    role: currentEmployee.role,
+                                    supervisorName: currentEmployee.manager,
+                                  });
                                   setActiveActionMenuId(null);
                                 }}
                                 style={{

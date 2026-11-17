@@ -6,6 +6,7 @@ import { Badge } from "../../../design-system/Badge";
 import { Button } from "../../../design-system/Button";
 import { Icons } from "../../../design-system/Icons";
 import { ModuleViewKey } from "../../shell/AppSidebar";
+import { downloadEmploymentVerificationLetter } from "../../../utils/pdfGenerator";
 
 export type EssWorkflowKey =
   | "time_off"
@@ -100,95 +101,95 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
     accentBg: string;
     highlights: string;
   }> = [
-    {
-      key: "time_off",
-      title: "1. Time Off & Leave",
-      subtitle: "Balances, Team Radar & Approvals",
-      badge: `${remainingLeave}d Available`,
-      badgeVariant: "success",
-      icon: Icons.Calendar,
-      accentColor: "#10b981",
-      accentBg: "rgba(16, 185, 129, 0.08)",
-      highlights: "Dynamic accrual (1.75d/mo), blackout dates & Manager → HRBP chain",
-    },
-    {
-      key: "pay_rewards",
-      title: "2. Document Vault & Compliance",
-      subtitle: "Employee Uploads & Certified Records",
-      badge: "Verified ✓",
-      badgeVariant: "success",
-      icon: Icons.FileText,
-      accentColor: "#6366f1",
-      accentBg: "rgba(99, 102, 241, 0.08)",
-      highlights: "Direct employee uploads, national ID verification, and signed compliance acknowledgments",
-    },
-    {
-      key: "profile_governance",
-      title: "3. Personal & Profile Hub",
-      subtitle: "Self-Service & Field Permissions",
-      badge: "100% Verified",
-      badgeVariant: "info",
-      icon: Icons.Users,
-      accentColor: "#f59e0b",
-      accentBg: "rgba(245, 158, 11, 0.08)",
-      highlights: "Field-level RBAC: instant contact edits vs admin-approved bank details",
-    },
-    {
-      key: "performance_inputs",
-      title: "4. Performance & OKRs",
-      subtitle: "Reviews, State Machine & Journal",
-      badge: "Self-Review Open",
-      badgeVariant: "warning",
-      icon: Icons.Target,
-      accentColor: "#8b5cf6",
-      accentBg: "rgba(139, 92, 246, 0.08)",
-      highlights: "Active review cycle, pre-appraisals, wins journal & lock on submission",
-    },
-    {
-      key: "work_schedules",
-      title: "5. Attendance & Shifts",
-      subtitle: "Geofenced Clock-In & Hybrid Time",
-      badge: "Accra Ridge Hub",
-      badgeVariant: "info",
-      icon: Icons.Clock,
-      accentColor: "#06b6d4",
-      accentBg: "rgba(6, 182, 212, 0.08)",
-      highlights: "Geofenced punch clock, payroll auto-sync, 1-click remote work log",
-    },
-    {
-      key: "service_catalog",
-      title: "6. HR Service Catalog",
-      subtitle: "Official Letters & Helpdesk Tickets",
-      badge: "AI Generator",
-      badgeVariant: "info",
-      icon: Icons.FileText,
-      accentColor: "#ec4899",
-      accentBg: "rgba(236, 72, 153, 0.08)",
-      highlights: "Instant visa/loan letters on company letterhead with QR verification",
-    },
-    {
-      key: "learning_lms",
-      title: "7. Learning & Growth (LMS)",
-      subtitle: "Compliance, Certs & T-Shaped Gaps",
-      badge: "2 To-Dos Due",
-      badgeVariant: "warning",
-      icon: Icons.BookOpen,
-      accentColor: "#14b8a6",
-      accentBg: "rgba(20, 184, 166, 0.08)",
-      highlights: "Mandatory compliance sync & skill recommendations from appraisal gaps",
-    },
-    {
-      key: "wellbeing_benefits",
-      title: "8. Well-being & Benefits",
-      subtitle: "EAP, Pulse & Wellness Wallet",
-      badge: `GH₵${wellnessBalance.toLocaleString()} Balance`,
-      badgeVariant: "success",
-      icon: Icons.Heart,
-      accentColor: "#f43f5e",
-      accentBg: "rgba(244, 63, 94, 0.08)",
-      highlights: "Anonymous emoji daily pulse, 24/7 EAP hotline & wellness reimbursements",
-    },
-  ];
+      {
+        key: "time_off",
+        title: "1. Time Off & Leave",
+        subtitle: "Balances, Team Radar & Approvals",
+        badge: `${remainingLeave}d Available`,
+        badgeVariant: "success",
+        icon: Icons.Calendar,
+        accentColor: "#10b981",
+        accentBg: "rgba(16, 185, 129, 0.08)",
+        highlights: "Dynamic accrual (1.75d/mo), blackout dates & Manager → HRBP chain",
+      },
+      {
+        key: "pay_rewards",
+        title: "2. Document Vault & Compliance",
+        subtitle: "Employee Uploads & Certified Records",
+        badge: "Verified ✓",
+        badgeVariant: "success",
+        icon: Icons.FileText,
+        accentColor: "#6366f1",
+        accentBg: "rgba(99, 102, 241, 0.08)",
+        highlights: "Direct employee uploads, national ID verification, and signed compliance acknowledgments",
+      },
+      {
+        key: "profile_governance",
+        title: "3. Personal & Profile Hub",
+        subtitle: "Self-Service & Field Permissions",
+        badge: "100% Verified",
+        badgeVariant: "info",
+        icon: Icons.Users,
+        accentColor: "#f59e0b",
+        accentBg: "rgba(245, 158, 11, 0.08)",
+        highlights: "Field-level RBAC: instant contact edits vs admin-approved bank details",
+      },
+      {
+        key: "performance_inputs",
+        title: "4. Performance & OKRs",
+        subtitle: "Reviews, State Machine & Journal",
+        badge: "Self-Review Open",
+        badgeVariant: "warning",
+        icon: Icons.Target,
+        accentColor: "#8b5cf6",
+        accentBg: "rgba(139, 92, 246, 0.08)",
+        highlights: "Active review cycle, pre-appraisals, wins journal & lock on submission",
+      },
+      {
+        key: "work_schedules",
+        title: "5. Attendance & Shifts",
+        subtitle: "Geofenced Clock-In & Hybrid Time",
+        badge: "Accra Ridge Hub",
+        badgeVariant: "info",
+        icon: Icons.Clock,
+        accentColor: "#06b6d4",
+        accentBg: "rgba(6, 182, 212, 0.08)",
+        highlights: "Geofenced punch clock, payroll auto-sync, 1-click remote work log",
+      },
+      {
+        key: "service_catalog",
+        title: "6. HR Service Catalog",
+        subtitle: "Official Letters & Helpdesk Tickets",
+        badge: "AI Generator",
+        badgeVariant: "info",
+        icon: Icons.FileText,
+        accentColor: "#ec4899",
+        accentBg: "rgba(236, 72, 153, 0.08)",
+        highlights: "Instant visa/loan letters on company letterhead with QR verification",
+      },
+      {
+        key: "learning_lms",
+        title: "7. Learning & Growth (LMS)",
+        subtitle: "Compliance, Certs & T-Shaped Gaps",
+        badge: "2 To-Dos Due",
+        badgeVariant: "warning",
+        icon: Icons.BookOpen,
+        accentColor: "#14b8a6",
+        accentBg: "rgba(20, 184, 166, 0.08)",
+        highlights: "Mandatory compliance sync & skill recommendations from appraisal gaps",
+      },
+      {
+        key: "wellbeing_benefits",
+        title: "8. Well-being & Benefits",
+        subtitle: "EAP, Pulse & Wellness Wallet",
+        badge: `GH₵${wellnessBalance.toLocaleString()} Balance`,
+        badgeVariant: "success",
+        icon: Icons.Heart,
+        accentColor: "#f43f5e",
+        accentBg: "rgba(244, 63, 94, 0.08)",
+        highlights: "Anonymous emoji daily pulse, 24/7 EAP hotline & wellness reimbursements",
+      },
+    ];
 
   return (
     <div style={{ marginBottom: "1.75rem" }}>
@@ -1355,7 +1356,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                           variant="primary"
                           size="sm"
                           onClick={() => {
-                            alert("Downloading official generated PDF with Davies Wright & ScoReview corporate letterhead.");
+                            downloadEmploymentVerificationLetter(employee.name, employee.role, employee.department, selectedLetterType);
                           }}
                         >
                           <Icons.Download size={13} />

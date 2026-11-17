@@ -6,6 +6,7 @@ import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatDate } from "../../utils/date";
+import { downloadPolicyPdf } from "../../utils/pdfGenerator";
 
 export interface ExpectedEmployeeDoc {
   id: number;
@@ -159,12 +160,12 @@ export const DocumentCentreScreen: React.FC<DocumentCentreScreenProps> = ({ user
         employeeDocs.map((doc) =>
           doc.id === selectedDocId
             ? {
-                ...doc,
-                status: "PENDING_REVIEW",
-                fileName: selectedFile.name,
-                uploadedAt: new Date().toISOString().split("T")[0],
-                notes: "Uploaded by employee. Awaiting HR Admin verification.",
-              }
+              ...doc,
+              status: "PENDING_REVIEW",
+              fileName: selectedFile.name,
+              uploadedAt: new Date().toISOString().split("T")[0],
+              notes: "Uploaded by employee. Awaiting HR Admin verification.",
+            }
             : doc
         )
       );
@@ -182,10 +183,10 @@ export const DocumentCentreScreen: React.FC<DocumentCentreScreenProps> = ({ user
       companyPolicies.map((p) =>
         p.id === id
           ? {
-              ...p,
-              status: "ACKNOWLEDGED",
-              acknowledgedAt: new Date().toISOString().split("T")[0],
-            }
+            ...p,
+            status: "ACKNOWLEDGED",
+            acknowledgedAt: new Date().toISOString().split("T")[0],
+          }
           : p
       )
     );
@@ -376,7 +377,12 @@ export const DocumentCentreScreen: React.FC<DocumentCentreScreenProps> = ({ user
                 </td>
                 <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", alignItems: "center" }}>
-                    <Button variant="outline" size="sm" onClick={() => alert(`Opening PDF copy of ${policy.title}...`)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadPolicyPdf(policy.title, policy.category, policy.effectiveDate)}
+                    >
+                      <Icons.Download size={13} style={{ marginRight: 4 }} />
                       View PDF
                     </Button>
                     {policy.status === "UNACKNOWLEDGED" && (

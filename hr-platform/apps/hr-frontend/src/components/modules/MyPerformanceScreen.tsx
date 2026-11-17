@@ -6,6 +6,7 @@ import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatDate } from "../../utils/date";
+import { downloadAppraisalReport } from "../../utils/pdfGenerator";
 
 export interface MyObjective {
   id: number;
@@ -574,7 +575,26 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
                     </div>
                   </td>
                   <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
-                    <Button variant="outline" size="sm" onClick={() => alert(`Downloading signed appraisal PDF for ${h.cycleTitle}...`)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        downloadAppraisalReport({
+                          cycleTitle: h.cycleTitle,
+                          period: h.period,
+                          framework: h.framework,
+                          selfRating: h.selfRating,
+                          supervisorComments: h.supervisorComments,
+                          calibratedScore: h.calibratedScore,
+                          employeeName: "Paa Kwesi Barnes",
+                          employeeId: "GH/SC-OPS/7821",
+                          department: "Technology Advisory & Cloud Solutions",
+                          role: "Lead Enterprise Architect",
+                          supervisorName: "Jemima Richards (Head of People & Strategy)",
+                        })
+                      }
+                    >
+                      <Icons.Download size={13} style={{ marginRight: 4 }} />
                       Download PDF
                     </Button>
                   </td>
