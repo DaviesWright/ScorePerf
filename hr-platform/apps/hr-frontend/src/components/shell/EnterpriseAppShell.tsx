@@ -17,6 +17,7 @@ import { TimeAndLeaveView, LeaveRecord } from "../modules/TimeAndLeaveView";
 import { LeaveScreen } from "../modules/LeaveSimple";
 import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { DashboardScreen } from "../modules/DashboardSimple";
+import { CommandCentreView } from "../modules/CommandCentreView";
 import { AssetsScreen } from "../modules/AssetsSimple";
 import { PerformanceSetupScreen } from "../modules/PerformanceSetupScreen";
 import { CompanySetupScreen } from "../modules/CompanySetupScreen";
@@ -71,10 +72,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
   );
   // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
-  // command_centre was merged into the dashboard; old links and buttons that still name it land on the dashboard.
   const setCurrentView = (requested: ModuleViewKey) => {
-    const view = requested === "command_centre" ? "dashboard" : requested;
-    if (isViewEnabled(view)) setCurrentViewRaw(view);
+    if (isViewEnabled(requested)) setCurrentViewRaw(requested);
   };
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
@@ -426,6 +425,23 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             <AssetManagementView assets={assets} employees={employees} />
           )}
 
+          {currentView === "command_centre" && (
+            <CommandCentreView
+              employees={employees}
+              assets={assets}
+              cycles={cycles}
+              stats={{
+                totalEmployees: employees.length,
+                activeCycles: cycles.length,
+                totalAssets: assets.length,
+                pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
+                openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
+                activeProjects: projects.length,
+              }}
+              onNavigate={setCurrentView}
+            />
+          )}
+
           {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} onNavigate={setCurrentView} />}
 
           {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
@@ -671,6 +687,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           {viewContent}
         </main>
       </div>
+
+      {/* Floating Dede AI Assistant Launcher & Chat Panel */}
+      <DedeWidget />
     </div>
   );
 };

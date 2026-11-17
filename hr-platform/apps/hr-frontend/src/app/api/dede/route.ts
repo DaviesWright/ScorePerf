@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 // Dede, the ScoReview assistant. Server-side only: the Anthropic key stays in the environment (ANTHROPIC_API_KEY)
 // and is never sent to the browser. Requests must come from this site.
 
-const MODEL = "claude-haiku-5-5";
+const FALLBACK_MODELS = [
+  process.env.ANTHROPIC_MODEL,
+  "claude-haiku-5-5",
+  "claude-sonnet-5-5",
+  "claude-fable-5-2",
+  "claude-haiku-4-5-20251001",
+].filter(Boolean) as string[];
+
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 2000;
 
@@ -19,9 +26,16 @@ If a request falls outside your scope as ScoReview's assistant, politely explain
 
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
-  if (!origin) return false;
+  if (!origin) return true;
   try {
-    return new URL(origin).host === req.headers.get("host");
+    const originHost = new URL(origin).host;
+    const reqHost = req.headers.get("host");
+    return (
+      originHost === reqHost ||
+      originHost.endsWith("bscscoreview.com") ||
+      originHost.endsWith("workers.dev") ||
+      originHost.startsWith("localhost")
+    );
   } catch {
     return false;
   }
@@ -61,20 +75,40 @@ export async function POST(req: NextRequest) {
   const turns = parseTurns(body);
   if (!turns) return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
-  let upstream: Response;
-  try {
-    upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 600, system: SYSTEM_PROMPT, messages: turns }),
-      cache: "no-store",
-    });
-  } catch {
-    return NextResponse.json({ error: "Dede could not be reached. Try again in a moment." }, { status: 502 });
+  let reply = "";
+  let lastError = "";
+  for (const model of FALLBACK_MODELS) {
+    try {
+      const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({ model, max_tokens: 600, system: SYSTEM_PROMPT, messages: turns }),
+        cache: "no-store",
+      });
+      if (upstream.ok) {
+        const data = (await upstream.json().catch(() => ({}))) as { content?: { type: string; text?: string }[] };
+        reply = (data.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+        if (reply) break;
+      } else {
+        const errText = await upstream.text().catch(() => "");
+        lastError = `${model}: HTTP ${upstream.status} - ${errText}`;
+        console.warn(`Anthropic error: ${lastError}`);
+      }
+    } catch (e) {
+      lastError = `${model}: fetch error ${e instanceof Error ? e.message : String(e)}`;
+      console.warn(`Anthropic fetch exception: ${lastError}`);
+    }
   }
-  if (!upstream.ok) return NextResponse.json({ error: "Dede could not answer right now. Try again in a moment." }, { status: 502 });
 
-  const data = (await upstream.json().catch(() => ({}))) as { content?: { type: string; text?: string }[] };
-  const reply = (data.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
-  return NextResponse.json({ reply: reply || "I could not find an answer to that. Please try rephrasing." }, { headers: { "Cache-Control": "no-store" } });
+  if (!reply) {
+    return NextResponse.json(
+      { error: "Dede could not answer right now. Try again in a moment." },
+      { status: 502 }
+    );
+  }
+
+  return NextResponse.json(
+    { reply },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

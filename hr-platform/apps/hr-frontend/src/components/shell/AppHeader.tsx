@@ -137,12 +137,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Omni-Agent & Notifications */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        {/* Unified Dede AI & Follow the Prompt Floating Sidebar Trigger */}
+        {/* Unified Dede AI & Assistant Trigger */}
         <Button
           variant="outline"
           size="sm"
-          onClick={onOpenOmniAgent}
-          title="Open Dede AI & Follow the Prompt Guided Sidebar (⌘J)"
+          onClick={() => window.dispatchEvent(new Event("dede:open"))}
+          title="Open Dede, the ScoReview AI assistant"
           style={{
             borderColor: colors.indigoBorder,
             backgroundColor: colors.indigoSubtle,
@@ -151,21 +151,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <Icons.Sparkles size={14} color={colors.indigoAction} />
-            <span style={{ fontWeight: 600 }}>Dede AI • Guide</span>
-            <span
-              style={{
-                fontSize: "10px",
-                color: colors.indigoPrimary,
-                fontFamily: typography.fontMono,
-                marginLeft: "2px",
-                backgroundColor: "#ffffff",
-                padding: "0.1rem 0.35rem",
-                borderRadius: radii.sm,
-                border: `1px solid ${colors.indigoBorder}`,
-              }}
-            >
-              ⌘J
-            </span>
+            <span style={{ fontWeight: 600 }}>Ask Dede</span>
           </span>
         </Button>
 
