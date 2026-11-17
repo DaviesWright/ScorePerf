@@ -223,7 +223,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     const depts = [
       { dept: "Healthcare Operations", team: "Clinical Governance Unit", manager: "Dr. Emmanuel K. Quarshie", role: "Clinical Operations Officer", color: "#0284c7" },
       { dept: "Engineering & Cloud", team: "Hyperdrive Edge Performance Squad", manager: "Benedicta Agbesi", role: "Cloud Infrastructure Engineer", color: "#6366f1" },
-      { dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", manager: "Richard Amoah", role: "People Operations Specialist", color: "#ec4899" },
+      { dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", manager: "Jemima Richards", role: "People Operations Specialist", color: "#ec4899" },
       { dept: "Technology Advisory", team: "Corporate Information Security Committee", manager: "Paa Kwesi Barnes", role: "Security & Governance Consultant", color: "#8b5cf6" },
       { dept: "Finance & Accounting", team: "Statutory Tax & Audit Reconciliation Team", manager: "Kojo Antwi", role: "Financial Planning Analyst", color: "#f59e0b" },
       { dept: "Client Success", team: "Regional Enterprise Client Care Hub", manager: "Doreen Wesley", role: "Enterprise Client Account Partner", color: "#10b981" },
@@ -260,7 +260,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     {
       id: 1,
       requestNo: 1,
-      ownerName: "Richard Amoah",
+      ownerName: "Jemima Richards",
       ownerStaffId: "SHR/GH/038",
       ownerRole: "Head, Human Resources",
       ownerAvatarColor: "#6366f1",
@@ -296,7 +296,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     {
       id: 3,
       requestNo: 3,
-      ownerName: "Belinda Ama Asare",
+      ownerName: "Adjoa Bediako",
       ownerStaffId: "GH/2017/6/13/094",
       ownerRole: "HR Analytics & Information System Specialist",
       ownerAvatarColor: "#ec4899",
@@ -481,7 +481,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       id: 5,
       level: "Employee",
       title: "Build and deploy 60 Interactive HR Reports with AI Query Translation",
-      lead: "Belinda Ama Asare",
+      lead: "Adjoa Bediako",
       framework: "BSC",
       progressPct: 95,
       alignedToParent: "Technology Advisory Division",
@@ -550,7 +550,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       id: 104,
       employeeName: "Doreen Wesley",
       employeeRole: "Customer Service Executive",
-      supervisorName: "Richard Amoah",
+      supervisorName: "Jemima Richards",
       cycleTitle: "Enterprise Annual Appraisal",
       framework: "OKR",
       goalTitle: "Deliver first-response resolution in under 4 minutes on priority tickets",
@@ -2364,12 +2364,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 { box: "Consistent Star (HiPo)", pot: "High Potential", perf: "High Performance", staff: "3 Employees", names: ["Emmanuel K. Quarshie", "Sarah Jenkins"], alert: "Executive Pipeline ⭐" },
 
                 { box: "Inconsistent Performer", pot: "Medium Potential", perf: "Low Performance", staff: "0 Employees", names: [], alert: "Review" },
-                { box: "Core Contributor", pot: "Medium Potential", perf: "Moderate Performance", staff: "8 Employees", names: ["Belinda Ama Asare", "Benedicta Agbesi"], alert: "Stable Core" },
+                { box: "Core Contributor", pot: "Medium Potential", perf: "Moderate Performance", staff: "8 Employees", names: ["Adjoa Bediako", "Benedicta Agbesi"], alert: "Stable Core" },
                 { box: "High Performer", pot: "Medium Potential", perf: "High Performance", staff: "4 Employees", names: ["Marcus Chen", "Julian Vance"], alert: "Reward & Retain" },
 
                 { box: "Risk / Talent Action", pot: "Low Potential", perf: "Low Performance", staff: "1 Employee", names: ["E. Quaye"], alert: "8-Week PIP ⚠️" },
                 { box: "Solid Professional", pot: "Low Potential", perf: "Moderate Performance", staff: "3 Employees", names: ["B. Appiah"], alert: "Specialist" },
-                { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Employees", names: ["Richard Amoah"], alert: "Flight Risk Alert 🚨" },
+                { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Employees", names: ["Jemima Richards"], alert: "Flight Risk Alert 🚨" },
               ].map((q, idx) => (
                 <div
                   key={idx}
@@ -3922,14 +3922,14 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               {/* Box 8: Low Potential, Moderate Performance */}
               <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
                 <span style={{ fontSize: "10px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>Effective Specialist</span>
-                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Richard Amoah</div>
+                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Jemima Richards</div>
                 <div style={{ fontSize: "11px", color: colors.textMuted }}>HR Head</div>
               </div>
 
               {/* Box 9: Low Potential, High Performance */}
               <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}`, backgroundColor: "rgba(16, 185, 129, 0.05)" }}>
                 <span style={{ fontSize: "10px", fontWeight: 700, color: "#065f46", textTransform: "uppercase" }}>Trusted Professional</span>
-                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Belinda Ama Asare</div>
+                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Adjoa Bediako</div>
                 <div style={{ fontSize: "11px", color: colors.textMuted }}>HRIS & Analytics</div>
               </div>
             </div>
@@ -4782,12 +4782,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     { box: "Consistent Star (HiPo)", pot: "High Potential", perf: "High Performance", staff: "3 Staff", names: ["Emmanuel K. Quarshie", "Sarah Jenkins"], alert: "Executive Succession Pipeline ⭐", color: "#dcfce7", border: "#86efac" },
 
                     { box: "Inconsistent Performer", pot: "Moderate Potential", perf: "Low Performance", staff: "0 Staff", names: [], alert: "Targeted Coaching", color: "#f8fafc", border: "#e2e8f0" },
-                    { box: "Core Contributor", pot: "Moderate Potential", perf: "Moderate Performance", staff: "8 Staff", names: ["Belinda Ama Asare", "Benedicta Agbesi"], alert: "Stable Organizational Core", color: "#f1f5f9", border: "#cbd5e1" },
+                    { box: "Core Contributor", pot: "Moderate Potential", perf: "Moderate Performance", staff: "8 Staff", names: ["Adjoa Bediako", "Benedicta Agbesi"], alert: "Stable Organizational Core", color: "#f1f5f9", border: "#cbd5e1" },
                     { box: "High Performer", pot: "Moderate Potential", perf: "High Performance", staff: "4 Staff", names: ["Marcus Chen", "Julian Vance"], alert: "Reward & Retain", color: "#e0e7ff", border: "#c7d2fe" },
 
                     { box: "Risk / Talent Action", pot: "Low Potential", perf: "Low Performance", staff: "1 Staff", names: ["E. Quaye"], alert: "8-Week Structured PIP ⚠️", color: "#fef2f2", border: "#fecaca" },
                     { box: "Solid Professional", pot: "Low Potential", perf: "Moderate Performance", staff: "3 Staff", names: ["B. Appiah"], alert: "Deep Technical Specialist", color: "#f8fafc", border: "#e2e8f0" },
-                    { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Staff", names: ["Richard Amoah"], alert: "Flight Risk Alert 🚨", color: "#fff1f2", border: "#fecdd3" },
+                    { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Staff", names: ["Jemima Richards"], alert: "Flight Risk Alert 🚨", color: "#fff1f2", border: "#fecdd3" },
                   ].map((q, idx) => (
                     <div
                       key={idx}
@@ -5246,7 +5246,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     <option value="Philip Aryee">Philip Aryee</option>
                     <option value="Julian Vance">Julian Vance</option>
                     <option value="Doreen Wesley">Doreen Wesley</option>
-                    <option value="Belinda Ama Asare">Belinda Ama Asare</option>
+                    <option value="Adjoa Bediako">Adjoa Bediako</option>
                   </select>
                 </div>
 
@@ -5262,7 +5262,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     <option value="Sarah Jenkins">Sarah Jenkins (VP People)</option>
                     <option value="Paa Kwesi Barnes">Paa Kwesi Barnes (Managing Principal)</option>
                     <option value="Richard Barnes">Richard Barnes (CEO)</option>
-                    <option value="Richard Amoah">Richard Amoah (HR Head)</option>
+                    <option value="Jemima Richards">Jemima Richards (HR Head)</option>
                   </select>
                 </div>
               </div>

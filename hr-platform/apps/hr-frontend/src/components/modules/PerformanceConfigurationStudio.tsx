@@ -286,7 +286,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
     },
     {
       version: "v2.3-live",
-      author: "Richard Amoah (Head HR)",
+      author: "Jemima Richards (Head HR)",
       publishedAt: "2026-11-01 09:30 UTC",
       changeSummary: "Enforced Balanced Scorecard 4-pillar weighting policy across UK and Ghana subsidiaries.",
       status: "active",

@@ -191,7 +191,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
     },
     {
       id: 2,
-      employeeName: "Richard Amoah",
+      employeeName: "Jemima Richards",
       staffId: "SHR/GH/038",
       contractType: "Permanent",
       startDate: "2021-03-01",
