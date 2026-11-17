@@ -805,7 +805,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     type: "Strategic Dashboard",
     description: "Visualizes performance score distributions across departments to ensure calibration integrity and prevent grade inflation.",
     kpis: ["Top Tier (Exceeds): 24%", "Core (Meets): 71%", "Needs Support: 5%", "Calibration Drift: 0.2%"],
-    sampleAiInsight: "Appraisal calibration exhibits a healthy distribution: 24% Exceeds, 71% Meets, and 5% Needs Support. Framework purity trigger prevented hybrid inflation.",
+    sampleAiInsight: "Appraisal calibration exhibits a healthy distribution: 24% Exceeds, 71% Meets, and 5% Needs Support across all operational departments.",
     metrics: [
       { label: "Exceeds Expectations", value: "24.4%", trend: "neutral" },
       { label: "Meets Target", value: "71.1%", trend: "neutral" },
@@ -823,7 +823,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Performance & Development",
     pack: "Manager Pack",
     type: "Strategic Dashboard",
-    description: "Real-time key result progress for FY26 Q4 under strict single-framework OKR governance.",
+    description: "Real-time key result progress for FY26 Q4 under enterprise OKR governance.",
     kpis: ["Overall OKR Velocity: 84%", "On Track: 38 Goals", "At Risk: 4 Goals", "Completed: 12 Goals"],
     sampleAiInsight: "Company-wide OKR velocity reached 84% with 6 weeks remaining in Q4. 38 of 42 active key results are on track for certified closure.",
     metrics: [

@@ -195,7 +195,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               Sign in to ScoReview HR
             </h1>
             <p style={{ fontSize: typography.sizes.xs, color: colors.textMuted, margin: 0 }}>
-              Single-framework calibrated performance & workforce intelligence
+              Calibrated performance management &amp; workforce intelligence
             </p>
           </div>
 
@@ -455,7 +455,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <div style={{ display: "flex", gap: "1rem" }}>
           <span>Hubs: Accra (GH) • London (UK)</span>
           <span>•</span>
-          <span>Single-Framework Calibration Active</span>
+          <span>Enterprise Calibration Active</span>
         </div>
       </footer>
     </div>

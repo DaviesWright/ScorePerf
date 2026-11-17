@@ -70,7 +70,7 @@ export const GovernanceView: React.FC = () => {
       actorRole: "HR Director",
       action: "TENANT_SECURITY_POLICY_LOCK",
       resource: "tenant:1:security_policy",
-      details: "Enforced SOC2 Type II and ISO 27001 strict single-framework governance.",
+      details: "Enforced SOC2 Type II and ISO 27001 compliance and governance controls.",
       ipAddress: "51.148.132.44",
       immutableHash: "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
       complianceTag: "SOC2-CC6.1",

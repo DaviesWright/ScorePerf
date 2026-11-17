@@ -82,8 +82,8 @@ export const SkillsMarketplaceView: React.FC = () => {
     {
       id: 2,
       date: "2026-10-24",
-      title: "Implemented Strict Single-Framework PMS Governance",
-      impact: "Prevented conflicting mathematical scoring distortions across OKR, MBO, and BSC cycles.",
+      title: "Standardized Appraisal Calibration & Governance",
+      impact: "Prevented conflicting scoring distortions across OKR, MBO, and BSC cycles.",
       tags: ["Governance", "PMS", "Methodology"],
     },
     {
@@ -981,7 +981,7 @@ export const SkillsMarketplaceView: React.FC = () => {
 
               {aiSummaryGenerated ? (
                 <div style={{ padding: "1rem", backgroundColor: "#faf5ff", borderRadius: radii.md, border: "1px solid #e9d5ff", fontSize: typography.sizes.xs, lineHeight: 1.6, color: "#581c87" }}>
-                  <strong>AI Executive Summary:</strong> &quot;Paa demonstrated top-tier engineering stewardship in FY26. Key measurable deliverables include Cloudflare Hyperdrive edge pool deployment (sub-15ms latency), 100% hardware coverage across 45 consultants, and strict single-framework calibration governance. Recommended rating: <strong>4.8 / 5.0 (Exceptional Impact)</strong>.&quot;
+                  <strong>AI Executive Summary:</strong> &quot;Paa demonstrated top-tier engineering stewardship in FY26. Key measurable deliverables include Cloudflare Hyperdrive edge pool deployment (sub-15ms latency), 100% hardware coverage across 45 consultants, and rigorous performance calibration governance. Recommended rating: <strong>4.8 / 5.0 (Exceptional Impact)</strong>.&quot;
                 </div>
               ) : (
                 <div style={{ padding: "1.5rem", textAlign: "center", backgroundColor: colors.surfaceSubtle, borderRadius: radii.md, color: colors.textMuted, fontSize: typography.sizes.xs }}>

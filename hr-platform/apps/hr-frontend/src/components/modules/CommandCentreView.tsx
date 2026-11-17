@@ -358,10 +358,10 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         <MetricCard
           label="Appraisal Frameworks"
           value={stats.activeCycles}
-          subtext="Pure OKR, MBO & BSC cycles active"
+          subtext="OKR, MBO & BSC cycles active"
           variant="purple"
           icon={<Icons.Target size={15} />}
-          badge={<Badge variant="okr" size="sm">Single-Framework</Badge>}
+          badge={<Badge variant="okr" size="sm">Standardized</Badge>}
           onClick={() => onNavigate("performance_pms")}
         />
         <MetricCard

@@ -286,7 +286,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_performance_pms",
       view: "performance_pms",
       title: "Performance Management (OKR / MBO / BSC)",
-      subtitle: "Strict single-framework appraisal cycles & competency reviews",
+      subtitle: "Appraisal cycles, KPI scorecards & competency reviews",
       category: "Navigation",
       icon: <Icons.Target size={16} color={colors.textSecondary} />,
       keywords: ["performance", "pms", "appraisals", "reviews", "okr", "mbo", "bsc", "framework"],

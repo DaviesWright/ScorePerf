@@ -703,7 +703,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                           {card.title}
                         </h3>
                         <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                          Single-Framework Purity • Rating: <strong>{card.score}</strong>
+                          Appraisal Rating: <strong>{card.score}</strong>
                         </div>
                       </div>
 
@@ -983,7 +983,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 My Q4 Appraisal Scorecard (OKR Framework)
               </h2>
               <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                Cycle: FY26 Q4 Strategic Leadership Review • Single-Framework Pure
+                Cycle: FY26 Q4 Strategic Leadership Review • Calibrated
               </span>
             </div>
             <Badge variant="okr" size="sm">Self-Review Active</Badge>

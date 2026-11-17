@@ -273,7 +273,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         { title: "Financial: Reduce annual recruitment spend by 22% via internal gig sourcing", weight: 30, target: "GH₵120,000 saved", metric: "Cost Variance" },
         { title: "Customer: Achieve 98% internal SLA adherence on HR advisory queries", weight: 25, target: "98% Positive CSAT", metric: "SLA Index" },
         { title: "Internal Processes: Roll out automated Pre-boarding across all African entities", weight: 25, target: "100% Entities", metric: "Entity Rollout" },
-        { title: "Learning & Growth: Certify 4 People & Culture analysts in single-framework calibration standards", weight: 20, target: "4 Certified", metric: "Certs Issued" },
+        { title: "Learning & Growth: Certify 4 People & Culture analysts in appraisal calibration standards", weight: 20, target: "4 Certified", metric: "Certs Issued" },
       ],
     },
     {
@@ -779,10 +779,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         framework_code: selectedFramework,
         framework_name:
           selectedFramework === "OKR"
-            ? "Objectives & Key Results (Single-Framework)"
+            ? "Objectives & Key Results (OKR)"
             : selectedFramework === "MBO"
-            ? "Management by Objectives (Single-Framework)"
-            : "Balanced Scorecard (Single-Framework)",
+            ? "Management by Objectives (MBO)"
+            : "Balanced Scorecard (BSC)",
         status: "ACTIVE",
         start_date: startDate,
         end_date: endDate,
@@ -2727,7 +2727,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </h4>
                 <p style={{ margin: "0.4rem 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted, maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                   {requestStatusFilter === "DECLINED"
-                    ? "Zero objectives have been returned for revision. All 9 active employee scorecards comply with single-framework standards."
+                    ? "Zero objectives have been returned for revision. All 9 active employee scorecards comply with appraisal standards."
                     : "No objective records matched your search query or status filter."}
                 </p>
                 <Button size="sm" variant="outline" onClick={() => { setRequestStatusFilter("ALL"); setRequestSearchQuery(""); }}>
@@ -3062,7 +3062,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   </h3>
                 </div>
                 <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
+                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with automated score validation.
                 </p>
 
                 <div
@@ -3674,7 +3674,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Formal Appraisal Cycles
               </h2>
               <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Enforces strict single-framework mathematical purity. Cycles cannot mix OKR and Balanced Scorecard scoring models.
+                Enforces framework consistency across evaluation cycles. Each cycle uses a dedicated scoring methodology.
               </p>
             </div>
             <Button variant="primary" size="sm" onClick={() => setShowNewCycleModal(true)}>
@@ -3698,7 +3698,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <thead>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>CYCLE TITLE</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FRAMEWORK (SINGLE-FRAMEWORK)</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL FRAMEWORK</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>PERIOD</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
@@ -4062,7 +4062,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Performance Framework &amp; Cascading Governance
                     </h3>
                     <p style={{ margin: "0.25rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                      Configure enterprise objective models, 4-pillar Balanced Scorecard weights, OKR stretch thresholds, and single-framework purity rules.
+                      Configure enterprise objective models, 4-pillar Balanced Scorecard weights, OKR stretch thresholds, and scoring calibration rules.
                     </p>
                   </div>
                 </div>
@@ -4099,7 +4099,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.indigoPrimary }}>
-                          Single-Framework Mathematical Integrity
+                          Calibration & Scoring Governance
                         </span>
                         <Badge variant="bsc" size="sm">Enforced</Badge>
                       </div>
@@ -4829,7 +4829,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.25rem", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: "1rem" }}>
                   <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                    Calibrated against Q4 Single-Framework appraisal scores.
+                    Calibrated against Q4 appraisal cycle scores.
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <Button variant="outline" size="sm" onClick={() => setStatusMessage({ text: "Dede AI calibrated 9-Box talent matrix: 4 HiPo successors verified." })}>
@@ -5428,7 +5428,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
               <div>
                 <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                  Methodology Framework (Single-Framework Pure)
+                  Evaluation Methodology Framework
                 </label>
                 <select
                   value={selectedFramework}
