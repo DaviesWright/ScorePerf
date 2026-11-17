@@ -11,6 +11,7 @@ import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { AttendanceTimeZonesPanel } from "./AttendanceTimeZonesPanel";
 import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
+import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
 
 export interface LeaveRecord {
   id: number;
@@ -74,12 +75,14 @@ interface TimeAndLeaveViewProps {
   initialLeaves: LeaveRecord[];
   showNewLeaveModal?: boolean;
   onCloseNewLeaveModal?: () => void;
+  onNavigateToWorkflows?: () => void;
 }
 
 export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   initialLeaves,
   showNewLeaveModal = false,
   onCloseNewLeaveModal,
+  onNavigateToWorkflows,
 }) => {
   // Leave Navigation Tabs (13 Modules)
   const [activeTab, setActiveTab] = useState<
@@ -341,22 +344,46 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [requestFilter, setRequestFilter] = useState<string>("ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // New Leave Form State
+  // New Leave Form State (Enhanced with Staging features)
   const [newEmployeeName, setNewEmployeeName] = useState("Paa Kwesi Barnes");
   const [leaveType, setLeaveType] = useState("Annual Leave");
   const [startDate, setStartDate] = useState("2026-05-01");
   const [endDate, setEndDate] = useState("2026-05-05");
   const [reason, setReason] = useState("");
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfPeriod, setHalfPeriod] = useState<"morning" | "afternoon">("morning");
+  const [confirmingRejectId, setConfirmingRejectId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  const loadRows: LoadRow[] = useMemo(
+    () =>
+      leaves.map((l) => ({
+        employeeName: `${l.first_name} ${l.last_name}`,
+        startDate: l.start_date,
+        endDate: l.end_date,
+      })),
+    [leaves]
+  );
 
   React.useEffect(() => {
     if (showNewLeaveModal) setShowModal(true);
   }, [showNewLeaveModal]);
 
-  const handleAction = (id: number, newStatus: string) => {
+  const handleAction = (id: number, newStatus: string, actionReason?: string) => {
     setLeaves((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l))
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              status: newStatus,
+              reason: actionReason ? `${l.reason || ""} [Declined: ${actionReason}]`.trim() : l.reason,
+            }
+          : l
+      )
     );
-    setFeedback(`Leave request marked as ${newStatus.toLowerCase()}.`);
+    setConfirmingRejectId(null);
+    setRejectionReason("");
+    setFeedback(`Leave request marked as ${newStatus.toLowerCase()}.${actionReason ? ` Reason: ${actionReason}` : ""}`);
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -371,24 +398,25 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const handleCreateLeave = (e: React.FormEvent) => {
     e.preventDefault();
     const parts = newEmployeeName.split(" ");
+    const daysCalc = isHalfDay ? "0.5" : "5.0";
     const newRecord: LeaveRecord = {
       id: Date.now(),
       first_name: parts[0] || "Staff",
       last_name: parts.slice(1).join(" ") || "Member",
       staff_id: "SEN/022",
       department: "Technology",
-      leave_type_name: leaveType,
+      leave_type_name: isHalfDay ? `${leaveType} (${halfPeriod === "morning" ? "Morning" : "Afternoon"} Half-Day)` : leaveType,
       start_date: startDate,
-      end_date: endDate,
-      requested_days: "5.0",
+      end_date: isHalfDay ? startDate : endDate,
+      requested_days: daysCalc,
       status: "APPROVED",
-      reason: reason || "Scheduled time off",
+      reason: reason || (isHalfDay ? `Half-day (${halfPeriod}) time off` : "Scheduled time off"),
       approver: "Line Manager",
     };
     setLeaves([newRecord, ...leaves]);
     setShowModal(false);
     onCloseNewLeaveModal?.();
-    setFeedback("Leave request recorded and approved with Dede AI clash verification.");
+    setFeedback(`Leave request (${daysCalc} days) recorded and approved with automated clash verification.`);
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -443,6 +471,18 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
           </div>
 
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            {onNavigateToWorkflows && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNavigateToWorkflows}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.GitBranch size={14} />
+                  <span>Approval Workflows</span>
+                </span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -729,6 +769,39 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Workforce Leave Density & Coverage Heatmap */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              border: `1px solid ${colors.border}`,
+              padding: "1.25rem",
+              boxShadow: shadows.xs,
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  Workforce Leave Density & Coverage Heatmap
+                </h3>
+                <p style={{ margin: "0.2rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
+                  Scheduled absence density across Accra & London practices to safeguard project coverage
+                </p>
+              </div>
+              <Badge variant="info" size="sm">Active Roster View</Badge>
+            </div>
+            <LeaveLoadStrip
+              rows={loadRows}
+              from="2026-05-01"
+              to="2026-05-31"
+              ramp={INDIGO_RAMP}
+              caption="May 2026 Daily Absence Load & Coverage Roster"
+            />
           </div>
 
           {/* Quick Dual Cards: Upcoming Leaves & Resumptions */}
@@ -1052,14 +1125,54 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                             >
                               Approve
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAction(l.id, "REJECTED")}
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
-                            >
-                              Decline
-                            </Button>
+                            {confirmingRejectId === l.id ? (
+                              <div style={{ display: "inline-flex", gap: "0.25rem", alignItems: "center" }}>
+                                <input
+                                  type="text"
+                                  placeholder="Decline reason..."
+                                  value={rejectionReason}
+                                  onChange={(e) => setRejectionReason(e.target.value)}
+                                  style={{
+                                    fontSize: "11px",
+                                    padding: "0.2rem 0.4rem",
+                                    border: `1px solid ${colors.border}`,
+                                    borderRadius: radii.sm,
+                                    width: "130px",
+                                  }}
+                                />
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => handleAction(l.id, "REJECTED", rejectionReason || "Operational constraints")}
+                                  style={{ padding: "0.2rem 0.4rem", fontSize: "11px", backgroundColor: colors.error, borderColor: colors.error }}
+                                >
+                                  Confirm
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setConfirmingRejectId(null);
+                                    setRejectionReason("");
+                                  }}
+                                  style={{ padding: "0.2rem 0.4rem", fontSize: "11px" }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setConfirmingRejectId(l.id);
+                                  setRejectionReason("");
+                                }}
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                              >
+                                Decline
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>
@@ -2247,10 +2360,46 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 </select>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}` }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textPrimary, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isHalfDay}
+                    onChange={(e) => setIsHalfDay(e.target.checked)}
+                    style={{ cursor: "pointer" }}
+                  />
+                  Half-Day Request (0.5 Day)
+                </label>
+                {isHalfDay && (
+                  <div style={{ display: "flex", gap: "0.6rem", marginLeft: "auto" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: typography.sizes.xs, cursor: "pointer", color: colors.textPrimary }}>
+                      <input
+                        type="radio"
+                        name="halfPeriod"
+                        value="morning"
+                        checked={halfPeriod === "morning"}
+                        onChange={() => setHalfPeriod("morning")}
+                      />
+                      Morning
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: typography.sizes.xs, cursor: "pointer", color: colors.textPrimary }}>
+                      <input
+                        type="radio"
+                        name="halfPeriod"
+                        value="afternoon"
+                        checked={halfPeriod === "afternoon"}
+                        onChange={() => setHalfPeriod("afternoon")}
+                      />
+                      Afternoon
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: isHalfDay ? "1fr" : "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                    Start Date
+                    {isHalfDay ? "Leave Date" : "Start Date"}
                   </label>
                   <input
                     type="date"
@@ -2259,17 +2408,19 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                     style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
-                  />
-                </div>
+                {!isHalfDay && (
+                  <div>
+                    <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

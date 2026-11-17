@@ -85,8 +85,17 @@ export function parseEnabledFeatures(raw: string | undefined): Set<FeatureKey> {
   return new Set(ALL_FEATURES.filter((f) => list.includes(f)));
 }
 
-/** NEXT_PUBLIC_SHELL: "plain" (default) uses PlainShell; "full" keeps the original decorated frame. */
-export const parseShellMode = (raw: string | undefined): "plain" | "full" => (raw?.trim().toLowerCase() === "full" ? "full" : "plain");
+/** NEXT_PUBLIC_SHELL: "plain" uses PlainShell (staging dark teal); "full" keeps the original decorated frame. */
+export const parseShellMode = (raw: string | undefined): "plain" | "full" => {
+  if (raw?.trim().toLowerCase() === "plain") return "plain";
+  if (raw?.trim().toLowerCase() === "full") return "full";
+  // The dark teal shell ("plain") is meant exclusively for the staging environment.
+  // Production (hr.bscscoreview.com) maintains its original full colors.
+  if (typeof window !== "undefined" && window.location.hostname.includes("staging")) {
+    return "plain";
+  }
+  return "full";
+};
 export const SHELL_MODE = parseShellMode(process.env.NEXT_PUBLIC_SHELL);
 
 const enabledViews = parseEnabledViews(process.env.NEXT_PUBLIC_ENABLED_MODULES);

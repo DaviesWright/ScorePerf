@@ -344,6 +344,11 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  // Staging environment (staging.bscscoreview.com) uses the dark teal rail ("plain");
+  // Production (hr.bscscoreview.com) maintains its original full colors ("full").
+  const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+  const effectiveShellMode = isStaging ? "plain" : (SHELL_MODE === "plain" && !isStaging ? "full" : SHELL_MODE);
+
   // The module screen itself, shared by both frames.
   const viewContent = (
     <>
@@ -455,12 +460,13 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
 
           {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 
-          {currentView === "time_and_leave" && SHELL_MODE === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "time_and_leave" && SHELL_MODE !== "plain" && (
+          {currentView === "time_and_leave" && effectiveShellMode === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "time_and_leave" && effectiveShellMode !== "plain" && (
             <TimeAndLeaveView
               initialLeaves={leaves}
               showNewLeaveModal={showLeaveModalDirectly}
               onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
+              onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
             />
           )}
 
@@ -533,7 +539,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     </>
   );
 
-  if (SHELL_MODE === "plain") {
+  if (effectiveShellMode === "plain") {
     return (
       <>
         <PlainShell

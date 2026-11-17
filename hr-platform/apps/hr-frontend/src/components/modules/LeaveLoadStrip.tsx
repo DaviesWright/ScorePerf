@@ -3,9 +3,10 @@
 import React, { useMemo } from "react";
 import { formatDate } from "../../utils/date";
 
-// Intensity strip: one cell per day, darker teal for more people off. Warm neutral is "none".
-// Each cell has a title with the date and count, and the strip has a summary label, so colour is not the only signal.
-const RAMP = ["#f2f1ed", "#cfe3dc", "#8fc2b3", "#4f9a88", "#0f5c4d"];
+// Intensity strip: one cell per day, darker colour for more people off.
+// Default teal ramp for staging, customisable for original enterprise colours.
+export const TEAL_RAMP = ["#f2f1ed", "#cfe3dc", "#8fc2b3", "#4f9a88", "#0f5c4d"];
+export const INDIGO_RAMP = ["#f8fafc", "#e0e7ff", "#a5b4fc", "#6366f1", "#4338ca"];
 
 export interface LoadRow {
   employeeName: string;
@@ -25,7 +26,19 @@ function dayList(from: string, to: string): string[] {
   return out;
 }
 
-export function LeaveLoadStrip({ rows, from, to, caption }: { rows: LoadRow[]; from: string; to: string; caption: string }) {
+export function LeaveLoadStrip({
+  rows,
+  from,
+  to,
+  caption,
+  ramp = TEAL_RAMP,
+}: {
+  rows: LoadRow[];
+  from: string;
+  to: string;
+  caption: string;
+  ramp?: string[];
+}) {
   const days = useMemo(() => dayList(from, to), [from, to]);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -41,7 +54,7 @@ export function LeaveLoadStrip({ rows, from, to, caption }: { rows: LoadRow[]; f
 
   return (
     <div style={{ marginBottom: "1.25rem" }}>
-      <p style={{ margin: "0 0 0.4rem 0", fontSize: "12px", color: "#79756c" }}>{caption}</p>
+      <p style={{ margin: "0 0 0.4rem 0", fontSize: "12px", color: "#79756c", fontWeight: 600 }}>{caption}</p>
       <div
         role="img"
         aria-label={`${caption}. Busiest day has ${busiest} ${busiest === 1 ? "person" : "people"} off.`}
@@ -54,15 +67,15 @@ export function LeaveLoadStrip({ rows, from, to, caption }: { rows: LoadRow[]; f
             <span
               key={d}
               title={`${formatDate(d)}: ${n} ${n === 1 ? "person" : "people"} off`}
-              style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: RAMP[step], border: "1px solid #e4e1da", boxSizing: "border-box" }}
+              style={{ width: "14px", height: "14px", borderRadius: "3px", backgroundColor: ramp[step], border: "1px solid #e2e8f0", boxSizing: "border-box" }}
             />
           );
         })}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.4rem", fontSize: "11px", color: "#79756c" }}>
         <span>Fewer</span>
-        {RAMP.map((c) => (
-          <span key={c} style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: c, border: "1px solid #e4e1da", boxSizing: "border-box" }} />
+        {ramp.map((c) => (
+          <span key={c} style={{ width: "12px", height: "12px", borderRadius: "2px", backgroundColor: c, border: "1px solid #e2e8f0", boxSizing: "border-box" }} />
         ))}
         <span>More</span>
       </div>
