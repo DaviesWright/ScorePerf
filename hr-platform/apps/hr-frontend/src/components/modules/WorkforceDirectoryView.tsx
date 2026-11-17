@@ -1311,8 +1311,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
             <div style={{ display: "flex", borderBottom: `1px solid ${colors.border}`, gap: "1.25rem" }}>
               {[
                 { id: "overview", label: "Overview" },
-                { id: "assets", label: "Hardware and Fleet" },
-                { id: "performance", label: "Performance" },
+                { id: "assets", label: "Hardware & Assets" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1389,19 +1388,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     No hardware assets currently provisioned to this employee.
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Performance Drawer Tab */}
-            {activeDrawerTab === "performance" && (
-              <div style={{ backgroundColor: colors.surfaceSubtle, padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: "11px", color: colors.textMuted }}>Q1 Performance Rating</span>
-                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: colors.emeraldDark, marginTop: "2px" }}>
-                  4.8 / 5.0 (Star Talent)
-                </div>
-                <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
-                  100% OKR and BSC alignment with zero cycle scoring distortions.
-                </p>
               </div>
             )}
           </div>

@@ -126,180 +126,346 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     employee: { title: "Employee (ESS)", badge: "Self-Service" },
   };
 
-  const navSections = [
-    {
-      group: "MY WORKSPACE",
-      items: [
+  const getNavSections = () => {
+    // 1. EMPLOYEE PERSONA (ESS ONLY)
+    if (persona === "employee") {
+      return [
         {
-          key: "self_service" as ModuleViewKey,
-          label: "My Self-Service",
-          icon: Icons.Users,
-          badge: "ESS",
-          badgeType: "peach" as const,
+          group: "MY WORKSPACE (ESS)",
+          items: [
+            {
+              key: "self_service" as ModuleViewKey,
+              label: "My Self-Service",
+              icon: Icons.Users,
+              badge: "ESS",
+              badgeType: "peach" as const,
+            },
+            {
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Appraisals",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "my_leave" as ModuleViewKey,
+              label: "My Leave",
+              icon: Icons.Calendar,
+              badge: "Leave Portal",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "document_centre" as ModuleViewKey,
+              label: "Document Centre",
+              icon: Icons.BookOpen,
+              badge: "Policies & Docs",
+              badgeType: "neutral" as const,
+            },
+            {
+              key: "helpdesk" as ModuleViewKey,
+              label: "My Support Tickets",
+              icon: Icons.LifeBuoy,
+              badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+              badgeType: "emerald" as const,
+            },
+          ],
         },
         {
-          key: "my_performance" as ModuleViewKey,
-          label: "My Performance",
-          icon: Icons.Target,
-          badge: "Appraisals",
-          badgeType: "indigo" as const,
+          group: "COMPANY DIRECTORY (READ-ONLY)",
+          items: [
+            {
+              key: "workforce_directory" as ModuleViewKey,
+              label: "Colleague Directory",
+              icon: Icons.Users,
+              badge: `${counts.employees}`,
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "policies_handbook" as ModuleViewKey,
+              label: "Policies & Handbooks",
+              icon: Icons.BookOpen,
+            },
+          ],
+        },
+      ];
+    }
+
+    // 2. LINE MANAGER PERSONA (ESS + MANAGER CONSOLE)
+    if (persona === "line_manager") {
+      return [
+        {
+          group: "MY WORKSPACE (ESS)",
+          items: [
+            {
+              key: "self_service" as ModuleViewKey,
+              label: "My Self-Service",
+              icon: Icons.Users,
+              badge: "ESS",
+              badgeType: "peach" as const,
+            },
+            {
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Appraisals",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "my_leave" as ModuleViewKey,
+              label: "My Leave",
+              icon: Icons.Calendar,
+              badge: "Leave Portal",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "document_centre" as ModuleViewKey,
+              label: "Document Centre",
+              icon: Icons.BookOpen,
+              badge: "Policies & Docs",
+              badgeType: "neutral" as const,
+            },
+          ],
         },
         {
-          key: "my_leave" as ModuleViewKey,
-          label: "My Leave",
-          icon: Icons.Calendar,
-          badge: "Leave Portal",
-          badgeType: "emerald" as const,
+          group: "MANAGER CONSOLE (MY TEAM)",
+          items: [
+            {
+              key: "performance_pms" as ModuleViewKey,
+              label: "Team Appraisals & Reviews",
+              icon: Icons.Target,
+              badge: `${counts.cycles}`,
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "objectives" as ModuleViewKey,
+              label: "Team OKRs & Alignment",
+              icon: Icons.Target,
+              badge: "Team",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "time_and_leave" as ModuleViewKey,
+              label: "Team Leave & Approvals",
+              icon: Icons.Calendar,
+              badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
+              badgeType: "peach" as const,
+            },
+            {
+              key: "admin_nerve_center" as ModuleViewKey,
+              label: "Approvals Inbox",
+              icon: Icons.ShieldCheck,
+              badge: "Approvals",
+              badgeType: "peach" as const,
+            },
+            {
+              key: "workforce_directory" as ModuleViewKey,
+              label: "Team & Directory",
+              icon: Icons.Users,
+              badge: `${counts.employees}`,
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "projects" as ModuleViewKey,
+              label: "Client Engagements",
+              icon: Icons.Briefcase,
+              badge: `${counts.projects}`,
+              badgeType: "neutral" as const,
+            },
+            {
+              key: "helpdesk" as ModuleViewKey,
+              label: "Helpdesk",
+              icon: Icons.LifeBuoy,
+              badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "policies_handbook" as ModuleViewKey,
+              label: "Policies & Handbooks",
+              icon: Icons.BookOpen,
+            },
+          ],
         },
-        {
-          key: "document_centre" as ModuleViewKey,
-          label: "Document Centre",
-          icon: Icons.BookOpen,
-          badge: "Policies & Docs",
-          badgeType: "neutral" as const,
-        },
-      ],
-    },
-    {
-      group: "WORKFORCE INTELLIGENCE",
-      items: [
-        {
-          key: "command_centre" as ModuleViewKey,
-          label: "Command Centre & Dashboard",
-          icon: Icons.CommandCentre,
-          badge: "Live Intel",
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "reports_analytics" as ModuleViewKey,
-          label: "Strategic Reports & AI",
-          icon: Icons.BarChart,
-          badge: "60 Reports",
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "workforce_directory" as ModuleViewKey,
-          label: "Workforce Directory",
-          icon: Icons.Users,
-          badge: `${counts.employees}`,
-          badgeType: "emerald" as const,
-        },
-        {
-          key: "projects" as ModuleViewKey,
-          label: "Client Engagements",
-          icon: Icons.Briefcase,
-          badge: `${counts.projects}`,
-          badgeType: "neutral" as const,
-        },
-      ],
-    },
-    {
-      group: "TALENT & CAREER",
-      items: [
-        {
-          key: "performance_pms" as ModuleViewKey,
-          label: "Appraisals (PMS)",
-          icon: Icons.Target,
-          badge: `${counts.cycles}`,
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "objectives" as ModuleViewKey,
-          label: "OKR & BSC Objectives",
-          icon: Icons.Target,
-          badge: "Strategy",
-          badgeType: "emerald" as const,
-        },
-        {
-          key: "performance_setup" as ModuleViewKey,
-          label: "Performance Setup",
-          icon: Icons.Settings,
-          badge: "Cycles & Scales",
-          badgeType: "peach" as const,
-        },
-        {
-          key: "skills_marketplace" as ModuleViewKey,
-          label: "Skills & Gig Board",
-          icon: Icons.Compass,
-          badge: "AI",
-          badgeType: "emerald" as const,
-        },
-      ],
-    },
-    {
-      group: "OPERATIONS & AUTOMATION",
-      items: [
-        {
-          key: "admin_nerve_center" as ModuleViewKey,
-          label: "Operations Nerve Center",
-          icon: Icons.ShieldCheck,
-          badge: "Approvals",
-          badgeType: "peach" as const,
-        },
-        {
-          key: "lifecycle_portals" as ModuleViewKey,
-          label: "Onboarding & Exit",
-          icon: Icons.Plane,
-        },
-      ],
-    },
-    {
-      group: "TIME & ASSETS",
-      items: [
-        {
-          key: "time_and_leave" as ModuleViewKey,
-          label: "Leaves & Shifts",
-          icon: Icons.Calendar,
-          badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
-          badgeType: "peach" as const,
-        },
-        {
-          key: "asset_management" as ModuleViewKey,
-          label: "Hardware & Fleet",
-          icon: Icons.Laptop,
-          badge: `${counts.assets}`,
-          badgeType: "neutral" as const,
-        },
-        {
-          key: "helpdesk" as ModuleViewKey,
-          label: "IT Helpdesk",
-          icon: Icons.LifeBuoy,
-          badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
-          badgeType: "emerald" as const,
-        },
-      ],
-    },
-    {
-      group: "GOVERNANCE & DATA",
-      items: [
-        {
-          key: "employee_settings" as ModuleViewKey,
-          label: "Employee Settings",
-          icon: Icons.Settings,
-          badge: "Config",
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "approval_workflows" as ModuleViewKey,
-          label: "Approval Workflows",
-          icon: Icons.FileCheck,
-          badge: "Maker-Checker",
-          badgeType: "emerald" as const,
-        },
-        { key: "company_setup" as ModuleViewKey, label: "Company Setup", icon: Icons.Settings },
-        {
-          key: "organogram" as ModuleViewKey,
-          label: "Organogram",
-          icon: Icons.GitBranch,
-          badge: "Hierarchy",
-          badgeType: "emerald" as const,
-        },
-        { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
-        { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
-        { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },
-      ],
-    },
-  ];
+      ];
+    }
+
+    // 3. HR ADMIN / HR DIRECTOR (HR CONSOLE)
+    return [
+      {
+        group: "MY WORKSPACE (ESS)",
+        items: [
+          {
+            key: "self_service" as ModuleViewKey,
+            label: "My Self-Service",
+            icon: Icons.Users,
+            badge: "ESS",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "my_performance" as ModuleViewKey,
+            label: "My Performance",
+            icon: Icons.Target,
+            badge: "Appraisals",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "my_leave" as ModuleViewKey,
+            label: "My Leave",
+            icon: Icons.Calendar,
+            badge: "Leave Portal",
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "document_centre" as ModuleViewKey,
+            label: "Document Centre",
+            icon: Icons.BookOpen,
+            badge: "Policies & Docs",
+            badgeType: "neutral" as const,
+          },
+        ],
+      },
+      {
+        group: "WORKFORCE INTELLIGENCE",
+        items: [
+          {
+            key: "command_centre" as ModuleViewKey,
+            label: "Command Centre & Dashboard",
+            icon: Icons.CommandCentre,
+            badge: "Live Intel",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "reports_analytics" as ModuleViewKey,
+            label: "Strategic Reports & AI",
+            icon: Icons.BarChart,
+            badge: "60 Reports",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "workforce_directory" as ModuleViewKey,
+            label: "Workforce Directory",
+            icon: Icons.Users,
+            badge: `${counts.employees}`,
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "projects" as ModuleViewKey,
+            label: "Client Engagements",
+            icon: Icons.Briefcase,
+            badge: `${counts.projects}`,
+            badgeType: "neutral" as const,
+          },
+        ],
+      },
+      {
+        group: "TALENT & CAREER",
+        items: [
+          {
+            key: "performance_pms" as ModuleViewKey,
+            label: "Appraisals (PMS)",
+            icon: Icons.Target,
+            badge: `${counts.cycles}`,
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "objectives" as ModuleViewKey,
+            label: "OKR & BSC Objectives",
+            icon: Icons.Target,
+            badge: "Strategy",
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "performance_setup" as ModuleViewKey,
+            label: "Performance Setup",
+            icon: Icons.Settings,
+            badge: "Cycles & Scales",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "skills_marketplace" as ModuleViewKey,
+            label: "Skills & Gig Board",
+            icon: Icons.Compass,
+            badge: "AI",
+            badgeType: "emerald" as const,
+          },
+        ],
+      },
+      {
+        group: "OPERATIONS & AUTOMATION",
+        items: [
+          {
+            key: "admin_nerve_center" as ModuleViewKey,
+            label: "Operations Nerve Center",
+            icon: Icons.ShieldCheck,
+            badge: "Approvals",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "lifecycle_portals" as ModuleViewKey,
+            label: "Onboarding & Exit",
+            icon: Icons.Plane,
+          },
+        ],
+      },
+      {
+        group: "TIME & ASSETS",
+        items: [
+          {
+            key: "time_and_leave" as ModuleViewKey,
+            label: "Leaves & Shifts",
+            icon: Icons.Calendar,
+            badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
+            badgeType: "peach" as const,
+          },
+          {
+            key: "asset_management" as ModuleViewKey,
+            label: "Hardware & Fleet",
+            icon: Icons.Laptop,
+            badge: `${counts.assets}`,
+            badgeType: "neutral" as const,
+          },
+          {
+            key: "helpdesk" as ModuleViewKey,
+            label: "IT Helpdesk",
+            icon: Icons.LifeBuoy,
+            badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+            badgeType: "emerald" as const,
+          },
+        ],
+      },
+      {
+        group: "GOVERNANCE & DATA",
+        items: [
+          {
+            key: "employee_settings" as ModuleViewKey,
+            label: "Employee Settings",
+            icon: Icons.Settings,
+            badge: "Config",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "approval_workflows" as ModuleViewKey,
+            label: "Approval Workflows",
+            icon: Icons.FileCheck,
+            badge: "Maker-Checker",
+            badgeType: "emerald" as const,
+          },
+          { key: "company_setup" as ModuleViewKey, label: "Company Setup", icon: Icons.Settings },
+          {
+            key: "organogram" as ModuleViewKey,
+            label: "Organogram",
+            icon: Icons.GitBranch,
+            badge: "Hierarchy",
+            badgeType: "emerald" as const,
+          },
+          { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
+          { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
+          { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },
+        ],
+      },
+    ];
+  };
+
+  const navSections = getNavSections();
 
   // Disabled modules are hidden (not removed); groups left empty disappear with them.
   const visibleNavSections = navSections

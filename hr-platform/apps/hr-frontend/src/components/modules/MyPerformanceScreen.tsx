@@ -41,13 +41,32 @@ export interface HistoricalAppraisal {
   completedDate: string;
 }
 
+export interface AssignedReviewTask {
+  id: string;
+  revieweeName: string;
+  revieweeTitle: string;
+  revieweeDepartment: string;
+  type: "Peer Review" | "Upward Review";
+  cycleTitle: string;
+  dueDate: string;
+  status: "Pending" | "Submitted";
+  submittedDate?: string;
+  ratings: Record<string, number>;
+  comments: Record<string, string>;
+}
+
 interface MyPerformanceScreenProps {
   user?: { id: string; persona: string; name?: string };
   realSession?: boolean;
 }
 
 export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
-  const [activeTab, setActiveTab] = useState<"self_review" | "objectives" | "aligned_tasks" | "history">("self_review");
+  const [activeTab, setActiveTab] = useState<
+    "self_review" | "objectives" | "my_cascade" | "assigned_reviews" | "aligned_tasks" | "history"
+  >("self_review");
+
+  // Cycle Phase Lifecycle Simulation: Open vs In Review vs Closed
+  const [cyclePhase, setCyclePhase] = useState<"Open" | "In Review" | "Calibration" | "Closed">("In Review");
 
   // Active Cycle State
   const activeCycle = {
@@ -112,6 +131,41 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
       status: "Approved",
     },
   ]);
+
+  // Assigned Peer & Upward Reviews (FR-PERF-017, FR-PERF-027)
+  const [assignedReviews, setAssignedReviews] = useState<AssignedReviewTask[]>([
+    {
+      id: "REV-PEER-101",
+      revieweeName: "Abena Osei",
+      revieweeTitle: "Senior Mobile Engineer",
+      revieweeDepartment: "FinTech Engineering Squad",
+      type: "Peer Review",
+      cycleTitle: "2026 Q2 Performance Appraisal",
+      dueDate: "2026-06-25",
+      status: "Pending",
+      ratings: { collaboration: 4.5, technicalRigor: 4.8 },
+      comments: { feedback: "" },
+    },
+    {
+      id: "REV-UPWARD-202",
+      revieweeName: "Sarah Jenkins",
+      revieweeTitle: "Engineering Director",
+      revieweeDepartment: "Technology Advisory & Cloud Solutions",
+      type: "Upward Review",
+      cycleTitle: "2026 Q2 Performance Appraisal",
+      dueDate: "2026-06-20",
+      status: "Submitted",
+      submittedDate: "2026-06-14",
+      ratings: { leadershipClarity: 5.0, psychologicalSafety: 4.9 },
+      comments: { feedback: "Sarah provides exceptional strategic clarity and removes operational blockers quickly." },
+    },
+  ]);
+
+  // Selected Peer Review in Edit Modal/Drawer
+  const [activeReviewTask, setActiveReviewTask] = useState<AssignedReviewTask | null>(null);
+  const [peerCollabRating, setPeerCollabRating] = useState<number>(4.5);
+  const [peerTechRating, setPeerTechRating] = useState<number>(4.8);
+  const [peerFeedbackText, setPeerFeedbackText] = useState<string>("");
 
   // Aligned Tasks State
   const [tasks, setTasks] = useState<AlignedTask[]>([
@@ -201,6 +255,10 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
 
   const handleAddObjective = (e: React.FormEvent) => {
     e.preventDefault();
+    if (cyclePhase === "In Review" || cyclePhase === "Calibration" || cyclePhase === "Closed") {
+      alert(`Objectives are locked because appraisal cycle is in '${cyclePhase}' phase. Edits are restricted.`);
+      return;
+    }
     if (!newObjTitle.trim()) return;
 
     const newObj: MyObjective = {
@@ -222,12 +280,64 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
     setTimeout(() => setStatusMessage(null), 4000);
   };
 
+  const submitPeerReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeReviewTask) return;
+    if (!peerFeedbackText.trim()) {
+      alert("Written feedback comments are mandatory for peer evaluation.");
+      return;
+    }
+
+    setAssignedReviews(
+      assignedReviews.map((r) =>
+        r.id === activeReviewTask.id
+          ? {
+              ...r,
+              status: "Submitted",
+              submittedDate: new Date().toISOString().split("T")[0],
+              ratings: { collaboration: peerCollabRating, technicalRigor: peerTechRating },
+              comments: { feedback: peerFeedbackText },
+            }
+          : r
+      )
+    );
+
+    setActiveReviewTask(null);
+    setPeerFeedbackText("");
+    setStatusMessage(`Peer review for ${activeReviewTask.revieweeName} submitted successfully and securely recorded.`);
+    setTimeout(() => setStatusMessage(null), 5000);
+  };
+
   const toggleTask = (taskId: number) => {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t)));
   };
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: "1140px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* ESS Scope Governance Banner (The One-Line Rule) */}
+      <div
+        style={{
+          padding: "0.85rem 1.25rem",
+          borderRadius: radii.md,
+          backgroundColor: "#eff6ff",
+          border: "1px solid #bfdbfe",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "0.75rem",
+          boxShadow: shadows.xs,
+        }}
+      >
+        <Icons.Info size={18} color="#2563eb" style={{ flexShrink: 0, marginTop: "2px" }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e40af" }}>
+            Employee Self-Service (ESS) Personal Workspace Rule
+          </div>
+          <div style={{ fontSize: "11.5px", color: "#1e3a8a", marginTop: "2px", lineHeight: "1.4" }}>
+            <strong>ESS is where I act on my own HR life.</strong> Manager Console is where I act on my team. HR Console is where I act on the company. Directory is where I look up colleagues — read-only, and never performance or leave data.
+          </div>
+        </div>
+      </div>
+
       {/* Header Banner */}
       <div
         style={{
@@ -249,22 +359,59 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
             <h1 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
               My Performance
             </h1>
-            <Badge variant="bsc" size="sm">Active: {activeCycle.framework}</Badge>
+            <Badge variant="bsc" size="sm">Framework: {activeCycle.framework}</Badge>
+            <Badge variant={cyclePhase === "Open" ? "neutral" : cyclePhase === "In Review" ? "warning" : "success"} size="sm">
+              Phase: {cyclePhase}
+            </Badge>
           </div>
           <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.35rem 0 0 0" }}>
-            Your dedicated space for setting objectives, completing self-appraisals with mandatory comments, and tracking review history.
+            Your dedicated workspace for setting objectives, completing self-assessments with mandatory comments, and tracking review history.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Button variant="outline" size="sm" onClick={() => setShowAddObjModal(true)}>
+        {/* Phase Simulation Selector & Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "11px", color: colors.textMuted }}>
+            <span>Cycle Phase:</span>
+            <select
+              value={cyclePhase}
+              onChange={(e) => setCyclePhase(e.target.value as typeof cyclePhase)}
+              style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                padding: "0.25rem 0.5rem",
+                borderRadius: radii.sm,
+                border: `1px solid ${colors.border}`,
+                backgroundColor: colors.surfaceSubtle,
+                color: colors.textPrimary,
+                cursor: "pointer",
+              }}
+            >
+              <option value="Open">Open (Goal Creation Active)</option>
+              <option value="In Review">In Review (Goals Locked)</option>
+              <option value="Calibration">Calibration (Scoring Locked)</option>
+              <option value="Closed">Closed (Archived)</option>
+            </select>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (cyclePhase === "In Review") {
+                alert("Goal creation is LOCKED during the 'In Review' phase (TC-ESS-06). Switch cycle phase to 'Open' to propose new objectives.");
+              } else {
+                setShowAddObjModal(true);
+              }
+            }}
+          >
             <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <Icons.Plus size={14} />
-              <span>Propose Objective</span>
+              {cyclePhase === "In Review" ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
+              <span>{cyclePhase === "In Review" ? "Objectives Locked" : "Propose Objective"}</span>
             </span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => setActiveTab("self_review")}>
-            <span>Active Appraisal Cycle</span>
+            <span>Active Appraisal</span>
           </Button>
         </div>
       </div>
@@ -276,10 +423,12 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
       )}
 
       {/* Tab Navigation Menu */}
-      <div style={{ display: "flex", gap: "0.5rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.5rem" }}>
+      <div style={{ display: "flex", gap: "0.5rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.5rem", overflowX: "auto" }}>
         {[
           { key: "self_review", label: "Take Appraisal (Self-Review)", icon: Icons.FileText },
           { key: "objectives", label: `My Objectives (${objectives.length})`, icon: Icons.Target },
+          { key: "my_cascade", label: "My Cascade (Alignment)", icon: Icons.GitBranch },
+          { key: "assigned_reviews", label: `Assigned Reviews (${assignedReviews.length})`, icon: Icons.Users },
           { key: "aligned_tasks", label: `Aligned Tasks (${tasks.length})`, icon: Icons.FileCheck },
           { key: "history", label: `Appraisal History (${history.length})`, icon: Icons.Clock },
         ].map((tab) => (
@@ -316,7 +465,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
           >
             <div>
               <div style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase" }}>
-                Active Appraisal Cycle
+                Active Appraisal Cycle • Phase: {cyclePhase}
               </div>
               <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.indigoPrimary, marginTop: "0.2rem" }}>
                 {activeCycle.title}
@@ -406,13 +555,32 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
       {activeTab === "objectives" && (
         <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.xs }}>
           <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
-              Current Cycle Objectives ({activeCycle.title})
-            </h2>
-            <Button variant="outline" size="sm" onClick={() => setShowAddObjModal(true)}>
+            <div>
+              <h2 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
+                Current Cycle Objectives ({activeCycle.title})
+              </h2>
+              {cyclePhase === "In Review" && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "11px", color: "#b45309", marginTop: "0.25rem" }}>
+                  <Icons.Lock size={12} color="#b45309" />
+                  <strong>Objectives Locked:</strong> Review phase is active. Objectives cannot be edited or added (TC-ESS-06).
+                </span>
+              )}
+            </div>
+
+            <Button
+              variant={cyclePhase === "In Review" ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (cyclePhase === "In Review") {
+                  alert("Objectives are locked while appraisal cycle is In Review (TC-ESS-06). Switch cycle phase to 'Open' to propose new goals.");
+                } else {
+                  setShowAddObjModal(true);
+                }
+              }}
+            >
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <Icons.Plus size={14} />
-                <span>Propose Objective</span>
+                {cyclePhase === "In Review" ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
+                <span>{cyclePhase === "In Review" ? "Goal Editing Locked" : "Propose Objective"}</span>
               </span>
             </Button>
           </div>
@@ -455,6 +623,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
                         min="0"
                         max="100"
                         value={obj.progress}
+                        disabled={cyclePhase === "In Review" || cyclePhase === "Closed"}
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
                           setObjectives(objectives.map((o) => (o.id === obj.id ? { ...o, progress: val } : o)));
@@ -471,7 +640,216 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
         </div>
       )}
 
-      {/* TAB 3: ALIGNED TASKS & KEY RESULTS */}
+      {/* TAB 3: MY CASCADE (ALIGNMENT) - FR-PERF-014 */}
+      {activeTab === "my_cascade" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* FR-PERF-014 Rule Notice */}
+          <div
+            style={{
+              padding: "0.85rem 1.25rem",
+              borderRadius: radii.md,
+              backgroundColor: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.75rem",
+            }}
+          >
+            <Icons.ShieldCheck size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "12px", fontWeight: 700, color: "#15803d" }}>
+                Scoped Objective Cascade Guarantee (FR-PERF-014)
+              </div>
+              <div style={{ fontSize: "11.5px", color: "#166534", marginTop: "2px", lineHeight: "1.4" }}>
+                In ESS, you see <strong>only your own objectives and the direct parent chain</strong> they attach to (My OKR &rarr; Department OKR &rarr; Company OKR). Sibling objectives owned by peers and other departments are strictly isolated to Manager Console and HR Console.
+              </div>
+            </div>
+          </div>
+
+          {/* Upward Cascade View */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, padding: "1.5rem", boxShadow: shadows.xs }}>
+            <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1.25rem 0" }}>
+              My Upward Alignment Hierarchy
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Level 1: Company Strategic OKR */}
+              <div
+                style={{
+                  padding: "1.1rem 1.25rem",
+                  borderRadius: radii.md,
+                  backgroundColor: "#f8fafc",
+                  border: `1px solid ${colors.border}`,
+                  borderLeft: `4px solid ${colors.indigoAction}`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase" }}>
+                    LEVEL 1: COMPANY STRATEGIC OBJECTIVE (PARENT)
+                  </span>
+                  <Badge variant="okr" size="sm">Corporate OKR</Badge>
+                </div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.indigoPrimary, marginTop: "0.3rem" }}>
+                  Expand Pan-African Cloud Infrastructure &amp; Regional Service Reliability
+                </div>
+                <div style={{ fontSize: "11.5px", color: colors.textSecondary, marginTop: "0.25rem" }}>
+                  Owner: Executive Leadership • Target: 99.98% platform reliability across West Africa Hub
+                </div>
+              </div>
+
+              {/* Connecting Connector Icon */}
+              <div style={{ display: "flex", justifyContent: "center", color: colors.indigoAction }}>
+                <Icons.ChevronDown size={20} />
+              </div>
+
+              {/* Level 2: Department / Squad OKR */}
+              <div
+                style={{
+                  padding: "1.1rem 1.25rem",
+                  borderRadius: radii.md,
+                  backgroundColor: "#f8fafc",
+                  border: `1px solid ${colors.border}`,
+                  borderLeft: `4px solid ${colors.brandBlue}`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: colors.brandBlue, textTransform: "uppercase" }}>
+                    LEVEL 2: DEPARTMENT SQUAD OBJECTIVE (MID-PARENT)
+                  </span>
+                  <Badge variant="neutral" size="sm">Platform Engineering</Badge>
+                </div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.textPrimary, marginTop: "0.3rem" }}>
+                  Deploy Edge Architecture with Sub-15ms p99 Latency &amp; ISO-27001 Compliance
+                </div>
+                <div style={{ fontSize: "11.5px", color: colors.textSecondary, marginTop: "0.25rem" }}>
+                  Owner: Sarah Jenkins (Managing Director) • Target: Zero edge downtime and 100% audit clearance
+                </div>
+              </div>
+
+              {/* Connecting Connector Icon */}
+              <div style={{ display: "flex", justifyContent: "center", color: colors.indigoAction }}>
+                <Icons.ChevronDown size={20} />
+              </div>
+
+              {/* Level 3: Individual Objective (Mine) */}
+              <div
+                style={{
+                  padding: "1.1rem 1.25rem",
+                  borderRadius: radii.md,
+                  backgroundColor: colors.indigoSubtle,
+                  border: `1.5px solid ${colors.indigoBorder}`,
+                  borderLeft: `4px solid ${colors.emeraldDark}`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: colors.emeraldDark, textTransform: "uppercase" }}>
+                    LEVEL 3: MY INDIVIDUAL DELIVERABLE (CHILD)
+                  </span>
+                  <Badge variant="success" size="sm">My Objective (35% Weight)</Badge>
+                </div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.indigoPrimary, marginTop: "0.3rem" }}>
+                  Deliver SaaS edge data architecture with sub-15ms p99 latency
+                </div>
+                <div style={{ fontSize: "11.5px", color: colors.textSecondary, marginTop: "0.25rem" }}>
+                  Owner: Kwame Barnes (You) • Progress: <strong>95%</strong> • Status: Approved
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: ASSIGNED PEER & UPWARD REVIEWS - FR-PERF-017, FR-PERF-027 */}
+      {activeTab === "assigned_reviews" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* FR-PERF-027 Rule Notice */}
+          <div
+            style={{
+              padding: "0.85rem 1.25rem",
+              borderRadius: radii.md,
+              backgroundColor: "#fef3c7",
+              border: "1px solid #fde68a",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: "0.75rem",
+            }}
+          >
+            <Icons.ShieldCheck size={18} color="#b45309" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "12px", fontWeight: 700, color: "#92400e" }}>
+                Confidential Task-Scoped Review Surface (FR-PERF-027)
+              </div>
+              <div style={{ fontSize: "11.5px", color: "#78350f", marginTop: "2px", lineHeight: "1.4" }}>
+                As an assigned reviewer, you evaluate the colleague solely on the assigned questions below. In compliance with governance standards, <strong>the reviewee’s personal goals, self-appraisal score, and historical ratings are strictly withheld</strong> to guarantee impartial assessment.
+              </div>
+            </div>
+          </div>
+
+          {/* Assigned Review Tasks Table */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.xs }}>
+            <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}` }}>
+              <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
+                My Assigned Review Responsibilities
+              </h3>
+              <p style={{ fontSize: "11px", color: colors.textMuted, margin: "0.2rem 0 0 0" }}>
+                Colleagues who have requested or been assigned for your feedback in this appraisal cycle.
+              </p>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+              <thead>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>COLLEAGUE / REVIEWEE</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>REVIEW TYPE</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>CYCLE &amp; DUE DATE</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {assignedReviews.map((rev) => (
+                  <tr key={rev.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <div style={{ fontWeight: 700, color: colors.textPrimary }}>{rev.revieweeName}</div>
+                      <div style={{ fontSize: "11px", color: colors.textMuted }}>
+                        {rev.revieweeTitle} • {rev.revieweeDepartment}
+                      </div>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={rev.type === "Peer Review" ? "neutral" : "info"} size="sm">
+                        {rev.type}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <div>{rev.cycleTitle}</div>
+                      <div style={{ fontSize: "11px", color: colors.textMuted }}>Due: {formatDate(rev.dueDate)}</div>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={rev.status === "Submitted" ? "success" : "warning"} size="sm">
+                        {rev.status === "Submitted" ? `Submitted (${rev.submittedDate})` : "Pending Action"}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
+                      <Button
+                        variant={rev.status === "Submitted" ? "outline" : "primary"}
+                        size="sm"
+                        onClick={() => {
+                          setActiveReviewTask(rev);
+                          setPeerFeedbackText(rev.comments?.feedback || "");
+                        }}
+                      >
+                        {rev.status === "Submitted" ? "View Submission" : "Complete Review"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: ALIGNED TASKS & KEY RESULTS */}
       {activeTab === "aligned_tasks" && (
         <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, padding: "1.25rem", boxShadow: shadows.xs }}>
           <div style={{ marginBottom: "1rem" }}>
@@ -530,7 +908,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
         </div>
       )}
 
-      {/* TAB 4: APPRAISAL HISTORY & PAST RATINGS */}
+      {/* TAB 6: APPRAISAL HISTORY & PAST RATINGS */}
       {activeTab === "history" && (
         <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.xs }}>
           <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}` }}>
@@ -602,6 +980,129 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Complete Peer Review Modal (Task-Scoped Form) */}
+      {activeReviewTask && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.5)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              border: `1px solid ${colors.border}`,
+              maxWidth: "580px",
+              width: "100%",
+              boxShadow: shadows.lg,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "1rem 1.25rem",
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: colors.surfaceSubtle,
+              }}
+            >
+              <div>
+                <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
+                  {activeReviewTask.type}: {activeReviewTask.revieweeName}
+                </h3>
+                <span style={{ fontSize: "11px", color: colors.textMuted }}>
+                  {activeReviewTask.revieweeTitle} • {activeReviewTask.revieweeDepartment}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveReviewTask(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: colors.textMuted }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={submitPeerReview} style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ padding: "0.6rem 0.85rem", borderRadius: radii.sm, backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", fontSize: "11px", color: "#1e40af" }}>
+                🔒 <strong>Strict Review Boundary:</strong> You are evaluating this colleague on observable collaboration and execution. In accordance with FR-PERF-027, their self-rating, individual goals, and ratings history are not exposed.
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.3rem" }}>
+                  1. Cross-Functional Collaboration &amp; Communication ({peerCollabRating} / 5.0)
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={peerCollabRating}
+                  disabled={activeReviewTask.status === "Submitted"}
+                  onChange={(e) => setPeerCollabRating(parseFloat(e.target.value))}
+                  style={{ width: "100%", accentColor: colors.indigoAction }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.3rem" }}>
+                  2. Technical Rigor &amp; Delivery SLA Compliance ({peerTechRating} / 5.0)
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="0.1"
+                  value={peerTechRating}
+                  disabled={activeReviewTask.status === "Submitted"}
+                  onChange={(e) => setPeerTechRating(parseFloat(e.target.value))}
+                  style={{ width: "100%", accentColor: colors.indigoAction }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.3rem" }}>
+                  3. Constructive Feedback &amp; Key Strengths (Mandatory)
+                </label>
+                <textarea
+                  rows={4}
+                  value={peerFeedbackText}
+                  disabled={activeReviewTask.status === "Submitted"}
+                  onChange={(e) => setPeerFeedbackText(e.target.value)}
+                  placeholder="Provide specific, actionable feedback regarding collaboration, technical quality, or team impact..."
+                  style={{ width: "100%", padding: "0.6rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                <Button variant="outline" size="sm" type="button" onClick={() => setActiveReviewTask(null)}>
+                  Close
+                </Button>
+                {activeReviewTask.status !== "Submitted" && (
+                  <Button variant="primary" size="sm" type="submit">
+                    Submit Peer Evaluation
+                  </Button>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
