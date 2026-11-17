@@ -158,8 +158,8 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
             l.status === "APPROVED"
               ? "success"
               : l.status === "PENDING"
-              ? "warning"
-              : "error"
+                ? "warning"
+                : "error"
           }
           size="sm"
         >
@@ -385,7 +385,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
         }}
       >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: `linear-gradient(90deg, ${colors.indigoAction} 0%, #a855f7 50%, ${colors.emeraldAction} 100%)` }} />
-        
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <div
@@ -434,7 +434,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
 
         {/* 3 Push Cards Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1rem" }}>
-          
+
           {/* Push Nudge 1: PTO & Long Weekend Rest */}
           <div
             style={{
@@ -1065,7 +1065,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                     Calibrated ratings comparing employee self-evaluation with line supervisor and committee scorecards.
                   </p>
                 </div>
-                <Badge variant="neutral" size="sm">Calibrated Framework</Badge>
+                <Badge variant="bsc" size="sm">Calibrated Framework</Badge>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -1140,7 +1140,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
         </div>
       </div>
 
-            {/* Main Content Split: My Goals vs My Leave History */}
+      {/* Main Content Split: My Goals vs My Leave History */}
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "1.75rem" }}>
         {/* Left: Active Appraisal Scorecard & Self-Review */}
         <div>
@@ -1153,7 +1153,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 Cycle: FY26 Q4 Strategic Leadership Review • Calibrated
               </span>
             </div>
-            <Badge variant="info" size="sm">Self-Review Active</Badge>
+            <Badge variant="okr" size="sm">Self-Review Active</Badge>
           </div>
 
           <div

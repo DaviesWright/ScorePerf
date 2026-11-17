@@ -1,25 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
-import { colors, typography, radii, shadows, space, text } from "../../design-system/tokens";
+import React, { useState, useMemo } from "react";
+import { colors, radii, shadows, space, text } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatDate } from "../../utils/date";
+import {
+  INITIAL_LEAVE_LEDGER_TRANSACTIONS,
+  LeaveLedgerTransaction,
+  PartialDayMode,
+  calculateLeaveDuration,
+  deriveBalanceFromLedger,
+  fromBp,
+  toBp,
+} from "../../domain/leaveEngine";
 
 export interface MyLeaveItem {
   id: number;
+  applicationNumber: string;
   leaveType: "Annual Leave" | "Sick Leave" | "Casual Leave" | "Compassionate" | "Maternity / Paternity";
+  leaveTypeCode: "ANNUAL" | "SICK" | "COMPASSIONATE";
   startDate: string;
   endDate: string;
+  partialDay: PartialDayMode;
   days: number;
+  resumptionDate: string;
   reason: string;
   handoverColleague: string;
-  status: "APPROVED" | "PENDING" | "REJECTED";
+  status: "DRAFT" | "APPROVED" | "PENDING" | "REJECTED" | "WITHDRAWN" | "CANCELLED";
   submittedAt: string;
+  policyVersionId: string;
   resumptionStatus?: "NOT_DUE" | "AWAITING_CONFIRMATION" | "CONFIRMED_RETURNED";
   actualResumptionDate?: string;
   resumptionNotes?: string;
+  linkedExtensions?: { id: string; additionalEndDate: string; additionalDays: number; status: string }[];
 }
 
 export interface PlannedLeaveBlock {
@@ -40,46 +55,81 @@ interface MyLeaveScreenProps {
 
 export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
   const [activeSubTab, setActiveSubTab] = useState<
-    "balances_history" | "plan_leave" | "confirm_resumption"
+    "balances_history" | "ledger" | "plan_leave" | "confirm_resumption"
   >("balances_history");
+
+  // Append-Only Ledger State (§0.1, §4.2, §5.3: never overwrite a balance field)
+  const [ledger, setLedger] = useState<LeaveLedgerTransaction[]>(
+    INITIAL_LEAVE_LEDGER_TRANSACTIONS
+  );
+
+  // Derive balances strictly from the append-only ledger
+  const annualBal = useMemo(
+    () => deriveBalanceFromLedger(ledger, "ANNUAL", "Annual Leave", "POL-ANNUAL-GH-v2.1"),
+    [ledger]
+  );
+  const sickBal = useMemo(
+    () => deriveBalanceFromLedger(ledger, "SICK", "Sick Leave", "POL-SICK-GH-v1.4"),
+    [ledger]
+  );
+  const compBal = useMemo(
+    () => deriveBalanceFromLedger(ledger, "COMPASSIONATE", "Compassionate & Family", "POL-COMP-GH-v1.0"),
+    [ledger]
+  );
 
   const [leaves, setLeaves] = useState<MyLeaveItem[]>([
     {
       id: 1,
+      applicationNumber: "APP-2026-001",
       leaveType: "Annual Leave",
+      leaveTypeCode: "ANNUAL",
       startDate: "2026-06-15",
       endDate: "2026-06-26",
+      partialDay: "FULL",
       days: 10,
+      resumptionDate: "2026-06-29",
       reason: "Mid-year family vacation and rest",
       handoverColleague: "Sarah Jenkins (Senior Consultant)",
       status: "APPROVED",
       submittedAt: "2026-05-02",
+      policyVersionId: "POL-ANNUAL-GH-v2.1",
       resumptionStatus: "AWAITING_CONFIRMATION",
+      linkedExtensions: [],
     },
     {
       id: 2,
+      applicationNumber: "APP-2026-002",
       leaveType: "Sick Leave",
+      leaveTypeCode: "SICK",
       startDate: "2026-03-12",
       endDate: "2026-03-13",
+      partialDay: "FULL",
       days: 2,
+      resumptionDate: "2026-03-16",
       reason: "Medical appointment and recovery",
       handoverColleague: "Marcus Chen (Engineering Lead)",
       status: "APPROVED",
       submittedAt: "2026-03-11",
+      policyVersionId: "POL-SICK-GH-v1.4",
       resumptionStatus: "CONFIRMED_RETURNED",
       actualResumptionDate: "2026-03-16",
       resumptionNotes: "Returned on schedule; all sprint items resumed from Marcus Chen.",
     },
     {
       id: 3,
+      applicationNumber: "APP-2026-003",
       leaveType: "Annual Leave",
+      leaveTypeCode: "ANNUAL",
       startDate: "2026-12-14",
       endDate: "2026-12-18",
+      partialDay: "FULL",
       days: 5,
+      resumptionDate: "2026-12-21",
       reason: "End-of-year personal leave & family commitment",
       handoverColleague: "Benedicta Agbesi (HR Specialist)",
       status: "PENDING",
       submittedAt: "2026-11-10",
+      policyVersionId: "POL-ANNUAL-GH-v2.1",
       resumptionStatus: "NOT_DUE",
     },
   ]);
@@ -92,7 +142,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
       startDate: "2026-06-15",
       endDate: "2026-06-26",
       days: 10,
-      purpose: "Mid-year family break",
+      purpose: "Mid-year family break (Converted to APP-2026-001)",
       preferredReliefOfficer: "Sarah Jenkins",
       status: "Approved",
     },
@@ -108,13 +158,20 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
     },
   ]);
 
-  // Apply for Leave Modal state
+  // Apply for Leave Modal state (§4.3)
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [leaveType, setLeaveType] = useState<MyLeaveItem["leaveType"]>("Annual Leave");
   const [startDate, setStartDate] = useState("2026-11-23");
-  const [endDate, setEndDate] = useState("2026-11-27");
+  const [endDate, setEndDate] = useState("2026-11-29"); // Mon-Sun test case: 7 calendar days -> 5 working days charged!
+  const [partialDay, setPartialDay] = useState<PartialDayMode>("FULL");
   const [reason, setReason] = useState("");
   const [handoverColleague, setHandoverColleague] = useState("Sarah Jenkins (Senior Consultant)");
+  const [saveAsDraftMode, setSaveAsDraftMode] = useState(false);
+
+  // Linked Extension Modal state (LV-022)
+  const [extendingLeave, setExtendingLeave] = useState<MyLeaveItem | null>(null);
+  const [extEndDate, setExtEndDate] = useState("2026-07-02");
+  const [extReason, setExtReason] = useState("");
 
   // Plan Leave Form state
   const [planQuarter, setPlanQuarter] = useState<PlannedLeaveBlock["quarter"]>("Q3");
@@ -133,85 +190,143 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
 
   const showToast = (msg: string) => {
     setStatusMessage(msg);
-    setTimeout(() => setStatusMessage(null), 5000);
+    setTimeout(() => setStatusMessage(null), 5500);
   };
 
-  const computeDays = (start: string, end: string) => {
-    try {
-      const s = new Date(start);
-      const e = new Date(end);
-      const diffTime = Math.abs(e.getTime() - s.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      return isNaN(diffDays) ? 1 : diffDays;
-    } catch {
-      return 1;
-    }
-  };
+  // Live deterministic calculation of selected dates (§4.3, §6 LV-004)
+  const calc = useMemo(
+    () => calculateLeaveDuration(startDate, endDate, partialDay),
+    [startDate, endDate, partialDay]
+  );
 
-  const annualTotal = 25;
-  const annualUsed = 15;
-  const annualRemaining = annualTotal - annualUsed;
+  const activeTypeBal =
+    leaveType === "Sick Leave"
+      ? sickBal
+      : leaveType === "Compassionate"
+      ? compBal
+      : annualBal;
 
-  const sickTotal = 10;
-  const sickUsed = 2;
-  const sickRemaining = sickTotal - sickUsed;
+  const isInsufficientBalance = calc.chargedDays > activeTypeBal.availableBalance;
 
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) {
+    if (!saveAsDraftMode && !reason.trim()) {
       alert("Please provide a reason and handover summary for your leave request.");
       return;
     }
+    if (!saveAsDraftMode && isInsufficientBalance) {
+      alert(
+        `LEAVE_INSUFFICIENT_BALANCE (LV-003): Requested ${calc.chargedDays} working days exceeds available balance of ${activeTypeBal.availableBalance} days.`
+      );
+      return;
+    }
 
-    const calculatedDays = computeDays(startDate, endDate);
+    const appNum = `APP-2026-00${leaves.length + 1}`;
+    const typeCode: MyLeaveItem["leaveTypeCode"] =
+      leaveType === "Sick Leave"
+        ? "SICK"
+        : leaveType === "Compassionate"
+        ? "COMPASSIONATE"
+        : "ANNUAL";
+
     const newLeave: MyLeaveItem = {
       id: Date.now(),
+      applicationNumber: appNum,
       leaveType,
+      leaveTypeCode: typeCode,
       startDate,
       endDate,
-      days: calculatedDays,
-      reason,
+      partialDay,
+      days: calc.chargedDays,
+      resumptionDate: calc.resumptionDate,
+      reason: reason.trim() || "Draft leave application",
       handoverColleague,
-      status: "PENDING",
+      status: saveAsDraftMode ? "DRAFT" : "PENDING",
       submittedAt: new Date().toISOString().split("T")[0],
+      policyVersionId: calc.policyVersion,
       resumptionStatus: "NOT_DUE",
     };
 
     setLeaves([newLeave, ...leaves]);
     setShowApplyModal(false);
     setReason("");
-    showToast(`Leave application for ${calculatedDays} days submitted to your Line Manager for approval.`);
+    showToast(
+      saveAsDraftMode
+        ? `Saved ${appNum} as Draft (${calc.chargedDays} working days; invisible to approvers, no reservation hold).`
+        : `Submitted ${appNum} (${calc.chargedDays} working days charged, ${calc.excludedDays} weekend/holiday days excluded; Resumption: ${formatDate(calc.resumptionDate)}).`
+    );
   };
 
-  const handleCancelLeave = (id: number) => {
-    if (confirm("Are you sure you want to cancel this pending leave request?")) {
-      setLeaves(leaves.filter((l) => l.id !== id));
-      showToast("Pending leave request cancelled.");
+  const handleCancelOrWithdrawLeave = (leave: MyLeaveItem) => {
+    if (leave.status === "APPROVED") {
+      // LV-009: Cancelling an approved leave releases the reservation in the append-only ledger
+      const releaseTx: LeaveLedgerTransaction = {
+        id: `LTX-${Date.now()}`,
+        employeeId: "EMP-PKB-001",
+        leaveTypeCode: leave.leaveTypeCode,
+        entitlementPeriodId: `PER-2026-${leave.leaveTypeCode}`,
+        transactionType: "RESERVATION_RELEASE",
+        quantityBp: toBp(leave.days),
+        effectiveDate: new Date().toISOString().slice(0, 10),
+        sourceType: "LEAVE_CANCELLATION",
+        sourceId: leave.applicationNumber,
+        policyVersionId: leave.policyVersionId,
+        reason: `Released reservation on cancellation of ${leave.applicationNumber}`,
+        createdBy: "Paa Kwesi Barnes (Self-Service)",
+        createdAt: new Date().toISOString(),
+      };
+      setLedger((prev) => [...prev, releaseTx]);
+      setLeaves((prev) =>
+        prev.map((l) => (l.id === leave.id ? { ...l, status: "CANCELLED" } : l))
+      );
+      showToast(
+        `Cancelled ${leave.applicationNumber} and appended RESERVATION_RELEASE (+${leave.days}d restored) to ledger.`
+      );
+    } else {
+      setLeaves((prev) =>
+        prev.map((l) => (l.id === leave.id ? { ...l, status: "WITHDRAWN" } : l))
+      );
+      showToast(`Withdrew ${leave.applicationNumber}.`);
     }
   };
 
-  const handleAddPlannedBlock = (e: React.FormEvent) => {
-    e.preventDefault();
-    const days = computeDays(planStart, planEnd);
-    const block: PlannedLeaveBlock = {
-      id: Date.now(),
-      quarter: planQuarter,
-      startDate: planStart,
-      endDate: planEnd,
-      days,
-      purpose: planPurpose.trim() || `${planQuarter} Planned Annual Leave`,
-      preferredReliefOfficer: planRelief,
-      status: "Submitted to Manager",
+  // Section 5.3 & LV-010: Confirm Resumption reclassifies RESERVATION -> LEAVE_TAKEN in the append-only ledger
+  const handleConfirmResumption = (leave: MyLeaveItem) => {
+    const releaseTx: LeaveLedgerTransaction = {
+      id: `LTX-REL-${Date.now()}`,
+      employeeId: "EMP-PKB-001",
+      leaveTypeCode: leave.leaveTypeCode,
+      entitlementPeriodId: `PER-2026-${leave.leaveTypeCode}`,
+      transactionType: "RESERVATION_RELEASE",
+      quantityBp: toBp(leave.days),
+      effectiveDate: resumptionDateInput,
+      sourceType: "LEAVE_RESUMPTION",
+      sourceId: leave.applicationNumber,
+      policyVersionId: leave.policyVersionId,
+      reason: `Reclassified active reservation upon confirmed return for ${leave.applicationNumber}`,
+      createdBy: "Paa Kwesi Barnes (Employee Confirmation)",
+      createdAt: new Date().toISOString(),
     };
-    setPlannedBlocks((prev) => [...prev, block]);
-    setPlanPurpose("");
-    showToast(`Added ${days}-day planned leave window (${planQuarter}) and shared with your Line Manager.`);
-  };
+    const takenTx: LeaveLedgerTransaction = {
+      id: `LTX-TKN-${Date.now() + 1}`,
+      employeeId: "EMP-PKB-001",
+      leaveTypeCode: leave.leaveTypeCode,
+      entitlementPeriodId: `PER-2026-${leave.leaveTypeCode}`,
+      transactionType: "LEAVE_TAKEN",
+      quantityBp: toBp(leave.days),
+      effectiveDate: resumptionDateInput,
+      sourceType: "LEAVE_RESUMPTION",
+      sourceId: leave.applicationNumber,
+      policyVersionId: leave.policyVersionId,
+      reason: `Confirmed leave consumption (${leave.days}d) upon return on ${resumptionDateInput}`,
+      createdBy: "Paa Kwesi Barnes (Employee Confirmation)",
+      createdAt: new Date().toISOString(),
+    };
 
-  const handleConfirmResumption = (id: number) => {
+    setLedger((prev) => [...prev, releaseTx, takenTx]);
     setLeaves((prev) =>
       prev.map((l) =>
-        l.id === id
+        l.id === leave.id
           ? {
               ...l,
               resumptionStatus: "CONFIRMED_RETURNED",
@@ -221,7 +336,59 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
           : l
       )
     );
-    showToast("Resumption confirmed and logged. Your Line Manager and HR have been notified.");
+    showToast(
+      `Resumption confirmed for ${leave.applicationNumber}. Ledger updated: RESERVATION_RELEASE (−${leave.days}d hold) + LEAVE_TAKEN (+${leave.days}d consumed).`
+    );
+  };
+
+  // Rule LV-022: Extending approved leave creates a linked LeaveExtension, never silently overwriting original dates
+  const handleCreateLinkedExtension = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!extendingLeave) return;
+    const extStart = addWorkingExtensionStart(extendingLeave.endDate);
+    const extCalc = calculateLeaveDuration(extStart, extEndDate, "FULL");
+    const extRecord = {
+      id: `EXT-${Date.now().toString().slice(-4)}`,
+      additionalEndDate: extEndDate,
+      additionalDays: extCalc.chargedDays,
+      status: "PENDING_APPROVAL",
+    };
+    setLeaves((prev) =>
+      prev.map((l) =>
+        l.id === extendingLeave.id
+          ? { ...l, linkedExtensions: [...(l.linkedExtensions || []), extRecord] }
+          : l
+      )
+    );
+    showToast(
+      `Created linked LeaveExtension ${extRecord.id} (+${extCalc.chargedDays} working days) attached to ${extendingLeave.applicationNumber} without mutating original approved dates (LV-022).`
+    );
+    setExtendingLeave(null);
+    setExtReason("");
+  };
+
+  const addWorkingExtensionStart = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, (m || 1) - 1, (d || 1) + 1));
+    return dt.toISOString().slice(0, 10);
+  };
+
+  const handleAddPlannedBlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    const c = calculateLeaveDuration(planStart, planEnd, "FULL");
+    const block: PlannedLeaveBlock = {
+      id: Date.now(),
+      quarter: planQuarter,
+      startDate: planStart,
+      endDate: planEnd,
+      days: c.chargedDays,
+      purpose: planPurpose.trim() || `${planQuarter} Planned Annual Leave`,
+      preferredReliefOfficer: planRelief,
+      status: "Submitted to Manager",
+    };
+    setPlannedBlocks((prev) => [...prev, block]);
+    setPlanPurpose("");
+    showToast(`Added ${c.chargedDays}-working-day planned leave window (${planQuarter}) to Annual Leave Planner.`);
   };
 
   const totalPlannedDays = plannedBlocks.reduce((s, b) => s + b.days, 0);
@@ -250,10 +417,10 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             <h1 style={{ fontSize: text.h1.fontSize, fontWeight: text.h1.fontWeight, color: colors.textPrimary, margin: 0 }}>
               My Leave (Employee Self-Service)
             </h1>
-            <Badge variant="success" size="sm">Experience 1 · ESS</Badge>
+            <Badge variant="success" size="sm">BUILD.md v2.0 · Ledger-Derived</Badge>
           </div>
           <p style={{ fontSize: text.body.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
-            Apply for leave, check your personal balances, plan annual leave windows, view history, and confirm return-to-duty resumption.
+            Apply for leave with work-calendar day calculation, inspect append-only ledger balances, plan annual leave, and confirm return-to-duty resumption.
           </p>
         </div>
 
@@ -263,14 +430,21 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             size="sm"
             onClick={() => setActiveSubTab("balances_history")}
           >
-            Balances &amp; History ({leaves.length})
+            My Applications &amp; History ({leaves.length})
+          </Button>
+          <Button
+            variant={activeSubTab === "ledger" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setActiveSubTab("ledger")}
+          >
+            Append-Only Balance Ledger ({ledger.length})
           </Button>
           <Button
             variant={activeSubTab === "plan_leave" ? "primary" : "outline"}
             size="sm"
             onClick={() => setActiveSubTab("plan_leave")}
           >
-            Plan Leave ({totalPlannedDays}d Planned)
+            Annual Leave Planner ({totalPlannedDays}d)
           </Button>
           <Button
             variant={activeSubTab === "confirm_resumption" ? "primary" : "outline"}
@@ -305,82 +479,140 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
         </div>
       )}
 
-      {/* Leave Balance Metric Cards (Always Visible in ESS) */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: space[4], fontVariantNumeric: "tabular-nums" }}>
-        <div style={{ backgroundColor: colors.surface, padding: space[4], borderRadius: radii.md, border: `1px solid ${colors.border}`, boxShadow: shadows.sm }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>Annual Leave</span>
-            <Badge variant="success" size="sm">Paid Entitlement</Badge>
-          </div>
-          <div style={{ fontSize: text.display.fontSize, fontWeight: 700, color: colors.indigoPrimary, marginTop: space[1] }}>
-            {annualRemaining} <span style={{ fontSize: text.small.fontSize, fontWeight: 500, color: colors.textMuted }}>/ {annualTotal} days left</span>
-          </div>
-          <div style={{ marginTop: space[1], fontSize: text.small.fontSize, color: colors.textSecondary }}>
-            Used: {annualUsed}d · Planned: {totalPlannedDays}d · Carry-over cap: 5d
-          </div>
-        </div>
+      {/* §4.2 Leave Availability Cards (Derived Strictly from Append-Only Ledger + Explicit Circular Utilisation Label) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: space[4], fontVariantNumeric: "tabular-nums" }}>
+        {[annualBal, sickBal, compBal].map((bal) => (
+          <div
+            key={bal.leaveTypeCode}
+            style={{
+              backgroundColor: colors.surface,
+              padding: space[4],
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              boxShadow: shadows.sm,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              gap: space[3],
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <span style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                  {bal.leaveTypeName} Availability
+                </span>
+                <div style={{ fontSize: text.display.fontSize, fontWeight: 700, color: colors.indigoPrimary, marginTop: "2px" }}>
+                  {bal.availableBalance} <span style={{ fontSize: text.body.fontSize, fontWeight: 600, color: colors.textSecondary }}>Available</span>
+                </div>
+                <div style={{ fontSize: text.micro.fontSize, color: colors.textMuted }}>
+                  Policy: <code>{bal.policyVersionId}</code> · As at 2026-11-17
+                </div>
+              </div>
 
-        <div style={{ backgroundColor: colors.surface, padding: space[4], borderRadius: radii.md, border: `1px solid ${colors.border}`, boxShadow: shadows.sm }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>Sick Leave</span>
-            <Badge variant="info" size="sm">Medical</Badge>
-          </div>
-          <div style={{ fontSize: text.display.fontSize, fontWeight: 700, color: colors.indigoPrimary, marginTop: space[1] }}>
-            {sickRemaining} <span style={{ fontSize: text.small.fontSize, fontWeight: 500, color: colors.textMuted }}>/ {sickTotal} days left</span>
-          </div>
-          <div style={{ marginTop: space[1], fontSize: text.small.fontSize, color: colors.textSecondary }}>
-            Used: {sickUsed}d · Medical note required &gt;2 days
-          </div>
-        </div>
+              {/* Circular Indicator Explicitly Labelled with "Utilisation" (§4.2) */}
+              <div style={{ textAlign: "center" }} title="Percentage of annual entitlement consumed (Taken / Entitlement)">
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  <circle cx="28" cy="28" r="22" fill="none" stroke={colors.surfaceSubtle} strokeWidth="5" />
+                  <circle
+                    cx="28"
+                    cy="28"
+                    r="22"
+                    fill="none"
+                    stroke={colors.indigoAction}
+                    strokeWidth="5"
+                    strokeDasharray={`${(bal.utilisationPct / 100) * 138.2} 138.2`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 28 28)"
+                  />
+                  <text x="28" y="31" textAnchor="middle" fontSize="11" fontWeight="700" fill={colors.textPrimary}>
+                    {bal.utilisationPct}%
+                  </text>
+                </svg>
+                <div style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted }}>
+                  Utilisation
+                </div>
+              </div>
+            </div>
 
-        <div style={{ backgroundColor: colors.surface, padding: space[4], borderRadius: radii.md, border: `1px solid ${colors.border}`, boxShadow: shadows.sm }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>Compassionate &amp; Family</span>
-            <Badge variant="neutral" size="sm">Statutory</Badge>
-          </div>
-          <div style={{ fontSize: text.display.fontSize, fontWeight: 700, color: colors.indigoPrimary, marginTop: space[1] }}>
-            5 <span style={{ fontSize: text.small.fontSize, fontWeight: 500, color: colors.textMuted }}>days available</span>
-          </div>
-          <div style={{ marginTop: space[1], fontSize: text.small.fontSize, color: colors.textSecondary }}>
-            Requires line manager notification
-          </div>
-        </div>
+            {/* §4.2 Mandatory 4-Row Breakdown */}
+            <div
+              style={{
+                padding: space[3],
+                borderRadius: radii.sm,
+                backgroundColor: colors.surfaceSubtle,
+                border: `1px solid ${colors.borderSubtle}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px",
+                fontSize: text.small.fontSize,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Annual entitlement (incl. carry-forward/credits)</span>
+                <strong>{bal.annualEntitlement} days</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Taken (confirmed consumed)</span>
+                <strong>{bal.taken} days</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Approved / reserved (future holds)</span>
+                <strong style={{ color: colors.warning }}>{bal.reserved} days</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${colors.border}`, paddingTop: "4px", marginTop: "2px" }}>
+                <span style={{ fontWeight: 600, color: colors.textPrimary }}>Available for application</span>
+                <strong style={{ color: colors.emeraldDark }}>{bal.availableBalance} days</strong>
+              </div>
+            </div>
 
-        <div style={{ backgroundColor: colors.surface, padding: space[4], borderRadius: radii.md, border: `1px solid ${colors.border}`, boxShadow: shadows.sm }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <span style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>Resumption Status</span>
-            <Badge variant={pendingResumptions > 0 ? "warning" : "success"} size="sm">
-              {pendingResumptions > 0 ? "Action Needed" : "Up to Date"}
-            </Badge>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Button variant="ghost" size="sm" onClick={() => setActiveSubTab("ledger")}>
+                View Ledger Transactions &rarr;
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setLeaveType(
+                    bal.leaveTypeCode === "SICK"
+                      ? "Sick Leave"
+                      : bal.leaveTypeCode === "COMPASSIONATE"
+                      ? "Compassionate"
+                      : "Annual Leave"
+                  );
+                  setShowApplyModal(true);
+                }}
+              >
+                Apply
+              </Button>
+            </div>
           </div>
-          <div style={{ fontSize: text.h2.fontSize, fontWeight: 600, color: colors.textPrimary, marginTop: space[2] }}>
-            {pendingResumptions > 0 ? `${pendingResumptions} Return Confirmation Due` : "All Returns Confirmed"}
-          </div>
-          <div style={{ marginTop: space[1], fontSize: text.small.fontSize, color: colors.textSecondary }}>
-            Confirm return-to-duty within 24h of resumption
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* SUB-TAB 1: BALANCES & LEAVE HISTORY */}
+      {/* SUB-TAB 1: APPLICATIONS & LEAVE HISTORY (§4.3, §4.5) */}
       {activeSubTab === "balances_history" && (
         <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.sm }}>
           <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-              My Leave Applications &amp; History ({leaves.length})
-            </h2>
-            <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>Personal ESS Ledger</span>
+            <div>
+              <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                My Leave Applications &amp; Episode History ({leaves.length})
+              </h2>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                Retains effective policy version, work-calendar charged days, resumption status, and linked extensions (LV-022).
+              </span>
+            </div>
+            <Badge variant="neutral" size="sm">Append-Only Audit Trail</Badge>
           </div>
 
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: text.body.fontSize, fontVariantNumeric: "tabular-nums" }}>
             <thead>
               <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
-                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>LEAVE TYPE</th>
-                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>PERIOD</th>
-                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>DAYS</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>REF &amp; TYPE</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>LEAVE DATES &amp; RESUMPTION</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>CHARGED DAYS</th>
                 <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>RELIEF OFFICER</th>
                 <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>STATUS</th>
-                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600 }}>RESUMPTION</th>
                 <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary, fontWeight: 600, textAlign: "right" }}>ACTIONS</th>
               </tr>
             </thead>
@@ -388,45 +620,69 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
               {leaves.map((l) => (
                 <tr key={l.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                   <td style={{ padding: space[3] }}>
-                    <div style={{ fontWeight: 600, color: colors.textPrimary }}>{l.leaveType}</div>
-                    <div style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>{l.reason}</div>
+                    <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: text.mono.fontSize, color: colors.indigoAction, marginRight: space[1] }}>
+                        {l.applicationNumber}
+                      </span>
+                      {l.leaveType}
+                    </div>
+                    <div style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                      {l.reason} · Policy: <code>{l.policyVersionId}</code>
+                    </div>
+                    {l.linkedExtensions && l.linkedExtensions.length > 0 && (
+                      <div style={{ marginTop: "4px", display: "flex", gap: space[1], flexWrap: "wrap" }}>
+                        {l.linkedExtensions.map((ext) => (
+                          <Badge key={ext.id} variant="info" size="sm">
+                            Linked {ext.id}: +{ext.additionalDays}d &rarr; {formatDate(ext.additionalEndDate)} ({ext.status})
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: space[3], color: colors.textSecondary }}>
-                    {formatDate(l.startDate)} &rarr; {formatDate(l.endDate)}
+                    <div>{formatDate(l.startDate)} &rarr; {formatDate(l.endDate)}</div>
+                    <div style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                      Scheduled Return: <strong>{formatDate(l.resumptionDate)}</strong>
+                    </div>
                   </td>
                   <td style={{ padding: space[3], fontWeight: 600, color: colors.indigoPrimary }}>
-                    {l.days} {l.days === 1 ? "day" : "days"}
+                    {l.days} {l.days === 1 ? "working day" : "working days"} ({l.partialDay})
                   </td>
                   <td style={{ padding: space[3], color: colors.textSecondary }}>{l.handoverColleague}</td>
                   <td style={{ padding: space[3] }}>
-                    <Badge variant={l.status === "APPROVED" ? "success" : l.status === "PENDING" ? "warning" : "error"} size="sm">
-                      {l.status === "APPROVED" ? "Approved ✓" : l.status === "PENDING" ? "Pending Manager" : "Declined"}
+                    <Badge
+                      variant={
+                        l.status === "APPROVED"
+                          ? "success"
+                          : l.status === "PENDING"
+                          ? "warning"
+                          : l.status === "DRAFT"
+                          ? "neutral"
+                          : "error"
+                      }
+                      size="sm"
+                    >
+                      {l.status}
                     </Badge>
                   </td>
-                  <td style={{ padding: space[3] }}>
-                    {l.resumptionStatus === "CONFIRMED_RETURNED" && (
-                      <Badge variant="success" size="sm">
-                        Resumed ({formatDate(l.actualResumptionDate || l.endDate)})
-                      </Badge>
-                    )}
-                    {l.resumptionStatus === "AWAITING_CONFIRMATION" && (
-                      <Badge variant="warning" size="sm">Confirmation Due</Badge>
-                    )}
-                    {(!l.resumptionStatus || l.resumptionStatus === "NOT_DUE") && (
-                      <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>Upcoming</span>
-                    )}
-                  </td>
                   <td style={{ padding: space[3], textAlign: "right" }}>
-                    {l.status === "PENDING" && (
-                      <Button variant="outline" size="sm" onClick={() => handleCancelLeave(l.id)}>
-                        Cancel Request
-                      </Button>
-                    )}
-                    {l.resumptionStatus === "AWAITING_CONFIRMATION" && (
-                      <Button variant="primary" size="sm" onClick={() => setActiveSubTab("confirm_resumption")}>
-                        Confirm Return
-                      </Button>
-                    )}
+                    <div style={{ display: "inline-flex", gap: space[1], flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {l.status === "APPROVED" && (
+                        <Button variant="outline" size="sm" onClick={() => setExtendingLeave(l)}>
+                          Extend (LV-022)
+                        </Button>
+                      )}
+                      {(l.status === "PENDING" || l.status === "DRAFT" || l.status === "APPROVED") && (
+                        <Button variant="ghost" size="sm" onClick={() => handleCancelOrWithdrawLeave(l)}>
+                          {l.status === "APPROVED" ? "Cancel" : "Withdraw"}
+                        </Button>
+                      )}
+                      {l.resumptionStatus === "AWAITING_CONFIRMATION" && (
+                        <Button variant="primary" size="sm" onClick={() => setActiveSubTab("confirm_resumption")}>
+                          Confirm Return
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -435,10 +691,76 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
         </div>
       )}
 
-      {/* SUB-TAB 2: PLAN LEAVE (ANNUAL LEAVE PLANNER) */}
+      {/* SUB-TAB 2: APPEND-ONLY BALANCE LEDGER (§0.1, §4.2, §7.2) */}
+      {activeSubTab === "ledger" && (
+        <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.sm }}>
+          <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                Append-Only Leave Entitlement &amp; Reservation Ledger ({ledger.length} Transactions)
+              </h2>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                Section 0.1 Rule: Every balance change is traceable to an immutable ledger entry in fixed precision NUMERIC(12,4).
+              </span>
+            </div>
+            <Badge variant="info" size="sm">Immutable Audit Ledger</Badge>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: text.body.fontSize, fontVariantNumeric: "tabular-nums" }}>
+            <thead>
+              <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>TX ID</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>EFFECTIVE DATE</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>LEAVE TYPE</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>TRANSACTION TYPE</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>QUANTITY (DAYS)</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>SOURCE &amp; POLICY VERSION</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.map((tx) => {
+                const isCredit =
+                  tx.transactionType === "OPENING" ||
+                  tx.transactionType === "ALLOCATION" ||
+                  tx.transactionType === "ACCRUAL" ||
+                  tx.transactionType === "ADDITIONAL_CREDIT" ||
+                  tx.transactionType === "CARRY_FORWARD_IN" ||
+                  tx.transactionType === "RESERVATION_RELEASE" ||
+                  tx.transactionType === "RECALL_RESTORE";
+                return (
+                  <tr key={tx.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: space[3], fontFamily: "var(--font-mono)", fontSize: text.mono.fontSize, color: colors.indigoAction }}>
+                      {tx.id}
+                    </td>
+                    <td style={{ padding: space[3], color: colors.textSecondary }}>{formatDate(tx.effectiveDate)}</td>
+                    <td style={{ padding: space[3] }}>
+                      <Badge variant="neutral" size="sm">{tx.leaveTypeCode}</Badge>
+                    </td>
+                    <td style={{ padding: space[3] }}>
+                      <Badge variant={isCredit ? "success" : "warning"} size="sm">
+                        {tx.transactionType}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: space[3], fontWeight: 700, color: isCredit ? colors.emeraldDark : colors.warning }}>
+                      {isCredit ? "+" : "−"}{fromBp(tx.quantityBp).toFixed(2)} d
+                    </td>
+                    <td style={{ padding: space[3] }}>
+                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>{tx.reason}</div>
+                      <div style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                        Source: <code>{tx.sourceId}</code> · Policy: <code>{tx.policyVersionId}</code> · Actor: {tx.createdBy}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* SUB-TAB 3: PLAN LEAVE (ANNUAL LEAVE PLANNER §4.7) */}
       {activeSubTab === "plan_leave" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: space[4] }}>
-          {/* Propose Planned Leave Block Form */}
           <form
             onSubmit={handleAddPlannedBlock}
             style={{
@@ -457,7 +779,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 Plan Annual Leave Window
               </h2>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                Schedule tentative leave windows early so your Line Manager can coordinate squad coverage and relief officers.
+                Proposed leave plans are indicative until converted into a formal application (§4.7, §4.8).
               </span>
             </div>
 
@@ -535,13 +857,12 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             </Button>
           </form>
 
-          {/* Planned Leave Windows Table */}
           <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, overflow: "hidden", boxShadow: shadows.sm }}>
             <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h3 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-                My FY2026 Leave Plan ({totalPlannedDays} / {annualTotal} Days Scheduled)
+                My FY2026 Leave Plan ({totalPlannedDays} / {annualBal.annualEntitlement} Working Days)
               </h3>
-              <Badge variant="info" size="sm">{annualTotal - totalPlannedDays}d Unscheduled</Badge>
+              <Badge variant="info" size="sm">Plan vs Actual Tracked</Badge>
             </div>
 
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: text.body.fontSize, fontVariantNumeric: "tabular-nums" }}>
@@ -549,7 +870,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>QUARTER</th>
                   <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>PLANNED DATES</th>
-                  <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>DAYS</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>WORKING DAYS</th>
                   <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>RELIEF OFFICER</th>
                   <th style={{ padding: space[3], fontSize: text.small.fontSize, color: colors.textSecondary }}>STATUS</th>
                 </tr>
@@ -575,15 +896,15 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
         </div>
       )}
 
-      {/* SUB-TAB 3: CONFIRM RESUMPTION (RETURN TO DUTY) */}
+      {/* SUB-TAB 4: CONFIRM RESUMPTION (§4.6, LV-010, LV-022) */}
       {activeSubTab === "confirm_resumption" && (
         <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: space[4], boxShadow: shadows.sm }}>
           <div style={{ marginBottom: space[4] }}>
             <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-              Confirm Return-to-Duty Resumption
+              Confirm Return-to-Duty Resumption (§4.6 · LV-010)
             </h2>
             <p style={{ fontSize: text.small.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
-              Log your actual resumption date after completed leave so attendance, payroll cutoffs, and relief officer handovers close cleanly.
+              Confirming return reclassifies your approved reservation into confirmed <code>LEAVE_TAKEN</code> in the append-only ledger without double-deducting entitlement (§5.3).
             </p>
           </div>
 
@@ -608,17 +929,17 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                   <div style={{ flex: "1 1 320px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: space[2] }}>
                       <span style={{ fontWeight: 700, fontSize: text.bodyStrong.fontSize, color: colors.textPrimary }}>
-                        {l.leaveType} ({l.days} days)
+                        {l.applicationNumber} · {l.leaveType} ({l.days} working days)
                       </span>
                       <Badge
                         variant={l.resumptionStatus === "CONFIRMED_RETURNED" ? "success" : "warning"}
                         size="sm"
                       >
-                        {l.resumptionStatus === "CONFIRMED_RETURNED" ? "Return Confirmed ✓" : "Awaiting Return Confirmation"}
+                        {l.resumptionStatus === "CONFIRMED_RETURNED" ? "Return Confirmed ✓" : "Resumption Pending"}
                       </Badge>
                     </div>
                     <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginTop: space[1] }}>
-                      Leave Period: {formatDate(l.startDate)} &rarr; {formatDate(l.endDate)} · Relief Officer: <strong>{l.handoverColleague}</strong>
+                      Leave Period: {formatDate(l.startDate)} &rarr; {formatDate(l.endDate)} · Scheduled Return: <strong>{formatDate(l.resumptionDate)}</strong> · Relief: <strong>{l.handoverColleague}</strong>
                     </div>
                     {l.resumptionNotes && (
                       <div style={{ fontSize: text.small.fontSize, color: colors.textMuted, marginTop: "4px" }}>
@@ -657,7 +978,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                           backgroundColor: colors.surface,
                         }}
                       />
-                      <Button variant="primary" size="sm" onClick={() => handleConfirmResumption(l.id)}>
+                      <Button variant="primary" size="sm" onClick={() => handleConfirmResumption(l)}>
                         Confirm Resumption
                       </Button>
                     </div>
@@ -668,7 +989,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
         </div>
       )}
 
-      {/* Apply for Leave Modal */}
+      {/* MODAL 1: APPLY FOR LEAVE WITH LIVE WORK-CALENDAR CALCULATOR (§4.3, LV-004) */}
       {showApplyModal && (
         <div
           role="dialog"
@@ -689,16 +1010,21 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
               backgroundColor: colors.surface,
               borderRadius: radii.md,
               border: `1px solid ${colors.border}`,
-              maxWidth: "520px",
+              maxWidth: "600px",
               width: "100%",
               boxShadow: shadows.modal,
               overflow: "hidden",
             }}
           >
             <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.surfaceSubtle }}>
-              <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
-                Submit Leave Application
-              </h3>
+              <div>
+                <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                  Leave Application (Work-Calendar Aware · §4.3)
+                </h3>
+                <span style={{ fontSize: text.micro.fontSize, color: colors.textMuted }}>
+                  Calendar: <code>{calc.calendarVersion}</code> · Policy: <code>{calc.policyVersion}</code>
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowApplyModal(false)}
@@ -709,21 +1035,38 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             </div>
 
             <form onSubmit={handleApplyLeave} style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
-              <div>
-                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
-                  Leave Type
-                </label>
-                <select
-                  value={leaveType}
-                  onChange={(e) => setLeaveType(e.target.value as MyLeaveItem["leaveType"])}
-                  style={{ width: "100%", height: "40px", padding: `0 ${space[2]}`, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
-                >
-                  <option value="Annual Leave">Annual Leave ({annualRemaining} days remaining)</option>
-                  <option value="Sick Leave">Sick Leave ({sickRemaining} days remaining)</option>
-                  <option value="Casual Leave">Casual Leave</option>
-                  <option value="Compassionate">Compassionate Leave</option>
-                  <option value="Maternity / Paternity">Maternity / Paternity Leave</option>
-                </select>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: space[3] }}>
+                <div>
+                  <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                    Leave Type
+                  </label>
+                  <select
+                    value={leaveType}
+                    onChange={(e) => setLeaveType(e.target.value as MyLeaveItem["leaveType"])}
+                    style={{ width: "100%", height: "40px", padding: `0 ${space[2]}`, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
+                  >
+                    <option value="Annual Leave">Annual Leave ({annualBal.availableBalance}d available)</option>
+                    <option value="Sick Leave">Sick Leave ({sickBal.availableBalance}d available)</option>
+                    <option value="Compassionate">Compassionate Leave ({compBal.availableBalance}d available)</option>
+                    <option value="Casual Leave">Casual Leave</option>
+                    <option value="Maternity / Paternity">Maternity / Paternity Leave</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                    Partial Day Mode
+                  </label>
+                  <select
+                    value={partialDay}
+                    onChange={(e) => setPartialDay(e.target.value as PartialDayMode)}
+                    style={{ width: "100%", height: "40px", padding: `0 ${space[2]}`, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
+                  >
+                    <option value="FULL">Full Working Days (1.0d)</option>
+                    <option value="FIRST_HALF">First Half — Morning (0.5d)</option>
+                    <option value="SECOND_HALF">Second Half — Afternoon (0.5d)</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: space[3] }}>
@@ -753,15 +1096,41 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 </div>
               </div>
 
+              {/* Live Deterministic Calculation Snapshot Box (§4.3, §6) */}
+              <div
+                style={{
+                  padding: space[3],
+                  borderRadius: radii.sm,
+                  backgroundColor: isInsufficientBalance ? colors.errorBg : colors.indigoSubtle,
+                  border: `1px solid ${isInsufficientBalance ? colors.errorBorder : colors.indigoBorder}`,
+                  fontSize: text.small.fontSize,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600, color: colors.textPrimary }}>
+                  <span>
+                    Charged Duration: <strong>{calc.chargedDays} working days</strong> (out of {calc.calendarDays} calendar days; {calc.excludedDays} non-working excluded)
+                  </span>
+                  <span>Resumption Date: <strong>{formatDate(calc.resumptionDate)}</strong></span>
+                </div>
+                <div style={{ marginTop: "4px", color: isInsufficientBalance ? colors.error : colors.textSecondary }}>
+                  Balance Snapshot: Available <strong>{activeTypeBal.availableBalance}d</strong> &rarr; Projected Remaining:{" "}
+                  <strong>{(activeTypeBal.availableBalance - calc.chargedDays).toFixed(1)}d</strong>{" "}
+                  {isInsufficientBalance && "(Exceeds Available Balance · LV-003)"}
+                </div>
+                <div style={{ marginTop: "4px", fontSize: text.micro.fontSize, color: colors.textMuted }}>
+                  Approval Route Preview: Stage 1 Line Manager (Sarah Jenkins) &rarr; Stage 2 HR Verification
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
-                  Designated Relief Officer (Handover Colleague)
+                  Proposed Relief Officer
                 </label>
                 <input
                   type="text"
                   value={handoverColleague}
                   onChange={(e) => setHandoverColleague(e.target.value)}
-                  placeholder="Colleague covering your responsibilities"
                   style={{ width: "100%", height: "40px", padding: `0 ${space[2]}`, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
                   required
                 />
@@ -769,28 +1138,127 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
 
               <div>
                 <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
-                  Reason &amp; Handover Checklist *
+                  Reason &amp; Handover Instructions *
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Provide context for your leave and handover preparations..."
                   style={{ width: "100%", padding: space[2], borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: space[1] }}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="submit"
+                  onClick={() => setSaveAsDraftMode(true)}
+                >
+                  Save as Draft (No Hold)
+                </Button>
+
+                <div style={{ display: "flex", gap: space[2] }}>
+                  <Button variant="outline" size="sm" type="button" onClick={() => setShowApplyModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    type="submit"
+                    disabled={isInsufficientBalance}
+                    onClick={() => setSaveAsDraftMode(false)}
+                  >
+                    Submit Leave Request
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: LINKED LEAVE EXTENSION (§4.18, Rule LV-022) */}
+      {extendingLeave && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: space[4],
+          }}
+        >
+          <form
+            onSubmit={handleCreateLinkedExtension}
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              maxWidth: "500px",
+              width: "100%",
+              boxShadow: shadows.modal,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
+              <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                Request Linked Leave Extension (LV-022)
+              </h3>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                Parent Episode: {extendingLeave.applicationNumber} ({formatDate(extendingLeave.startDate)} &rarr; {formatDate(extendingLeave.endDate)})
+              </span>
+            </div>
+
+            <div style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
+              <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary }}>
+                Rule LV-022: Extending an approved leave creates a linked <code>LeaveExtension</code> record routed for approval — it never silently overwrites the original approved dates.
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Revised Extension End Date
+                </label>
+                <input
+                  type="date"
+                  min={extendingLeave.endDate}
+                  value={extEndDate}
+                  onChange={(e) => setExtEndDate(e.target.value)}
+                  style={{ width: "100%", height: "38px", padding: `0 ${space[2]}`, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
                   required
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: space[2], marginTop: space[2] }}>
-                <Button variant="outline" size="sm" type="button" onClick={() => setShowApplyModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" size="sm" type="submit">
-                  Submit Leave Request
-                </Button>
+              <div>
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Extension Reason *
+                </label>
+                <textarea
+                  rows={2}
+                  value={extReason}
+                  onChange={(e) => setExtReason(e.target.value)}
+                  placeholder="Reason for requesting additional days..."
+                  style={{ width: "100%", padding: space[2], borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
+                  required
+                />
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div style={{ padding: space[4], borderTop: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "flex-end", gap: space[2] }}>
+              <Button variant="outline" size="sm" type="button" onClick={() => setExtendingLeave(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" type="submit">
+                Submit Linked Extension
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </div>

@@ -162,7 +162,20 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       return updated;
     });
 
-    if (newPersona === "employee" && (currentView === "company_setup" || currentView === "performance_setup" || currentView === "admin_nerve_center" || currentView === "approval_workflows")) {
+    if (
+      newPersona === "employee" &&
+      (currentView === "company_setup" ||
+        currentView === "performance_setup" ||
+        currentView === "admin_nerve_center" ||
+        currentView === "approval_workflows" ||
+        currentView === "workforce_directory" ||
+        currentView === "command_centre" ||
+        currentView === "dashboard" ||
+        currentView === "performance_pms" ||
+        currentView === "time_and_leave" ||
+        currentView === "objectives" ||
+        currentView === "reports_analytics")
+    ) {
       setCurrentView("self_service");
     }
   };
@@ -410,14 +423,24 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       )}
 
       {currentView === "workforce_directory" && (
-        <WorkforceDirectoryView
-          employees={employees}
-          assets={assets}
-          selectedInitialEmployee={selectedDirectoryEmployee}
-          onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
-          onNavigateToSettings={() => setCurrentView("employee_settings")}
-          onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
-        />
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="workforce_directory"
+            requiredScope="employees:read"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <WorkforceDirectoryView
+            employees={employees}
+            assets={assets}
+            selectedInitialEmployee={selectedDirectoryEmployee}
+            onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
+            onNavigateToSettings={() => setCurrentView("employee_settings")}
+            onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+          />
+        )
       )}
 
       {currentView === "performance_pms" && (

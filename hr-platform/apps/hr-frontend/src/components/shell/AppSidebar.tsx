@@ -120,167 +120,148 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   }, [isPinned]);
 
   const personaLabels: Record<UserPersona, { title: string; badge: string }> = {
-    hr_director: { title: "HR Director", badge: "Executive" },
-    hr_admin: { title: "HR Administrator", badge: "Operations" },
-    line_manager: { title: "Line Manager", badge: "People Lead" },
-    employee: { title: "Employee (ESS)", badge: "Self-Service" },
+    hr_director: { title: "HRMS · Executive / HR", badge: "/hrms" },
+    hr_admin: { title: "HRMS · HR Governance", badge: "/hrms" },
+    line_manager: { title: "MSS · My Team", badge: "/mss" },
+    employee: { title: "ESS · My Work", badge: "/ess" },
   };
 
   const getNavSections = () => {
-    // 1. EMPLOYEE PERSONA (ESS ONLY)
+    // 1. ESS — EMPLOYEE SELF-SERVICE (/ess) — TC-ARCH-01: No directory route in ESS
     if (persona === "employee") {
       return [
         {
-          group: "MY WORKSPACE (ESS)",
+          group: "ESS · MY WORK (/ess)",
           items: [
             {
               key: "self_service" as ModuleViewKey,
-              label: "My Self-Service",
+              label: "My Profile & Requests",
               icon: Icons.Users,
               badge: "ESS",
               badgeType: "peach" as const,
             },
             {
-              key: "my_performance" as ModuleViewKey,
-              label: "My Performance",
-              icon: Icons.Target,
-              badge: "Appraisals",
-              badgeType: "indigo" as const,
-            },
-            {
               key: "my_leave" as ModuleViewKey,
               label: "My Leave",
               icon: Icons.Calendar,
-              badge: "Leave Portal",
+              badge: "Balances & Plan",
               badgeType: "emerald" as const,
+            },
+            {
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Goals & Review",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "skills_marketplace" as ModuleViewKey,
+              label: "My Skills & Gig Fit",
+              icon: Icons.Compass,
+              badge: "20 Skills",
+              badgeType: "indigo" as const,
             },
             {
               key: "document_centre" as ModuleViewKey,
-              label: "Document Centre",
+              label: "My Documents",
               icon: Icons.BookOpen,
-              badge: "Policies & Docs",
+              badge: "Payslips & Docs",
               badgeType: "neutral" as const,
             },
             {
+              key: "policies_handbook" as ModuleViewKey,
+              label: "My Policies & Handbooks",
+              icon: Icons.BookOpen,
+            },
+            {
               key: "helpdesk" as ModuleViewKey,
-              label: "My Support Tickets",
+              label: "My Support Requests",
               icon: Icons.LifeBuoy,
               badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
               badgeType: "emerald" as const,
-            },
-          ],
-        },
-        {
-          group: "COMPANY DIRECTORY (READ-ONLY)",
-          items: [
-            {
-              key: "workforce_directory" as ModuleViewKey,
-              label: "Colleague Directory",
-              icon: Icons.Users,
-              badge: `${counts.employees}`,
-              badgeType: "emerald" as const,
-            },
-            {
-              key: "policies_handbook" as ModuleViewKey,
-              label: "Policies & Handbooks",
-              icon: Icons.BookOpen,
             },
           ],
         },
       ];
     }
 
-    // 2. LINE MANAGER PERSONA (ESS + MANAGER CONSOLE)
+    // 2. MSS — MANAGER SELF-SERVICE (/mss) + ESS Secondary Context
     if (persona === "line_manager") {
       return [
         {
-          group: "MY WORKSPACE (ESS)",
+          group: "MSS · MY TEAM (/mss)",
           items: [
             {
-              key: "self_service" as ModuleViewKey,
-              label: "My Self-Service",
+              key: "workforce_directory" as ModuleViewKey,
+              label: "Team Roster",
               icon: Icons.Users,
-              badge: "ESS",
-              badgeType: "peach" as const,
-            },
-            {
-              key: "my_performance" as ModuleViewKey,
-              label: "My Performance",
-              icon: Icons.Target,
-              badge: "Appraisals",
-              badgeType: "indigo" as const,
-            },
-            {
-              key: "my_leave" as ModuleViewKey,
-              label: "My Leave",
-              icon: Icons.Calendar,
-              badge: "Leave Portal",
-              badgeType: "emerald" as const,
-            },
-            {
-              key: "document_centre" as ModuleViewKey,
-              label: "Document Centre",
-              icon: Icons.BookOpen,
-              badge: "Policies & Docs",
-              badgeType: "neutral" as const,
-            },
-          ],
-        },
-        {
-          group: "MANAGER CONSOLE (MY TEAM)",
-          items: [
-            {
-              key: "performance_pms" as ModuleViewKey,
-              label: "Team Appraisals & Reviews",
-              icon: Icons.Target,
-              badge: `${counts.cycles}`,
-              badgeType: "indigo" as const,
-            },
-            {
-              key: "objectives" as ModuleViewKey,
-              label: "Team OKRs & Alignment",
-              icon: Icons.Target,
-              badge: "Team",
+              badge: "Subtree",
               badgeType: "emerald" as const,
             },
             {
               key: "time_and_leave" as ModuleViewKey,
-              label: "Team Leave & Approvals",
+              label: "Leave Approvals & Coverage",
               icon: Icons.Calendar,
               badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
               badgeType: "peach" as const,
             },
             {
-              key: "admin_nerve_center" as ModuleViewKey,
-              label: "Approvals Inbox",
-              icon: Icons.ShieldCheck,
-              badge: "Approvals",
-              badgeType: "peach" as const,
+              key: "objectives" as ModuleViewKey,
+              label: "Team Goals & Alignment",
+              icon: Icons.Target,
+              badge: "Subtree",
+              badgeType: "emerald" as const,
             },
             {
-              key: "workforce_directory" as ModuleViewKey,
-              label: "Team & Directory",
-              icon: Icons.Users,
-              badge: `${counts.employees}`,
-              badgeType: "emerald" as const,
+              key: "performance_pms" as ModuleViewKey,
+              label: "Report Reviews",
+              icon: Icons.Target,
+              badge: `${counts.cycles}`,
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "skills_marketplace" as ModuleViewKey,
+              label: "Team Skills & Heatmap",
+              icon: Icons.Compass,
+              badge: "20 Skills",
+              badgeType: "indigo" as const,
             },
             {
               key: "projects" as ModuleViewKey,
-              label: "Client Engagements",
+              label: "Team Analytics & Projects",
               icon: Icons.Briefcase,
               badge: `${counts.projects}`,
-              badgeType: "neutral" as const,
+              badgeType: "indigo" as const,
+            },
+          ],
+        },
+        {
+          group: "ESS · MY WORK (/ess)",
+          items: [
+            {
+              key: "self_service" as ModuleViewKey,
+              label: "My Profile & Requests",
+              icon: Icons.Users,
+              badge: "ESS",
+              badgeType: "peach" as const,
             },
             {
-              key: "helpdesk" as ModuleViewKey,
-              label: "Helpdesk",
-              icon: Icons.LifeBuoy,
-              badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+              key: "my_leave" as ModuleViewKey,
+              label: "My Leave",
+              icon: Icons.Calendar,
+              badge: "Self",
               badgeType: "emerald" as const,
             },
             {
-              key: "policies_handbook" as ModuleViewKey,
-              label: "Policies & Handbooks",
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Self",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "document_centre" as ModuleViewKey,
+              label: "My Documents",
               icon: Icons.BookOpen,
             },
           ],
