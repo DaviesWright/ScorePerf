@@ -719,7 +719,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 800, color: colors.textPrimary, textTransform: "uppercase" }}>
-                  Rating Scale &amp; Competency Framework Builder
+                  Rating Scale &amp; Skill Framework Builder
                 </h3>
                 <p style={{ margin: "2px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
                   Define custom numeric, percentage, discrete, or pass/fail anchors and map them to job architectures or divisions.

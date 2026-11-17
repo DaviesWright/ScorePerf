@@ -733,7 +733,7 @@ export const GeneralAppraisalSettingsView: React.FC = () => {
         <div style={infoBoxStyle}>
           <Icons.Info size={16} color={colors.indigoPrimary} style={{ flexShrink: 0, marginTop: 1 }} />
           <span>
-            When percentage scores are enabled, numerical percentages will be displayed alongside ratings for objectives, core values, and competencies (if applicable) during performance reviews.
+            When percentage scores are enabled, numerical percentages will be displayed alongside ratings for objectives, core values, and skills (if applicable) during performance reviews.
           </span>
         </div>
       </div>

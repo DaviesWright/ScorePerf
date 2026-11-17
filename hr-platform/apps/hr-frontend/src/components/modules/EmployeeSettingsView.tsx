@@ -1579,7 +1579,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   { key: "payslipPeek", label: "Instant Payslip Peek Card", desc: "Allows employees to view latest net pay and HMRC / GRA RTI breakdown." },
                   { key: "leaveBalance", label: "Annual Leave Allowance & 1-Click Request", desc: "Displays remaining leave balance and instant draft request." },
                   { key: "anniversariesCarousel", label: "Birthdays & Work Anniversaries Carousel", desc: "Social community feed celebrating colleague milestones." },
-                  { key: "internalGigs", label: "Internal Gig Board & Skill Matches", desc: "Recommends cross-functional projects matching verified employee competencies." },
+                  { key: "internalGigs", label: "Internal Gig Board & Skill Matches", desc: "Recommends cross-functional projects matching verified employee skills." },
                   { key: "vibeCheckVoice", label: "10-Second Voice & Emoji Vibe Check", desc: "Allows anonymous weekly pulse feedback with sentiment waveform analysis." },
                   { key: "companyFinancialRunway", label: "Company Financial Runway & Burn Rate", desc: "CONFIDENTIAL: Restrict strictly to Executive & Finance roles." },
                 ].map((widget) => (

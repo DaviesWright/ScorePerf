@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { colors, typography, radii, shadows } from "../../design-system/tokens";
+import { colors, typography, radii, shadows, surfaceAccent, SurfaceKind } from "../../design-system/tokens";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
@@ -76,11 +76,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
+  const surfaceKind: SurfaceKind =
+    persona === "employee" ? "ess" : persona === "line_manager" ? "manager" : "hr";
+
   return (
     <header
+      data-surface={surfaceKind}
       style={{
         backgroundColor: colors.surface,
         borderBottom: `1px solid ${colors.border}`,
+        borderLeft: surfaceAccent[surfaceKind],
         padding: "0.65rem 1.5rem",
         display: "flex",
         alignItems: "center",

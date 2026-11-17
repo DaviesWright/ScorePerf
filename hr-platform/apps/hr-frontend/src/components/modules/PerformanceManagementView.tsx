@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
-import { Badge } from "../../design-system/Badge";
+import { Badge, frameworkVariant } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { drillProps } from "../../utils/drill";
@@ -181,7 +181,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     },
   ]);
 
-  // State 3: Strict Numeric Trait-Based Competency Matrix (1-5 Scale)
+  // State 3: Strict Numeric Trait-Based Skill Matrix (1-5 Scale)
   const [traitScores, setTraitScores] = useState<Record<string, number>>({
     "Communication & Tactical Briefing": 4,
     "Team Collaboration & Joint Interoperability": 5,
@@ -206,7 +206,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     | "General Appraisal"
     | "Framework & Methodology"
     | "Multi-Tier Sign-Off Chains"
-    | "Competency & Trait Matrix"
+    | "Skill & Trait Matrix"
     | "360° Peer Review & Calibration"
     | "Nine-Box Talent Matrix"
     | "PIP & Governance Exceptions"
@@ -722,8 +722,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     ],
   });
 
-  const [competencyMatrixConfig, setCompetencyMatrixConfig] = useState({
-    competencyWeightPercent: 30,
+  const [skillMatrixConfig, setSkillMatrixConfig] = useState({
+    skillWeightPercent: 30,
     goalWeightPercent: 70,
     mandatoryPassingGrade: 3.0,
     traits: [
@@ -1669,7 +1669,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         Period: {formatDateRange(cycle.start_date, cycle.end_date)}
                       </div>
                     </div>
-                    <Badge variant="bsc" size="sm">
+                    <Badge variant={frameworkVariant(cycle.framework_code)} size="sm">
                       {cycle.framework_code || "BSC"}
                     </Badge>
                   </div>
@@ -2100,7 +2100,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB: STRICT NUMERIC COMPETENCY TRAIT MATRIX (1-5 Scale)                   */}
+      {/* TAB: STRICT NUMERIC SKILL TRAIT MATRIX (1-5 Scale)                   */}
       {/* ========================================================================= */}
       {activeMainTab === "trait_matrix" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -2120,7 +2120,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Icons.Award size={18} color={colors.indigoAction} />
                 <h2 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                  Core Values &amp; Behavioral Competency Review (1-5 Scale)
+                  Core Values &amp; Behavioral Skill Review (1-5 Scale)
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
@@ -3559,7 +3559,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
-                          <Badge variant={obj.framework === "BSC" ? "bsc" : "okr"} size="sm">
+                          <Badge variant={frameworkVariant(obj.framework)} size="sm">
                             {obj.framework}
                           </Badge>
                           <span style={{ fontSize: "11px", color: colors.textMuted }}>
@@ -3910,7 +3910,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{c.description}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
-                      <Badge variant="bsc" size="sm">
+                      <Badge variant={frameworkVariant(c.framework_code)} size="sm">
                         {c.framework_code || "BSC"}
                       </Badge>
                     </td>
@@ -4203,7 +4203,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               "General Appraisal",
               "Framework & Methodology",
               "Multi-Tier Sign-Off Chains",
-              "Competency & Trait Matrix",
+              "Skill & Trait Matrix",
               "360° Peer Review & Calibration",
               "Nine-Box Talent Matrix",
               "PIP & Governance Exceptions",
@@ -4307,7 +4307,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         <span style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.indigoPrimary }}>
                           Calibration & Scoring Governance
                         </span>
-                        <Badge variant="bsc" size="sm">Enforced</Badge>
+                        <Badge variant="neutral" size="sm">Enforced</Badge>
                       </div>
                       <p style={{ margin: "6px 0 0 0", fontSize: "11px", color: colors.textSecondary, lineHeight: 1.45 }}>
                         Individual appraisal cycles are locked to a single framework. Combining qualitative OKRs with mathematical BSC quadrant scores within the same cycle is prohibited to prevent compensation distortion.
@@ -4649,8 +4649,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
           )}
 
-          {/* TAB 3: COMPETENCY & TRAIT MATRIX */}
-          {settingsPrimaryTab === "Competency & Trait Matrix" && (
+          {/* TAB 3: SKILL & TRAIT MATRIX */}
+          {settingsPrimaryTab === "Skill & Trait Matrix" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               <div
                 style={{
@@ -4664,7 +4664,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.75rem" }}>
                   <div>
                     <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.textPrimary, margin: 0, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      Behavioral Competencies &amp; Trait Scoring Matrix
+                      Behavioral Skills &amp; Trait Scoring Matrix
                     </h3>
                     <p style={{ margin: "0.25rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
                       Evaluate non-negotiable professional behaviors on a strict 1–5 scale, decoupled from goal OKR percentages.
@@ -4679,7 +4679,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Evaluated Behavioral Traits (Weights must sum to 100%)
                     </label>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                      {competencyMatrixConfig.traits.map((trait) => (
+                      {skillMatrixConfig.traits.map((trait) => (
                         <div
                           key={trait.id}
                           style={{
@@ -4723,8 +4723,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.25rem" }}>
                             <input
                               type="number"
-                              value={competencyMatrixConfig.goalWeightPercent}
-                              onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, goalWeightPercent: parseInt(e.target.value, 10) || 0 })}
+                              value={skillMatrixConfig.goalWeightPercent}
+                              onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, goalWeightPercent: parseInt(e.target.value, 10) || 0 })}
                               style={{ width: "65px", padding: "0.35rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, fontWeight: 700 }}
                             />
                             <span style={{ fontSize: "12px", color: colors.textMuted }}>%</span>
@@ -4732,12 +4732,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         </div>
 
                         <div>
-                          <label style={{ fontSize: "11px", color: colors.textMuted, display: "block" }}>Competencies Weight</label>
+                          <label style={{ fontSize: "11px", color: colors.textMuted, display: "block" }}>Skills Weight</label>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.25rem" }}>
                             <input
                               type="number"
-                              value={competencyMatrixConfig.competencyWeightPercent}
-                              onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, competencyWeightPercent: parseInt(e.target.value, 10) || 0 })}
+                              value={skillMatrixConfig.skillWeightPercent}
+                              onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, skillWeightPercent: parseInt(e.target.value, 10) || 0 })}
                               style={{ width: "65px", padding: "0.35rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, fontWeight: 700 }}
                             />
                             <span style={{ fontSize: "12px", color: colors.textMuted }}>%</span>
@@ -4745,20 +4745,20 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         </div>
                       </div>
                       <div style={{ fontSize: "11px", color: colors.emeraldDark, fontWeight: 600, marginTop: "0.6rem" }}>
-                        Total: {competencyMatrixConfig.goalWeightPercent + competencyMatrixConfig.competencyWeightPercent}%
+                        Total: {skillMatrixConfig.goalWeightPercent + skillMatrixConfig.skillWeightPercent}%
                       </div>
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                        Mandatory Passing Competency Gate
+                        Mandatory Passing Skill Gate
                       </label>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <input
                           type="number"
                           step="0.1"
-                          value={competencyMatrixConfig.mandatoryPassingGrade}
-                          onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, mandatoryPassingGrade: parseFloat(e.target.value) || 3.0 })}
+                          value={skillMatrixConfig.mandatoryPassingGrade}
+                          onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, mandatoryPassingGrade: parseFloat(e.target.value) || 3.0 })}
                           style={{ width: "75px", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs }}
                         />
                         <span style={{ fontSize: "11px", color: colors.textMuted }}>
@@ -4771,9 +4771,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setStatusMessage({ text: "Behavioral competency scoring matrix and passing gate saved." })}
+                        onClick={() => setStatusMessage({ text: "Behavioral skill scoring matrix and passing gate saved." })}
                       >
-                        Save Competency Settings
+                        Save Skill Settings
                       </Button>
                     </div>
                   </div>

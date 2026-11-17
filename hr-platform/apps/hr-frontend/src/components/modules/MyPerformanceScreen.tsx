@@ -7,6 +7,17 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatDate } from "../../utils/date";
 import { downloadAppraisalReport } from "../../utils/pdfGenerator";
+import {
+  SKILL_CATEGORIES,
+  SKILLS_TAXONOMY,
+  INITIAL_MY_SKILL_ASSESSMENTS,
+  ROLE_SKILL_PROFILES,
+  ALIGNED_GIGS,
+  getProficiencyLabel,
+  ProficiencyLevelNumber,
+  EmployeeSkillAssessmentRecord,
+} from "../../data/skillsFramework";
+import { SkillBadge, SkillRating, GapBar } from "../../design-system/SkillsComponents";
 
 export interface MyObjective {
   id: number;
@@ -62,8 +73,17 @@ interface MyPerformanceScreenProps {
 
 export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
   const [activeTab, setActiveTab] = useState<
-    "self_review" | "objectives" | "my_cascade" | "assigned_reviews" | "aligned_tasks" | "history"
+    "self_review" | "my_skills" | "objectives" | "my_cascade" | "assigned_reviews" | "aligned_tasks" | "history"
   >("self_review");
+
+  // ESS My Skills & Gap Analysis State (§4, §5, §10)
+  const [skillAssessments, setSkillAssessments] = useState<EmployeeSkillAssessmentRecord[]>(
+    INITIAL_MY_SKILL_ASSESSMENTS
+  );
+  const [essGapBaseline, setEssGapBaseline] = useState<
+    "my_role" | "target_role" | "previous_cycle" | "gig_requirements"
+  >("my_role");
+  const [essSelectedGigId, setEssSelectedGigId] = useState<string>(ALIGNED_GIGS[1].id);
 
   // Cycle Phase Lifecycle Simulation: Open vs In Review vs Closed
   const [cyclePhase, setCyclePhase] = useState<"Open" | "In Review" | "Calibration" | "Closed">("In Review");
@@ -292,12 +312,12 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
       assignedReviews.map((r) =>
         r.id === activeReviewTask.id
           ? {
-              ...r,
-              status: "Submitted",
-              submittedDate: new Date().toISOString().split("T")[0],
-              ratings: { collaboration: peerCollabRating, technicalRigor: peerTechRating },
-              comments: { feedback: peerFeedbackText },
-            }
+            ...r,
+            status: "Submitted",
+            submittedDate: new Date().toISOString().split("T")[0],
+            ratings: { collaboration: peerCollabRating, technicalRigor: peerTechRating },
+            comments: { feedback: peerFeedbackText },
+          }
           : r
       )
     );
@@ -426,6 +446,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
       <div style={{ display: "flex", gap: "0.5rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.5rem", overflowX: "auto" }}>
         {[
           { key: "self_review", label: "Take Appraisal (Self-Review)", icon: Icons.FileText },
+          { key: "my_skills", label: "My Skills (20)", icon: Icons.Award },
           { key: "objectives", label: `My Objectives (${objectives.length})`, icon: Icons.Target },
           { key: "my_cascade", label: "My Cascade (Alignment)", icon: Icons.GitBranch },
           { key: "assigned_reviews", label: `Assigned Reviews (${assignedReviews.length})`, icon: Icons.Users },
@@ -639,6 +660,282 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
           </table>
         </div>
       )}
+
+      {/* TAB: MY SKILLS — SELF-RATING & GAP ANALYSIS (Addendum v1.2 §4, §5, §10) */}
+      {activeTab === "my_skills" && (() => {
+        const resolveReq = (code: string): number | null => {
+          if (essGapBaseline === "gig_requirements") {
+            const gig = ALIGNED_GIGS.find((g) => g.id === essSelectedGigId) || ALIGNED_GIGS[0];
+            const found = gig.requiredSkills.find((r) => r.skillCode === code);
+            return found ? found.minLevel : null;
+          }
+          return ROLE_SKILL_PROFILES[essGapBaseline]?.levels[code] ?? null;
+        };
+
+        const rows = SKILLS_TAXONOMY.map((sk) => {
+          const rec = skillAssessments.find((a) => a.skillCode === sk.code);
+          const req = resolveReq(sk.code);
+          const finalLvl = rec?.finalRating ?? rec?.selfRating ?? null;
+          const gap = req !== null && finalLvl !== null ? Number((req - finalLvl).toFixed(1)) : null;
+          return { skill: sk, rec, req, finalLvl, gap };
+        });
+
+        const deficits = [...rows].filter((r) => r.gap !== null && r.gap > 0).sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0)).slice(0, 3);
+        const strengths = [...rows].filter((r) => r.gap !== null && r.gap < 0).sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0)).slice(0, 3);
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {/* Gap Analysis Selector Bar (§5.1, §5.3) */}
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                padding: "1rem 1.25rem",
+                boxShadow: shadows.xs,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  My Skills &amp; Gap Analysis Selector (20 Skills · 5 Categories · 1–5 Scale)
+                </div>
+                <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Rate your own proficiency (ESS personal scope) and compare against your role profile, target role, prior cycle, or open gigs.
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                <select
+                  aria-label="Gap analysis comparison baseline"
+                  value={essGapBaseline}
+                  onChange={(e) => setEssGapBaseline(e.target.value as typeof essGapBaseline)}
+                  style={{
+                    height: "38px",
+                    padding: "0 0.75rem",
+                    borderRadius: radii.md,
+                    border: `1px solid ${colors.borderStrong}`,
+                    fontSize: typography.sizes.xs,
+                    fontWeight: 600,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <option value="my_role">Baseline: My Role Profile (Default)</option>
+                  <option value="target_role">Baseline: Target Role Profile</option>
+                  <option value="previous_cycle">Baseline: Previous Cycle</option>
+                  <option value="gig_requirements">Baseline: Gig Requirements</option>
+                </select>
+
+                {essGapBaseline === "gig_requirements" && (
+                  <select
+                    aria-label="Target Gig for Gap Comparison"
+                    value={essSelectedGigId}
+                    onChange={(e) => setEssSelectedGigId(e.target.value)}
+                    style={{
+                      height: "38px",
+                      padding: "0 0.75rem",
+                      borderRadius: radii.md,
+                      border: `1px solid ${colors.indigoAction}`,
+                      fontSize: typography.sizes.xs,
+                      fontWeight: 600,
+                      backgroundColor: colors.indigoSubtle,
+                      color: colors.indigoPrimary,
+                    }}
+                  >
+                    {ALIGNED_GIGS.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.id}: {g.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Focus Areas: Top 3 Deficits & Top 3 Strengths + Add as Development Goal CTA (§5.3, TC-SKILL-14) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "1rem" }}>
+              <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
+                <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.5rem" }}>
+                  Focus Areas — Top 3 Deficits (Required &minus; Final &gt; 0)
+                </div>
+                {deficits.length === 0 ? (
+                  <div style={{ fontSize: typography.sizes.xs, color: colors.success }}>
+                    ✓ All required skills meet or exceed the selected baseline.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {deficits.map((d) => (
+                      <div
+                        key={d.skill.code}
+                        style={{
+                          padding: "0.6rem 0.75rem",
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.warningBg,
+                          border: `1px solid ${colors.warningBorder}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <SkillBadge code={d.skill.code} name={d.skill.name} />
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: colors.warning }}>
+                            &minus;{d.gap} lvl
+                          </span>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            const newGoal: MyObjective = {
+                              id: Date.now(),
+                              title: `Develop ${d.skill.code} ${d.skill.name} from L${d.finalLvl ?? 1} to required L${d.req}`,
+                              framework: "BSC",
+                              perspective: "Learning & Growth",
+                              weight: 15,
+                              target: `Achieve Level ${d.req} (${getProficiencyLabel(d.req)}) in next cycle`,
+                              progress: 0,
+                              status: "Draft",
+                            };
+                            setObjectives((prev) => [newGoal, ...prev]);
+                            setStatusMessage(
+                              `Added skill deficit "${d.skill.code} ${d.skill.name}" as a Draft Learning & Growth goal in My Objectives.`
+                            );
+                            setTimeout(() => setStatusMessage(null), 5000);
+                          }}
+                        >
+                          + Add as development goal
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
+                <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.5rem" }}>
+                  Top 3 Strengths — Surpluses (Gig Board Matching Signals)
+                </div>
+                {strengths.length === 0 ? (
+                  <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                    No skill surpluses against this stretch baseline.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {strengths.map((s) => (
+                      <div
+                        key={s.skill.code}
+                        style={{
+                          padding: "0.6rem 0.75rem",
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.frameworkBscBg,
+                          border: `1px solid ${colors.frameworkBscBorder}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <SkillBadge code={s.skill.code} name={s.skill.name} level={s.finalLvl} />
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: colors.frameworkBsc }}>
+                          +{Math.abs(s.gap || 0)} lvl Surplus
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 5 Categories × 4 Skills Self-Assessment & Gap Table */}
+            {SKILL_CATEGORIES.map((cat) => {
+              const catRows = rows.filter((r) => r.skill.categoryCode === cat.code);
+              return (
+                <div
+                  key={cat.id}
+                  style={{
+                    backgroundColor: colors.surface,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radii.md,
+                    overflow: "hidden",
+                    boxShadow: shadows.xs,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "0.85rem 1.25rem",
+                      backgroundColor: colors.surfaceSubtle,
+                      borderBottom: `1px solid ${colors.border}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                      {cat.name} ({cat.code})
+                    </span>
+                    <Badge variant="neutral" size="sm">4 Skills</Badge>
+                  </div>
+
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: "left" }}>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>SKILL</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>MY SELF-RATING (1–5)</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>REQUIRED</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>GAP VS BASELINE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {catRows.map((r) => (
+                        <tr key={r.skill.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                              <span style={{ color: colors.indigoAction, marginRight: "6px" }}>{r.skill.code}</span>
+                              {r.skill.name}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textMuted }}>{r.skill.description}</div>
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <SkillRating
+                              compact
+                              value={r.rec?.selfRating ?? null}
+                              onChange={(lvl: ProficiencyLevelNumber) => {
+                                setSkillAssessments((prev) =>
+                                  prev.map((a) =>
+                                    a.skillCode === r.skill.code
+                                      ? { ...a, selfRating: lvl, finalRating: a.managerRating ?? lvl }
+                                      : a
+                                  )
+                                );
+                                setStatusMessage(
+                                  `Updated self-rating for ${r.skill.code} ${r.skill.name} to Level ${lvl}.`
+                                );
+                                setTimeout(() => setStatusMessage(null), 3500);
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>
+                            {r.req !== null ? getProficiencyLabel(r.req) : "Not required"}
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <GapBar requiredLevel={r.req} finalRating={r.finalLvl} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* TAB 3: MY CASCADE (ALIGNMENT) - FR-PERF-014 */}
       {activeTab === "my_cascade" && (
@@ -982,6 +1279,282 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
           </table>
         </div>
       )}
+
+      {/* TAB: MY SKILLS — SELF-RATING & GAP ANALYSIS (Addendum v1.2 §4, §5, §10) */}
+      {activeTab === "my_skills" && (() => {
+        const resolveReq = (code: string): number | null => {
+          if (essGapBaseline === "gig_requirements") {
+            const gig = ALIGNED_GIGS.find((g) => g.id === essSelectedGigId) || ALIGNED_GIGS[0];
+            const found = gig.requiredSkills.find((r) => r.skillCode === code);
+            return found ? found.minLevel : null;
+          }
+          return ROLE_SKILL_PROFILES[essGapBaseline]?.levels[code] ?? null;
+        };
+
+        const rows = SKILLS_TAXONOMY.map((sk) => {
+          const rec = skillAssessments.find((a) => a.skillCode === sk.code);
+          const req = resolveReq(sk.code);
+          const finalLvl = rec?.finalRating ?? rec?.selfRating ?? null;
+          const gap = req !== null && finalLvl !== null ? Number((req - finalLvl).toFixed(1)) : null;
+          return { skill: sk, rec, req, finalLvl, gap };
+        });
+
+        const deficits = [...rows].filter((r) => r.gap !== null && r.gap > 0).sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0)).slice(0, 3);
+        const strengths = [...rows].filter((r) => r.gap !== null && r.gap < 0).sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0)).slice(0, 3);
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {/* Gap Analysis Selector Bar (§5.1, §5.3) */}
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                padding: "1rem 1.25rem",
+                boxShadow: shadows.xs,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "1rem",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  My Skills &amp; Gap Analysis Selector (20 Skills · 5 Categories · 1–5 Scale)
+                </div>
+                <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Rate your own proficiency (ESS personal scope) and compare against your role profile, target role, prior cycle, or open gigs.
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                <select
+                  aria-label="Gap analysis comparison baseline"
+                  value={essGapBaseline}
+                  onChange={(e) => setEssGapBaseline(e.target.value as typeof essGapBaseline)}
+                  style={{
+                    height: "38px",
+                    padding: "0 0.75rem",
+                    borderRadius: radii.md,
+                    border: `1px solid ${colors.borderStrong}`,
+                    fontSize: typography.sizes.xs,
+                    fontWeight: 600,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <option value="my_role">Baseline: My Role Profile (Default)</option>
+                  <option value="target_role">Baseline: Target Role Profile</option>
+                  <option value="previous_cycle">Baseline: Previous Cycle</option>
+                  <option value="gig_requirements">Baseline: Gig Requirements</option>
+                </select>
+
+                {essGapBaseline === "gig_requirements" && (
+                  <select
+                    aria-label="Target Gig for Gap Comparison"
+                    value={essSelectedGigId}
+                    onChange={(e) => setEssSelectedGigId(e.target.value)}
+                    style={{
+                      height: "38px",
+                      padding: "0 0.75rem",
+                      borderRadius: radii.md,
+                      border: `1px solid ${colors.indigoAction}`,
+                      fontSize: typography.sizes.xs,
+                      fontWeight: 600,
+                      backgroundColor: colors.indigoSubtle,
+                      color: colors.indigoPrimary,
+                    }}
+                  >
+                    {ALIGNED_GIGS.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.id}: {g.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Focus Areas: Top 3 Deficits & Top 3 Strengths + Add as Development Goal CTA (§5.3, TC-SKILL-14) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "1rem" }}>
+              <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
+                <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.5rem" }}>
+                  Focus Areas — Top 3 Deficits (Required &minus; Final &gt; 0)
+                </div>
+                {deficits.length === 0 ? (
+                  <div style={{ fontSize: typography.sizes.xs, color: colors.success }}>
+                    ✓ All required skills meet or exceed the selected baseline.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {deficits.map((d) => (
+                      <div
+                        key={d.skill.code}
+                        style={{
+                          padding: "0.6rem 0.75rem",
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.warningBg,
+                          border: `1px solid ${colors.warningBorder}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <SkillBadge code={d.skill.code} name={d.skill.name} />
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: colors.warning }}>
+                            &minus;{d.gap} lvl
+                          </span>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            const newGoal: MyObjective = {
+                              id: Date.now(),
+                              title: `Develop ${d.skill.code} ${d.skill.name} from L${d.finalLvl ?? 1} to required L${d.req}`,
+                              framework: "BSC",
+                              perspective: "Learning & Growth",
+                              weight: 15,
+                              target: `Achieve Level ${d.req} (${getProficiencyLabel(d.req)}) in next cycle`,
+                              progress: 0,
+                              status: "Draft",
+                            };
+                            setObjectives((prev) => [newGoal, ...prev]);
+                            setStatusMessage(
+                              `Added skill deficit "${d.skill.code} ${d.skill.name}" as a Draft Learning & Growth goal in My Objectives.`
+                            );
+                            setTimeout(() => setStatusMessage(null), 5000);
+                          }}
+                        >
+                          + Add as development goal
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
+                <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary, marginBottom: "0.5rem" }}>
+                  Top 3 Strengths — Surpluses (Gig Board Matching Signals)
+                </div>
+                {strengths.length === 0 ? (
+                  <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                    No skill surpluses against this stretch baseline.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {strengths.map((s) => (
+                      <div
+                        key={s.skill.code}
+                        style={{
+                          padding: "0.6rem 0.75rem",
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.frameworkBscBg,
+                          border: `1px solid ${colors.frameworkBscBorder}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <SkillBadge code={s.skill.code} name={s.skill.name} level={s.finalLvl} />
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: colors.frameworkBsc }}>
+                          +{Math.abs(s.gap || 0)} lvl Surplus
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 5 Categories × 4 Skills Self-Assessment & Gap Table */}
+            {SKILL_CATEGORIES.map((cat) => {
+              const catRows = rows.filter((r) => r.skill.categoryCode === cat.code);
+              return (
+                <div
+                  key={cat.id}
+                  style={{
+                    backgroundColor: colors.surface,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radii.md,
+                    overflow: "hidden",
+                    boxShadow: shadows.xs,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "0.85rem 1.25rem",
+                      backgroundColor: colors.surfaceSubtle,
+                      borderBottom: `1px solid ${colors.border}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                      {cat.name} ({cat.code})
+                    </span>
+                    <Badge variant="neutral" size="sm">4 Skills</Badge>
+                  </div>
+
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${colors.borderSubtle}`, textAlign: "left" }}>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>SKILL</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>MY SELF-RATING (1–5)</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>REQUIRED</th>
+                        <th style={{ padding: "0.65rem 1rem", color: colors.textSecondary }}>GAP VS BASELINE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {catRows.map((r) => (
+                        <tr key={r.skill.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                              <span style={{ color: colors.indigoAction, marginRight: "6px" }}>{r.skill.code}</span>
+                              {r.skill.name}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textMuted }}>{r.skill.description}</div>
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <SkillRating
+                              compact
+                              value={r.rec?.selfRating ?? null}
+                              onChange={(lvl: ProficiencyLevelNumber) => {
+                                setSkillAssessments((prev) =>
+                                  prev.map((a) =>
+                                    a.skillCode === r.skill.code
+                                      ? { ...a, selfRating: lvl, finalRating: a.managerRating ?? lvl }
+                                      : a
+                                  )
+                                );
+                                setStatusMessage(
+                                  `Updated self-rating for ${r.skill.code} ${r.skill.name} to Level ${lvl}.`
+                                );
+                                setTimeout(() => setStatusMessage(null), 3500);
+                              }}
+                            />
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem", fontWeight: 600 }}>
+                            {r.req !== null ? getProficiencyLabel(r.req) : "Not required"}
+                          </td>
+                          <td style={{ padding: "0.75rem 1rem" }}>
+                            <GapBar requiredLevel={r.req} finalRating={r.finalLvl} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Complete Peer Review Modal (Task-Scoped Form) */}
       {activeReviewTask && (

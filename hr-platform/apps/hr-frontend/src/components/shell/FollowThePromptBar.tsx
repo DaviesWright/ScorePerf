@@ -61,7 +61,7 @@ export const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
         id: "emp_4",
         stepNumber: 4,
         title: "Review T-Shaped Skill Recommendations & Internal Gigs",
-        promptText: "Explore internal project gigs and LMS learning modules automatically recommended from your appraisal competency gaps.",
+        promptText: "Explore internal project gigs and LMS learning modules automatically recommended from your appraisal skill gaps.",
         actionLabel: "Open Skills & Projects",
         targetView: "skills_marketplace",
         estimatedTime: "1 min",
@@ -341,7 +341,7 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedLabel: "Check Data Governance →",
   },
   skills_marketplace: {
-    whatToDoHere: "Match employee T-shaped competency profiles to open internal gigs and upskilling courses.",
+    whatToDoHere: "Match employee T-shaped skill profiles to open internal gigs and upskilling courses.",
     nextSuggestedView: "projects",
     nextSuggestedLabel: "Explore Active Projects →",
   },

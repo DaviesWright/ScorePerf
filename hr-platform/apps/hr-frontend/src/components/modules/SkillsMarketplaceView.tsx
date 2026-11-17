@@ -1,545 +1,382 @@
 "use client";
 
 import React, { useState } from "react";
-import { colors, typography, radii, shadows } from "../../design-system/tokens";
-import { Badge } from "../../design-system/Badge";
+import { colors, typography, radii, shadows, space, text } from "../../design-system/tokens";
+import { Badge, frameworkVariant } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatDate } from "../../utils/date";
+import {
+  SKILL_CATEGORIES,
+  SKILLS_TAXONOMY,
+  SKILL_PROFICIENCY_SCALE,
+  INITIAL_MY_SKILL_ASSESSMENTS,
+  ROLE_SKILL_PROFILES,
+  ALIGNED_GIGS,
+  computeGigFit,
+  getProficiencyLabel,
+  SkillRecord,
+  SkillCategoryCode,
+  ProficiencyLevelNumber,
+  GapBaselineKey,
+  EmployeeSkillAssessmentRecord,
+  AlignedGigRecord,
+} from "../../data/skillsFramework";
+import {
+  SkillBadge,
+  SkillRating,
+  GapBar,
+  CategoryHeatmap,
+  CategoryHeatmapRow,
+} from "../../design-system/SkillsComponents";
 
-export interface SkillItem {
-  no: number;
+interface DevelopmentGoalDraft {
+  id: string;
+  skillCode: string;
+  skillName: string;
   title: string;
-  category: "Core Skills" | "Non-Core Skills" | "Human Capacity Building" | "Leadership Skills" | "Functional Skills";
-  status: "Active" | "Inactive";
-  description?: string;
-}
-
-export interface SkillCategoryItem {
-  no: number;
-  title: string;
-  description: string;
-  count: number;
-}
-
-export interface SkillReviewRecord {
-  no: number;
-  employeeName: string;
-  employeeId: string;
-  role: string;
-  status: "Pending Approval Benjamin Arthur" | "Pending Employee" | "No Pending Assessment" | "Completed";
-  lastAssessment: string;
-}
-
-interface Gig {
-  id: number;
-  title: string;
-  practice: string;
-  duration: string;
-  workload: string;
-  requiredSkills: string[];
-  matchScore: number;
-  lead: string;
-  applied?: boolean;
-}
-
-interface JournalEntry {
-  id: number;
-  date: string;
-  title: string;
-  impact: string;
-  tags: string[];
+  framework: "BSC" | "OKR" | "MBO";
+  createdAt: string;
 }
 
 export const SkillsMarketplaceView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    "skills" | "categories" | "gap_analysis" | "reviews" | "gigs" | "t_shaped" | "navigator" | "journal"
-  >("skills");
+    "gap_analysis" | "my_skills" | "gigs" | "framework" | "team_heatmap"
+  >("gap_analysis");
 
-  // Filter & Search states
-  const [searchSkill, setSearchSkill] = useState("");
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("All");
-  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
-  const [openReviewDropdownId, setOpenReviewDropdownId] = useState<number | null>(null);
+  // Shared 20-skill taxonomy state (descriptions & role required levels editable; structure immutable per VAL-SKILL-001)
+  const [skills, setSkills] = useState<SkillRecord[]>(SKILLS_TAXONOMY);
+  const [assessments, setAssessments] = useState<EmployeeSkillAssessmentRecord[]>(
+    INITIAL_MY_SKILL_ASSESSMENTS
+  );
+  const [roleProfiles, setRoleProfiles] = useState(ROLE_SKILL_PROFILES);
 
-  // Modal states
-  const [showAddSkillModal, setShowAddSkillModal] = useState(false);
-  const [newCompTitle, setNewCompTitle] = useState("");
-  const [newCompCategory, setNewCompCategory] = useState<SkillItem["category"]>("Core Skills");
+  // Gap Analysis Selector state (§5.1: default on load = My Role Profile)
+  const [selectedBaseline, setSelectedBaseline] = useState<GapBaselineKey>("my_role");
+  const [selectedGigForBaseline, setSelectedGigForBaseline] = useState<string>(ALIGNED_GIGS[1].id);
+  const [categoryFilter, setCategoryFilter] = useState<SkillCategoryCode | "ALL">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Gigs & Reverse Link Post-Gig Prompt (§6.3, FR-SKILL-016)
+  const [gigs, setGigs] = useState<AlignedGigRecord[]>(ALIGNED_GIGS);
+  const [simulateStaleDate, setSimulateStaleDate] = useState<boolean>(false);
+  const [postGigPromptGig, setPostGigPromptGig] = useState<AlignedGigRecord | null>(null);
+
+  // Development Goals drafted from Skill Deficits (§5.3, FR-SKILL-010, TC-SKILL-14)
+  const [draftGoals, setDraftGoals] = useState<DevelopmentGoalDraft[]>([]);
+  const [nextCycleFramework, setNextCycleFramework] = useState<"BSC" | "OKR" | "MBO">("BSC");
+
+  // HR Calibration Override Modal (VAL-SKILL-005, TC-SKILL-05: mandatory justification)
+  const [calibratingSkill, setCalibratingSkill] = useState<SkillRecord | null>(null);
+  const [calibratedLevel, setCalibratedLevel] = useState<ProficiencyLevelNumber>(4);
+  const [calibrationJustification, setCalibrationJustification] = useState<string>("");
+  const [calibrationError, setCalibrationError] = useState<string | null>(null);
+
+  // Edit Skill Description / Role Level Modal (VAL-SKILL-001)
+  const [editingSkill, setEditingSkill] = useState<SkillRecord | null>(null);
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editRoleReqLevel, setEditRoleReqLevel] = useState<number | null>(4);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Selected skill for Gap Analysis
-  const [gapSelectedCompId, setGapSelectedCompId] = useState<number>(3); // Default to AI skill
-  const [gapSearchQuery, setGapSearchQuery] = useState("");
-
-  // 1. The 20 Skills (Exact User Master List)
-  const [skills, setSkills] = useState<SkillItem[]>([
-    {
-      no: 1,
-      title: "Title",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Foundational professional etiquette and title designation clarity.",
-    },
-    {
-      no: 2,
-      title: "Knowledge of Books",
-      category: "Core Skills",
-      status: "Active",
-      description: "Thorough understanding of regulatory statutes, corporate ledgers, and operational manuals.",
-    },
-    {
-      no: 3,
-      title: "Ability to use AI to accelerate productivity and achieve work goals",
-      category: "Core Skills",
-      status: "Active",
-      description: "Leveraging generative AI workflows, intelligent automation, and LLM tooling for high-speed delivery.",
-    },
-    {
-      no: 4,
-      title: "Time Management",
-      category: "Core Skills",
-      status: "Active",
-      description: "Prioritizing high-leverage milestones and meeting delivery SLAs consistently.",
-    },
-    {
-      no: 5,
-      title: "Managing and Developing Workforce",
-      category: "Human Capacity Building",
-      status: "Active",
-      description: "Optimally assigning talent, mentoring direct reports, and building long-term bench strength.",
-    },
-    {
-      no: 6,
-      title: "Ability to show emotional intelligence on the job",
-      category: "Functional Skills",
-      status: "Active",
-      description: "Navigating workplace dynamics, showing empathy, and de-escalating interpersonal tensions.",
-    },
-    {
-      no: 7,
-      title: "Delivering Results & Ensuring Customer Satisfaction - Ensuring Customer Satisfaction",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Proactive client engagement and exceptional service satisfaction ratings.",
-    },
-    {
-      no: 8,
-      title: "Ability to Develop Staff - Able to provide guidance and support to staff for career development",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Providing structured career progression plans and coaching to junior colleagues.",
-    },
-    {
-      no: 9,
-      title: "Delivering Results & Ensuring Customer Satisfaction - Ensuring the delivery of quality service and products",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Maintaining strict QA protocols and zero-defect product standards.",
-    },
-    {
-      no: 10,
-      title: "Ability to work Effectively in a Team - Ability to function in a Team",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Seamless cross-functional collaboration and accountability across squad deliverables.",
-    },
-    {
-      no: 11,
-      title: "Respect and Commitment - Respect for superiors, colleagues and customers",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Demonstrating high professional respect and ethical decorum across all engagements.",
-    },
-    {
-      no: 12,
-      title: "Ability to Develop Staff - Able to develop others (subordinates)",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Delivering hands-on skills transfer and structured performance feedback to team members.",
-    },
-    {
-      no: 13,
-      title: "Commitment to own personal development and training - Eagerness for self development",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Proactive self-learning and pursuit of certifications outside scheduled working hours.",
-    },
-    {
-      no: 14,
-      title: "Commitment to own personal development and training - Inner drive to supplement training from organization",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Independently mastering new paradigms to stay ahead of industry disruptions.",
-    },
-    {
-      no: 15,
-      title: "Following Instructions and Working Towards Organisational Goals - Keeping to laid down regulations and procedures",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Strict adherence to statutory compliance, audit guidelines, and operating policies.",
-    },
-    {
-      no: 16,
-      title: "Respect and Commitment - Commitment to work and organisational development",
-      category: "Non-Core Skills",
-      status: "Active",
-      description: "Deep engagement with institutional growth, brand stewardship, and collective success.",
-    },
-    {
-      no: 17,
-      title: "Developing/Managing Budgets & Saving Costs - Executing result-based actions",
-      category: "Core Skills",
-      status: "Active",
-      description: "Fiscal stewardship, cost containment, and ROI-driven expenditure management.",
-    },
-    {
-      no: 18,
-      title: "Maximising and maintaining Productivity - Ability to manage pressure and setbacks effectively",
-      category: "Core Skills",
-      status: "Active",
-      description: "Resilience under critical deadlines and maintaining operational poise amidst turbulence.",
-    },
-    {
-      no: 19,
-      title: "Supporting & Cooperating - Ability to work effectively with teams, clients and staff",
-      category: "Core Skills",
-      status: "Active",
-      description: "Fostering psychological safety, mutual support, and team synergy.",
-    },
-    {
-      no: 20,
-      title: "Maximising and maintaining Productivity - Ability to accept challenges and execute them with confidence",
-      category: "Core Skills",
-      status: "Active",
-      description: "Taking ownership of complex mandates and delivering with confidence and precision.",
-    },
-  ]);
-
-  // 2. The 5 Skill Categories
-  const [categories] = useState<SkillCategoryItem[]>([
-    {
-      no: 1,
-      title: "Non-Core Skills",
-      description: "Non-Core Skills for the Public Service Commission, Ghana",
-      count: 10,
-    },
-    {
-      no: 2,
-      title: "Core Skills",
-      description: "Skills essential for all employees of the public service commission, Ghana",
-      count: 7,
-    },
-    {
-      no: 3,
-      title: "Human Capacity Building",
-      description: "Managing workforce optimally",
-      count: 1,
-    },
-    {
-      no: 4,
-      title: "Leadership Skills",
-      description: "These are skills for managerial roles",
-      count: 1,
-    },
-    {
-      no: 5,
-      title: "Functional Skills",
-      description: "These are role specific skills",
-      count: 1,
-    },
-  ]);
-
-  // 3. Skill Reviews Records (from screenshot)
-  const [reviewRecords, setReviewRecords] = useState<SkillReviewRecord[]>([
-    {
-      no: 1,
-      employeeName: "Richard Mamphey",
-      employeeId: "SHR/GH/038",
-      role: "Head, Human Resources",
-      status: "Pending Approval Benjamin Arthur",
-      lastAssessment: "Thu, Jun 11, 2026. 10:11 pm",
-    },
-    {
-      no: 2,
-      employeeName: "Isaac Boateng",
-      employeeId: "SHR/GH/010",
-      role: "Chief Financial Officer",
-      status: "Pending Employee",
-      lastAssessment: "Mon, Sep 2, 2024.",
-    },
-    {
-      no: 3,
-      employeeName: "Joel Mawutor",
-      employeeId: "GH/2024/10/18/127",
-      role: "Administrative Officer",
-      status: "No Pending Assessment",
-      lastAssessment: "-- -- --",
-    },
-    {
-      no: 4,
-      employeeName: "John Asamoah",
-      employeeId: "GH/2022/2/1/103",
-      role: "R&D Lead",
-      status: "No Pending Assessment",
-      lastAssessment: "-- -- --",
-    },
-    {
-      no: 5,
-      employeeName: "Philip Arthur",
-      employeeId: "HFTL143",
-      role: "Customer Service Executive",
-      status: "No Pending Assessment",
-      lastAssessment: "-- -- --",
-    },
-    {
-      no: 6,
-      employeeName: "Dave Nii",
-      employeeId: "HFTL145",
-      role: "IT Infrastructure Officer",
-      status: "No Pending Assessment",
-      lastAssessment: "-- -- --",
-    },
-  ]);
-
-  // Selected Specialist Domain & Leadership Track
-  const [selectedDomain, setSelectedDomain] = useState<string>("HR Technology & Analytics");
-  const [selectedLeadershipTier, setSelectedLeadershipTier] = useState<"Leads Self" | "Leads Others" | "Leads Organization">("Leads Others");
-
-  // Enrolled Upskilling Courses State
-  const [enrolledCourses, setEnrolledCourses] = useState<string[]>([]);
-
-  // Gigs State
-  const [gigs, setGigs] = useState<Gig[]>([
-    {
-      id: 1,
-      title: "Cloudflare Edge TCP Multiplexing & Hyperdrive Benchmarking",
-      practice: "Cloud & Edge Engineering",
-      duration: "3 Weeks",
-      workload: "15% Allocation",
-      requiredSkills: ["Cloudflare Workers", "PostgreSQL", "Hyperdrive", "Performance Testing"],
-      matchScore: 98,
-      lead: "Marcus Chen (Engineering Dir)",
-    },
-    {
-      id: 2,
-      title: "West Africa Labour Compliance Harmonization (Ghana & Nigeria)",
-      practice: "People & Culture & Legal",
-      duration: "4 Weeks",
-      workload: "10% Allocation",
-      requiredSkills: ["Strategic Workforce Planning", "Global Compliance", "Labour Law"],
-      matchScore: 84,
-      lead: "Sarah Jenkins (Head of P&C)",
-    },
-    {
-      id: 3,
-      title: "Enterprise Design System Modernization (Apple / Linear standard)",
-      practice: "Enterprise Advisory",
-      duration: "2 Weeks",
-      workload: "20% Allocation",
-      requiredSkills: ["React 19", "Design Tokens", "Accessibility WCAG AAA"],
-      matchScore: 92,
-      lead: "Julian Vance (Advisory Dir)",
-    },
-  ]);
-
-  // Journal Entries
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([
-    {
-      id: 1,
-      date: "2026-11-01",
-      title: "Architected Cloudflare Hyperdrive edge pool with Neon PostgreSQL",
-      impact: "Eliminated server cold starts, reduced query latency to 1.4ms across 45 client connections.",
-      tags: ["Cloudflare", "Performance", "Architecture"],
-    },
-    {
-      id: 2,
-      date: "2026-10-24",
-      title: "Standardized Appraisal Calibration & Governance",
-      impact: "Prevented conflicting scoring distortions across OKR, MBO, and BSC cycles.",
-      tags: ["Governance", "PMS", "Methodology"],
-    },
-    {
-      id: 3,
-      date: "2026-10-15",
-      title: "Equipped 100% of workforce with corporate hardware fleet",
-      impact: "Procured and provisioned 54 ThinkPad P16 and MacBook Pro devices with zero onboarding downtime.",
-      tags: ["Operations", "Asset Fleet"],
-    },
-  ]);
-
-  const [newQuickWin, setNewQuickWin] = useState("");
-  const [newImpact, setNewImpact] = useState("");
-  const [aiSummaryGenerated, setAiSummaryGenerated] = useState(false);
-
-  const handleAddSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCompTitle.trim()) return;
-
-    const newItem: SkillItem = {
-      no: skills.length + 1,
-      title: newCompTitle.trim(),
-      category: newCompCategory,
-      status: "Active",
-      description: "Custom organizational skill added by HR Administrator.",
-    };
-
-    setSkills([...skills, newItem]);
-    setShowAddSkillModal(false);
-    setNewCompTitle("");
-    setToastMessage(`Skill "${newItem.title}" created successfully.`);
-    setTimeout(() => setToastMessage(null), 4000);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 5000);
   };
 
-  const toggleSkillStatus = (no: number) => {
-    setSkills(
-      skills.map((c) =>
-        c.no === no ? { ...c, status: c.status === "Active" ? "Inactive" : "Active" } : c
-      )
-    );
-    setOpenDropdownId(null);
-  };
-
-  const deleteSkill = (no: number) => {
-    if (confirm("Are you sure you want to delete this skill?")) {
-      setSkills(skills.filter((c) => c.no !== no));
-      setOpenDropdownId(null);
+  // Resolve required level for a skill code under the active baseline (§5.1, VAL-SKILL-006)
+  const getRequiredLevelForSkill = (skillCode: string): number | null => {
+    if (selectedBaseline === "gig_requirements") {
+      const gig = gigs.find((g) => g.id === selectedGigForBaseline) || gigs[0];
+      const req = gig.requiredSkills.find((r) => r.skillCode === skillCode);
+      return req ? req.minLevel : null; // null => "Not required" (VAL-SKILL-006)
     }
+    return roleProfiles[selectedBaseline]?.levels[skillCode] ?? null;
   };
 
-  const handleApplyGig = (id: number) => {
-    setGigs((prev) => prev.map((g) => (g.id === id ? { ...g, applied: true } : g)));
-    setToastMessage("Gig application submitted to Practice Director.");
-    setTimeout(() => setToastMessage(null), 4000);
-  };
-
-  const handleAddJournalEntry = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newQuickWin) return;
-
-    const entry: JournalEntry = {
-      id: Date.now(),
-      date: new Date().toISOString().slice(0, 10),
-      title: newQuickWin,
-      impact: newImpact || "High operational value delivered to Senrab ConsulTech.",
-      tags: ["Continuous Review", "Quick Win"],
+  // Compute per-skill gap rows
+  const skillGapRows = skills.map((sk) => {
+    const rec = assessments.find((a) => a.skillCode === sk.code);
+    const finalRating = rec?.finalRating ?? null;
+    const selfRating = rec?.selfRating ?? null;
+    const managerRating = rec?.managerRating ?? null;
+    const requiredLevel = getRequiredLevelForSkill(sk.code);
+    const gap =
+      requiredLevel !== null && finalRating !== null
+        ? Number((requiredLevel - finalRating).toFixed(1))
+        : null;
+    return {
+      skill: sk,
+      assessment: rec,
+      requiredLevel,
+      selfRating,
+      managerRating,
+      finalRating,
+      gap,
     };
-
-    setJournalEntries([entry, ...journalEntries]);
-    setNewQuickWin("");
-    setNewImpact("");
-  };
-
-  // Filtered skills
-  const filteredSkills = skills.filter((c) => {
-    const matchesSearch = c.title.toLowerCase().includes(searchSkill.toLowerCase());
-    const matchesCat = selectedCategoryFilter === "All" || c.category === selectedCategoryFilter;
-    return matchesSearch && matchesCat;
   });
 
-  const selectedGapComp = skills.find((c) => c.no === gapSelectedCompId) || skills[2];
+  // Top 3 Deficits (gap > 0) and Top 3 Strengths (gap < 0) (§5.3, FR-SKILL-010)
+  const topDeficits = [...skillGapRows]
+    .filter((r) => r.gap !== null && r.gap > 0)
+    .sort((a, b) => (b.gap ?? 0) - (a.gap ?? 0))
+    .slice(0, 3);
+
+  const topStrengths = [...skillGapRows]
+    .filter((r) => r.gap !== null && r.gap < 0)
+    .sort((a, b) => (a.gap ?? 0) - (b.gap ?? 0))
+    .slice(0, 3);
+
+  // Category-level summary (5 rows, FR-SKILL-009)
+  const categorySummaries = SKILL_CATEGORIES.map((cat) => {
+    const rows = skillGapRows.filter(
+      (r) => r.skill.categoryCode === cat.code && r.requiredLevel !== null && r.finalRating !== null
+    );
+    const avgReq =
+      rows.length > 0
+        ? Number((rows.reduce((s, r) => s + (r.requiredLevel || 0), 0) / rows.length).toFixed(2))
+        : null;
+    const avgActual =
+      rows.length > 0
+        ? Number((rows.reduce((s, r) => s + (r.finalRating || 0), 0) / rows.length).toFixed(2))
+        : null;
+    const avgGap =
+      avgReq !== null && avgActual !== null ? Number((avgReq - avgActual).toFixed(2)) : null;
+
+    return {
+      category: cat,
+      assessedCount: rows.length,
+      avgReq,
+      avgActual,
+      avgGap,
+    };
+  });
+
+  // Handle employee self-rating update (FR-SKILL-005, TC-SKILL-03)
+  const handleUpdateSelfRating = (skillCode: string, level: ProficiencyLevelNumber) => {
+    setAssessments((prev) =>
+      prev.map((a) =>
+        a.skillCode === skillCode
+          ? {
+              ...a,
+              selfRating: level,
+              finalRating: a.managerRating ?? level,
+              assessedAt: "2026-11-17",
+            }
+          : a
+      )
+    );
+    const sk = skills.find((s) => s.code === skillCode);
+    showToast(`Saved self-rating for ${skillCode} ${sk?.name}: Level ${level} (${getProficiencyLabel(level)}).`);
+  };
+
+  const handleUpdateEvidenceNote = (skillCode: string, note: string) => {
+    setAssessments((prev) =>
+      prev.map((a) => (a.skillCode === skillCode ? { ...a, evidenceNote: note } : a))
+    );
+  };
+
+  // Add deficit as a draft development goal in next cycle (FR-SKILL-010, TC-SKILL-14)
+  const handleAddAsDevelopmentGoal = (skill: SkillRecord, requiredLevel: number, actualLevel: number | null) => {
+    const existing = draftGoals.find((g) => g.skillCode === skill.code);
+    if (existing) {
+      showToast(`Development goal for ${skill.code} ${skill.name} is already queued for next cycle.`);
+      return;
+    }
+    const draft: DevelopmentGoalDraft = {
+      id: `DEV-GOAL-${skill.code}`,
+      skillCode: skill.code,
+      skillName: skill.name,
+      title: `Advance ${skill.code} ${skill.name} from L${actualLevel ?? 1} to L${requiredLevel} (${getProficiencyLabel(requiredLevel)})`,
+      framework: nextCycleFramework,
+      createdAt: "2026-11-17",
+    };
+    setDraftGoals((prev) => [draft, ...prev]);
+    showToast(
+      `Draft ${nextCycleFramework} development goal created for next cycle: "${draft.title}"`
+    );
+  };
+
+  // Save HR Calibration adjustment with mandatory justification (VAL-SKILL-005, TC-SKILL-05)
+  const handleSaveCalibration = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!calibratingSkill) return;
+    if (!calibrationJustification.trim() || calibrationJustification.trim().length < 10) {
+      setCalibrationError(
+        "VAL-SKILL-005 Violation: Justification is mandatory (minimum 10 characters) to adjust a final skill rating during calibration."
+      );
+      return;
+    }
+    setAssessments((prev) =>
+      prev.map((a) =>
+        a.skillCode === calibratingSkill.code
+          ? {
+              ...a,
+              finalRating: calibratedLevel,
+              calibrationJustification: calibrationJustification.trim(),
+              assessedAt: "2026-11-17",
+              assessedBy: "HR Calibration Committee",
+            }
+          : a
+      )
+    );
+    showToast(
+      `Calibrated final rating for ${calibratingSkill.code} ${calibratingSkill.name} to Level ${calibratedLevel} (Audit-logged).`
+    );
+    setCalibratingSkill(null);
+    setCalibrationJustification("");
+    setCalibrationError(null);
+  };
+
+  // Save Skill Description & Role Profile level (VAL-SKILL-001)
+  const handleSaveSkillMetadata = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSkill) return;
+    setSkills((prev) =>
+      prev.map((s) => (s.code === editingSkill.code ? { ...s, description: editDescription } : s))
+    );
+    setRoleProfiles((prev) => ({
+      ...prev,
+      my_role: {
+        ...prev.my_role,
+        levels: {
+          ...prev.my_role.levels,
+          [editingSkill.code]: editRoleReqLevel,
+        },
+      },
+    }));
+    showToast(
+      `Updated description and required role profile level for ${editingSkill.code} ${editingSkill.name}.`
+    );
+    setEditingSkill(null);
+  };
+
+  // Team & Company Aggregate Heatmap rows (§10, FR-SKILL-011)
+  const heatmapRows: CategoryHeatmapRow[] = [
+    {
+      id: "SQUAD-EDGE",
+      label: "Cloud & Edge Engineering Squad (18 Staff)",
+      subtitle: "Aggregate squad mean — individual peer ratings withheld (VAL-SKILL-007)",
+      categoryAverages: { TECH: 4.5, EXEC: 3.9, PPL: 3.8, LEAD: 3.5, PERS: 4.4 },
+    },
+    {
+      id: "SQUAD-FINTECH",
+      label: "FinTech & Payments Product Squad (24 Staff)",
+      subtitle: "Aggregate squad mean",
+      categoryAverages: { TECH: 4.2, EXEC: 4.1, PPL: 4.0, LEAD: 3.4, PERS: 4.3 },
+    },
+    {
+      id: "SQUAD-ADVISORY",
+      label: "Enterprise Advisory & People Strategy (21 Staff)",
+      subtitle: "Aggregate squad mean",
+      categoryAverages: { TECH: 3.6, EXEC: 4.2, PPL: 4.6, LEAD: 4.3, PERS: 4.5 },
+    },
+    {
+      id: "SQUAD-OPS",
+      label: "Regional Operations & Compliance (28 Staff)",
+      subtitle: "Aggregate squad mean",
+      categoryAverages: { TECH: 3.4, EXEC: 4.4, PPL: 4.1, LEAD: 3.7, PERS: 4.6 },
+    },
+  ];
 
   return (
-    <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
-      {/* Header Banner */}
+    <div style={{ padding: `${space[5]} ${space[6]}`, maxWidth: "1280px", margin: "0 auto" }}>
+      {/* Page Header */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "flex-start",
           flexWrap: "wrap",
-          gap: "1rem",
-          marginBottom: "1.25rem",
+          gap: space[4],
+          marginBottom: space[5],
         }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Icons.Compass size={22} color={colors.indigoAction} />
+          <div style={{ display: "flex", alignItems: "center", gap: space[2], flexWrap: "wrap" }}>
+            <Icons.Compass size={24} color={colors.indigoAction} />
             <h1
               style={{
-                fontSize: typography.sizes.xl,
-                fontWeight: typography.weights.bold,
+                fontSize: text.h1.fontSize,
+                fontWeight: text.h1.fontWeight,
+                lineHeight: text.h1.lineHeight,
                 color: colors.textPrimary,
-                letterSpacing: "-0.02em",
                 margin: 0,
               }}
             >
-              Talent, Skills &amp; Gig Board
+              Skills &amp; Gig Board
             </h1>
-            <Badge variant="okr" size="sm">20 Skills Configured</Badge>
+            <Badge variant="info" size="sm">
+              20 Skills · 5 Categories · 5-Level Scale
+            </Badge>
+            <Badge variant={frameworkVariant(nextCycleFramework)} size="sm">
+              {nextCycleFramework}
+            </Badge>
           </div>
-          <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.3rem 0 0 0" }}>
-            Organizational skill framework, employee reviews, gap analysis diagnostics, and internal gig marketplace.
+          <p
+            style={{
+              fontSize: text.body.fontSize,
+              color: colors.textSecondary,
+              margin: `${space[1]} 0 0 0`,
+            }}
+          >
+            Twenty skills, five categories, one 5-level proficiency scale — rated in Performance, gap-analyzed against a selectable baseline, and used as the matching currency on the Gig Board.
           </p>
         </div>
 
-        {/* Global Action */}
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Button variant="primary" size="sm" onClick={() => setShowAddSkillModal(true)}>
-            <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <Icons.Plus size={14} />
-              <span>Add Skill</span>
-            </span>
-          </Button>
+        {/* Navigation Tabs */}
+        <div style={{ display: "flex", gap: space[2], flexWrap: "wrap" }}>
+          {[
+            { key: "gap_analysis", label: "Skill Gap Analysis", icon: Icons.Crosshair },
+            { key: "my_skills", label: "My Skills (Self-Rating)", icon: Icons.Award },
+            { key: "gigs", label: `Internal Gig Board (${gigs.length})`, icon: Icons.Briefcase },
+            { key: "framework", label: "Skills Framework (20)", icon: Icons.Layers },
+            { key: "team_heatmap", label: "Aggregate Skill Heatmap", icon: Icons.BarChart },
+          ].map((tab) => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? "primary" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab(tab.key as typeof activeTab)}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: space[1] }}>
+                <tab.icon size={16} />
+                <span>{tab.label}</span>
+              </span>
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Main Tab Navigation */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.4rem",
-          borderBottom: `1px solid ${colors.borderSubtle}`,
-          paddingBottom: "0.5rem",
-          marginBottom: "1.25rem",
-          overflowX: "auto",
-        }}
-      >
-        {[
-          { key: "skills", label: `Skills (${skills.length})`, icon: Icons.Award },
-          { key: "categories", label: `Skill Categories (${categories.length})`, icon: Icons.Layers },
-          { key: "gap_analysis", label: "Skill Gap Analysis", icon: Icons.Crosshair },
-          { key: "reviews", label: `Skill Reviews (${reviewRecords.length})`, icon: Icons.Users },
-          { key: "gigs", label: `Internal Gig Board (${gigs.length})`, icon: Icons.Briefcase },
-          { key: "t_shaped", label: "T-Shaped Radar", icon: Icons.Target },
-          { key: "navigator", label: "AI Career Navigator", icon: Icons.Sparkles },
-          { key: "journal", label: `Performance Journal (${journalEntries.length})`, icon: Icons.FileText },
-        ].map((tab) => (
-          <Button
-            key={tab.key}
-            variant={activeTab === tab.key ? "primary" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab(tab.key as typeof activeTab)}
-          >
-            <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <tab.icon size={14} />
-              <span>{tab.label}</span>
-            </span>
-          </Button>
-        ))}
-      </div>
-
-      {/* Toast Notification */}
+      {/* Toast Banner */}
       {toastMessage && (
         <div
+          role="status"
           style={{
-            marginBottom: "1rem",
-            padding: "0.65rem 1rem",
+            marginBottom: space[4],
+            padding: `${space[3]} ${space[4]}`,
             borderRadius: radii.md,
-            backgroundColor: "#f0fdf4",
-            border: "1px solid #bbf7d0",
-            color: "#166534",
-            fontSize: typography.sizes.xs,
-            fontWeight: 600,
+            backgroundColor: colors.successBg,
+            border: `1px solid ${colors.successBorder}`,
+            color: colors.success,
+            fontSize: text.bodyStrong.fontSize,
+            fontWeight: text.bodyStrong.fontWeight,
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <span>✓ {toastMessage}</span>
           <button
+            type="button"
             onClick={() => setToastMessage(null)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#166534", fontWeight: 700 }}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.success,
+              cursor: "pointer",
+              fontWeight: 700,
+            }}
           >
             ✕
           </button>
@@ -547,315 +384,553 @@ export const SkillsMarketplaceView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 1: SKILLS MASTER LIST (Exact Table from Screenshot 1 & 20 items) */}
+      {/* TAB 1: SKILL GAP ANALYSIS WITH 6 SELECTABLE BASELINES (§5)                */}
       {/* ========================================================================= */}
-      {activeTab === "skills" && (
-        <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.xs }}>
-          {/* Controls Bar: Search & Category Filter */}
+      {activeTab === "gap_analysis" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: space[5] }}>
+          {/* §5.1 Gap Analysis Baseline Selector Card */}
           <div
             style={{
-              padding: "1rem 1.25rem",
-              borderBottom: `1px solid ${colors.borderSubtle}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "0.75rem",
-              backgroundColor: colors.surfaceSubtle,
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              padding: space[4],
+              boxShadow: shadows.sm,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1, maxWidth: "480px" }}>
-              <div style={{ position: "relative", width: "100%" }}>
-                <Icons.Search size={15} color={colors.textMuted} style={{ position: "absolute", left: "10px", top: "10px" }} />
-                <input
-                  type="text"
-                  placeholder="Search skills by keyword..."
-                  value={searchSkill}
-                  onChange={(e) => setSearchSkill(e.target.value)}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: space[4],
+              }}
+            >
+              <div style={{ flex: "1 1 360px" }}>
+                <label
+                  htmlFor="gap-baseline-select"
+                  style={{
+                    display: "block",
+                    fontSize: text.small.fontSize,
+                    fontWeight: 600,
+                    color: colors.textSecondary,
+                    marginBottom: space[1],
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Comparison Baseline Selector (FR-SKILL-007)
+                </label>
+                <select
+                  id="gap-baseline-select"
+                  value={selectedBaseline}
+                  onChange={(e) => setSelectedBaseline(e.target.value as GapBaselineKey)}
                   style={{
                     width: "100%",
-                    padding: "0.5rem 0.75rem 0.5rem 2.25rem",
+                    height: "40px",
+                    padding: `0 ${space[3]}`,
+                    borderRadius: radii.md,
+                    border: `1px solid ${colors.borderStrong}`,
+                    fontSize: text.bodyStrong.fontSize,
+                    fontWeight: 600,
+                    color: colors.textPrimary,
+                    backgroundColor: colors.surface,
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="my_role">My Role Profile (Default) — Lead Enterprise Architect</option>
+                  <option value="target_role">Target Role Profile — Practice Director / VP Engineering</option>
+                  <option value="team_benchmark">Team Benchmark — Platform Engineering Median (Aggregate Only)</option>
+                  <option value="company_benchmark">Company Benchmark — Org-Wide Median (HR Console Scope)</option>
+                  <option value="previous_cycle">Previous Cycle — FY2025 Q4 Final Ratings</option>
+                  <option value="gig_requirements">Gig Requirements — Specific Open Internal Gig</option>
+                </select>
+                <div style={{ fontSize: text.small.fontSize, color: colors.textMuted, marginTop: space[1] }}>
+                  {selectedBaseline === "gig_requirements"
+                    ? "Comparing your verified final skill ratings against the selected gig's minimum required levels."
+                    : roleProfiles[selectedBaseline]?.subtitle}
+                </div>
+              </div>
+
+              {/* Conditional Secondary Gig Selector when baseline === 'gig_requirements' */}
+              {selectedBaseline === "gig_requirements" && (
+                <div style={{ flex: "1 1 320px" }}>
+                  <label
+                    htmlFor="gig-baseline-picker"
+                    style={{
+                      display: "block",
+                      fontSize: text.small.fontSize,
+                      fontWeight: 600,
+                      color: colors.textSecondary,
+                      marginBottom: space[1],
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Target Open Gig
+                  </label>
+                  <select
+                    id="gig-baseline-picker"
+                    value={selectedGigForBaseline}
+                    onChange={(e) => setSelectedGigForBaseline(e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "40px",
+                      padding: `0 ${space[3]}`,
+                      borderRadius: radii.md,
+                      border: `1px solid ${colors.indigoAction}`,
+                      fontSize: text.body.fontSize,
+                      fontWeight: 600,
+                      color: colors.indigoPrimary,
+                      backgroundColor: colors.indigoSubtle,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {gigs.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.id}: {g.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Next-Cycle Framework Selector for "Add as development goal" CTA */}
+              <div style={{ minWidth: "200px" }}>
+                <label
+                  htmlFor="next-cycle-fw"
+                  style={{
+                    display: "block",
+                    fontSize: text.small.fontSize,
+                    fontWeight: 600,
+                    color: colors.textSecondary,
+                    marginBottom: space[1],
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Next Cycle Goal Target
+                </label>
+                <select
+                  id="next-cycle-fw"
+                  value={nextCycleFramework}
+                  onChange={(e) => setNextCycleFramework(e.target.value as "BSC" | "OKR" | "MBO")}
+                  style={{
+                    width: "100%",
+                    height: "40px",
+                    padding: `0 ${space[3]}`,
                     borderRadius: radii.md,
                     border: `1px solid ${colors.border}`,
-                    fontSize: typography.sizes.xs,
-                    backgroundColor: colors.surface,
+                    fontSize: text.body.fontSize,
+                    backgroundColor: colors.surfaceSubtle,
+                    color: colors.textPrimary,
+                  }}
+                >
+                  <option value="BSC">BSC Draft Goal</option>
+                  <option value="OKR">OKR Draft Objective</option>
+                  <option value="MBO">MBO Draft Objective</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* §5.3 Focus Areas Panel: Top 3 Deficits & Top 3 Strengths + Add as Development Goal CTA */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: space[4] }}>
+            {/* Top 3 Deficits */}
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                padding: space[4],
+                boxShadow: shadows.sm,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: space[3] }}>
+                <div>
+                  <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                    Priority Focus Areas (Top 3 Skill Deficits)
+                  </h2>
+                  <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                    Largest positive gaps (required &minus; final &gt; 0) — push directly to next cycle&apos;s goals
+                  </span>
+                </div>
+                <Badge variant="warning" size="sm">Development Focus</Badge>
+              </div>
+
+              {topDeficits.length === 0 ? (
+                <div style={{ padding: space[4], backgroundColor: colors.successBg, borderRadius: radii.sm, color: colors.success, fontSize: text.body.fontSize }}>
+                  ✓ Zero skill deficits against this baseline. All required levels are met or exceeded.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: space[3] }}>
+                  {topDeficits.map((item) => {
+                    const alreadyDrafted = draftGoals.some((d) => d.skillCode === item.skill.code);
+                    return (
+                      <div
+                        key={item.skill.code}
+                        style={{
+                          padding: space[3],
+                          borderRadius: radii.sm,
+                          backgroundColor: colors.warningBg,
+                          border: `1px solid ${colors.warningBorder}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: space[3],
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: space[2] }}>
+                            <SkillBadge code={item.skill.code} name={item.skill.name} />
+                            <span style={{ fontSize: text.micro.fontSize, fontWeight: 700, color: colors.warning, fontVariantNumeric: "tabular-nums" }}>
+                              Gap: &minus;{item.gap} lvl (Actual L{item.finalRating} vs Req L{item.requiredLevel})
+                            </span>
+                          </div>
+                          <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginTop: space[1] }}>
+                            {item.skill.categoryName}
+                          </div>
+                        </div>
+
+                        <Button
+                          variant={alreadyDrafted ? "secondary" : "primary"}
+                          size="sm"
+                          disabled={alreadyDrafted}
+                          onClick={() =>
+                            handleAddAsDevelopmentGoal(item.skill, item.requiredLevel ?? 4, item.finalRating)
+                          }
+                        >
+                          {alreadyDrafted ? `Added to ${nextCycleFramework} ✓` : "+ Add as development goal"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Top 3 Strengths (Surpluses) */}
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                padding: space[4],
+                boxShadow: shadows.sm,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: space[3] }}>
+                <div>
+                  <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                    Verified Strengths (Top 3 Skill Surpluses)
+                  </h2>
+                  <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                    Skills exceeding baseline requirement (gap &lt; 0) — prime signals for Internal Gigs
+                  </span>
+                </div>
+                <Badge variant="success" size="sm">Gig Matching Signals</Badge>
+              </div>
+
+              {topStrengths.length === 0 ? (
+                <div style={{ padding: space[4], backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm, color: colors.textSecondary, fontSize: text.body.fontSize }}>
+                  No surpluses above the selected baseline (e.g., Target Role stretches all requirements).
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: space[3] }}>
+                  {topStrengths.map((item) => (
+                    <div
+                      key={item.skill.code}
+                      style={{
+                        padding: space[3],
+                        borderRadius: radii.sm,
+                        backgroundColor: colors.frameworkBscBg,
+                        border: `1px solid ${colors.frameworkBscBorder}`,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: space[3],
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: space[2] }}>
+                          <SkillBadge code={item.skill.code} name={item.skill.name} />
+                          <span style={{ fontSize: text.micro.fontSize, fontWeight: 700, color: colors.frameworkBsc, fontVariantNumeric: "tabular-nums" }}>
+                            Surplus: +{Math.abs(item.gap || 0)} lvl (Actual L{item.finalRating} vs Req L{item.requiredLevel})
+                          </span>
+                        </div>
+                        <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginTop: space[1] }}>
+                          {item.skill.categoryName}
+                        </div>
+                      </div>
+
+                      <Button variant="outline" size="sm" onClick={() => setActiveTab("gigs")}>
+                        Match to Gigs &rarr;
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Queued Next-Cycle Development Goals (when user clicks "Add as development goal") */}
+          {draftGoals.length > 0 && (
+            <div
+              style={{
+                backgroundColor: colors.indigoSubtle,
+                border: `1px solid ${colors.indigoBorder}`,
+                borderRadius: radii.md,
+                padding: space[4],
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: space[2] }}>
+                <span style={{ fontSize: text.bodyStrong.fontSize, fontWeight: 600, color: colors.indigoPrimary }}>
+                  Queued Next-Cycle Development Goals ({draftGoals.length})
+                </span>
+                <Badge variant={frameworkVariant(nextCycleFramework)} size="sm">
+                  {nextCycleFramework}
+                </Badge>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: space[2] }}>
+                {draftGoals.map((dg) => (
+                  <div
+                    key={dg.id}
+                    style={{
+                      padding: `${space[2]} ${space[3]}`,
+                      backgroundColor: colors.surface,
+                      borderRadius: radii.sm,
+                      border: `1px solid ${colors.border}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: text.body.fontSize,
+                    }}
+                  >
+                    <span>
+                      <strong>[{dg.skillCode}]</strong> {dg.title}
+                    </span>
+                    <Badge variant="success" size="sm">Drafted for Next Cycle</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* §5.2 & FR-SKILL-009: 5-Category Average Gap Summary Row */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              padding: space[4],
+              boxShadow: shadows.sm,
+            }}
+          >
+            <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: `0 0 ${space[3]} 0` }}>
+              Category-Level Gap Summary (5 Categories · FR-SKILL-009)
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: space[3] }}>
+              {categorySummaries.map((cs) => {
+                const hasData = cs.avgGap !== null;
+                const isDeficit = (cs.avgGap ?? 0) > 0;
+                const isSurplus = (cs.avgGap ?? 0) < 0;
+                return (
+                  <div
+                    key={cs.category.code}
+                    style={{
+                      padding: space[3],
+                      borderRadius: radii.sm,
+                      backgroundColor: colors.surfaceSubtle,
+                      border: `1px solid ${colors.border}`,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: text.micro.fontSize, fontWeight: 700, color: colors.indigoAction }}>
+                        {cs.category.code}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: text.micro.fontSize,
+                          fontWeight: 600,
+                          color: !hasData
+                            ? colors.textMuted
+                            : isDeficit
+                            ? colors.warning
+                            : isSurplus
+                            ? colors.frameworkBsc
+                            : colors.success,
+                        }}
+                      >
+                        {!hasData
+                          ? "Not required"
+                          : isDeficit
+                          ? `Avg Gap: −${cs.avgGap}`
+                          : isSurplus
+                          ? `Avg Surplus: +${Math.abs(cs.avgGap || 0)}`
+                          : "Avg: Met (0.0)"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: text.bodyStrong.fontSize, fontWeight: 600, color: colors.textPrimary, marginTop: space[1] }}>
+                      {cs.category.name}
+                    </div>
+                    <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginTop: space[1] }}>
+                      {hasData
+                        ? `Required Avg: ${cs.avgReq} · Final Avg: ${cs.avgActual}`
+                        : "No skills in this category required by selected baseline"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Per-Skill Gap Analysis Table Grouped by 5 Categories */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              overflow: "hidden",
+              boxShadow: shadows.sm,
+            }}
+          >
+            <div
+              style={{
+                padding: space[4],
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: space[3],
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                  Per-Skill Gap Breakdown (20 Skills · 1–5 Proficiency Scale)
+                </h2>
+                <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                  Formula: gap = required_level &minus; final_rating (Deficit &gt; 0, Met = 0, Surplus &lt; 0)
+                </span>
+              </div>
+
+              <div style={{ display: "flex", gap: space[2], alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Filter skill by code or name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    height: "36px",
+                    padding: `0 ${space[3]}`,
+                    borderRadius: radii.sm,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: text.body.fontSize,
                   }}
                 />
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value as SkillCategoryCode | "ALL")}
+                  style={{
+                    height: "36px",
+                    padding: `0 ${space[3]}`,
+                    borderRadius: radii.sm,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: text.body.fontSize,
+                    backgroundColor: colors.surface,
+                  }}
+                >
+                  <option value="ALL">All 5 Categories (20 Skills)</option>
+                  {SKILL_CATEGORIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>Category:</span>
-              <select
-                value={selectedCategoryFilter}
-                onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-                style={{
-                  padding: "0.45rem 0.75rem",
-                  borderRadius: radii.md,
-                  border: `1px solid ${colors.border}`,
-                  fontSize: typography.sizes.xs,
-                  backgroundColor: colors.surface,
-                  color: colors.textPrimary,
-                  cursor: "pointer",
-                }}
-              >
-                <option value="All">All Categories ({skills.length})</option>
-                <option value="Core Skills">Core Skills</option>
-                <option value="Non-Core Skills">Non-Core Skills</option>
-                <option value="Human Capacity Building">Human Capacity Building</option>
-                <option value="Functional Skills">Functional Skills</option>
-                <option value="Leadership Skills">Leadership Skills</option>
-              </select>
-
-              <Button variant="primary" size="sm" onClick={() => setShowAddSkillModal(true)}>
-                + Add Skill
-              </Button>
-            </div>
-          </div>
-
-          {/* Table */}
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
-            <thead>
-              <tr style={{ backgroundColor: "#f8fafc", borderBottom: `1.5px solid ${colors.border}`, textAlign: "left" }}>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "60px" }}>NO</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>SKILL</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>CATEGORY</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "110px" }}>STATUS</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "130px", textAlign: "right" }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSkills.map((comp) => (
-                <tr
-                  key={comp.no}
-                  style={{
-                    borderBottom: `1px solid ${colors.borderSubtle}`,
-                    transition: "background-color 0.12s ease",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                >
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: colors.textSecondary }}>
-                    {comp.no}
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem" }}>
-                    <div style={{ fontWeight: 700, color: colors.textPrimary, lineHeight: 1.4 }}>
-                      {comp.title}
-                    </div>
-                    {comp.description && (
-                      <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.2rem" }}>
-                        {comp.description}
-                      </div>
-                    )}
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem" }}>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: comp.category === "Core Skills" ? "#1e40af" : "#475569",
-                        backgroundColor: comp.category === "Core Skills" ? "#eff6ff" : "#f1f5f9",
-                        padding: "0.25rem 0.6rem",
-                        borderRadius: radii.sm,
-                        border: `1px solid ${comp.category === "Core Skills" ? "#bfdbfe" : "#e2e8f0"}`,
-                        display: "inline-block",
-                      }}
-                    >
-                      {comp.category}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem" }}>
-                    <span
-                      style={{
-                        padding: "0.25rem 0.65rem",
-                        borderRadius: radii.full,
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        backgroundColor: comp.status === "Active" ? "#ecfdf5" : "#f1f5f9",
-                        color: comp.status === "Active" ? "#059669" : "#64748b",
-                        border: `1px solid ${comp.status === "Active" ? "#a7f3d0" : "#cbd5e1"}`,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.3rem",
-                      }}
-                    >
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: comp.status === "Active" ? "#10b981" : "#94a3b8" }} />
-                      {comp.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem", textAlign: "right", position: "relative" }}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenDropdownId(openDropdownId === comp.no ? null : comp.no)}
-                      style={{
-                        backgroundColor: "#2563eb",
-                        color: "#ffffff",
-                        padding: "0.35rem 0.75rem",
-                        borderRadius: radii.sm,
-                        border: "none",
-                        fontSize: "11.5px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.3rem",
-                      }}
-                    >
-                      <span>Action</span>
-                      <Icons.ChevronDown size={12} color="#ffffff" />
-                    </button>
-
-                    {/* Dropdown Menu (Matches Screenshot 1) */}
-                    {openDropdownId === comp.no && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: "1rem",
-                          top: "2.75rem",
-                          backgroundColor: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: radii.md,
-                          boxShadow: shadows.md,
-                          zIndex: 50,
-                          minWidth: "150px",
-                          textAlign: "left",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert(`Editing skill #${comp.no}: ${comp.title}`);
-                            setOpenDropdownId(null);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: colors.textPrimary,
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert(`Assigning job role mapping for: ${comp.title}`);
-                            setOpenDropdownId(null);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: colors.textPrimary,
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          Add job role
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleSkillStatus(comp.no)}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: comp.status === "Active" ? "#d97706" : "#059669",
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          {comp.status === "Active" ? "De-activate" : "Activate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteSkill(comp.no)}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: "#dc2626",
-                            cursor: "pointer",
-                            display: "block",
-                            borderTop: "1px solid #f1f5f9",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fef2f2")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 2: SKILL CATEGORIES (Matches Screenshot 2)                       */}
-      {/* ========================================================================= */}
-      {activeTab === "categories" && (
-        <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, padding: "1.5rem", boxShadow: shadows.xs }}>
-          <div style={{ marginBottom: "1.5rem" }}>
-            <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
-              Skill Categories
-            </h2>
-            <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.3rem", lineHeight: 1.5 }}>
-              This is a list of all the skill categories in your organization. You can create, edit, activate, and deactivate new categories, and skills that are close to the categories you have created.
-            </p>
-          </div>
-
-          <div style={{ border: `1px solid ${colors.border}`, borderRadius: radii.md, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: text.body.fontSize,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
               <thead>
-                <tr style={{ backgroundColor: "#f8fafc", borderBottom: `1.5px solid ${colors.border}`, textAlign: "left" }}>
-                  <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "60px" }}>NO</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "240px" }}>TITLE</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>DESCRIPTION</th>
-                  <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, textAlign: "right", width: "120px" }}>SKILLS</th>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>SKILL</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>CATEGORY</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>REQUIRED</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>FINAL RATING</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>PROFICIENCY GAP</th>
+                  <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary, textAlign: "right" }}>ACTION</th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((cat) => (
-                  <tr key={cat.no} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                    <td style={{ padding: "0.95rem 1rem", fontWeight: 700, color: colors.textSecondary }}>
-                      {cat.no}
-                    </td>
-                    <td style={{ padding: "0.95rem 1rem", fontWeight: 700, color: colors.indigoPrimary }}>
-                      {cat.title}
-                    </td>
-                    <td style={{ padding: "0.95rem 1rem", color: colors.textSecondary }}>
-                      {cat.description}
-                    </td>
-                    <td style={{ padding: "0.95rem 1rem", textAlign: "right" }}>
-                      <Badge variant="okr" size="sm">{cat.count} Items</Badge>
-                    </td>
-                  </tr>
-                ))}
+                {skillGapRows
+                  .filter((r) => categoryFilter === "ALL" || r.skill.categoryCode === categoryFilter)
+                  .filter(
+                    (r) =>
+                      !searchQuery.trim() ||
+                      r.skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      r.skill.code.includes(searchQuery.trim())
+                  )
+                  .map((row) => (
+                    <tr key={row.skill.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                      <td style={{ padding: space[3] }}>
+                        <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                          <span style={{ color: colors.indigoAction, marginRight: space[1] }}>{row.skill.code}</span>
+                          {row.skill.name}
+                        </div>
+                        <div style={{ fontSize: text.small.fontSize, color: colors.textMuted, marginTop: "2px" }}>
+                          {row.skill.description}
+                        </div>
+                      </td>
+                      <td style={{ padding: space[3] }}>
+                        <Badge variant="neutral" size="sm">
+                          {row.skill.categoryCode}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: space[3], fontWeight: 600, color: colors.textPrimary }}>
+                        {row.requiredLevel !== null ? getProficiencyLabel(row.requiredLevel) : "Not required"}
+                      </td>
+                      <td style={{ padding: space[3], fontWeight: 600, color: colors.indigoPrimary }}>
+                        {getProficiencyLabel(row.finalRating)}
+                      </td>
+                      <td style={{ padding: space[3] }}>
+                        <GapBar requiredLevel={row.requiredLevel} finalRating={row.finalRating} />
+                      </td>
+                      <td style={{ padding: space[3], textAlign: "right" }}>
+                        {row.gap !== null && row.gap > 0 ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleAddAsDevelopmentGoal(row.skill, row.requiredLevel ?? 4, row.finalRating)
+                            }
+                          >
+                            + Development Goal
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setCalibratingSkill(row.skill);
+                              setCalibratedLevel((row.finalRating as ProficiencyLevelNumber) || 4);
+                              setCalibrationJustification(row.assessment?.calibrationJustification || "");
+                              setCalibrationError(null);
+                            }}
+                          >
+                            Calibrate
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -863,858 +938,761 @@ export const SkillsMarketplaceView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: SKILL GAP ANALYSIS (Matches Screenshot 3)                     */}
+      {/* TAB 2: MY SKILLS — SELF-RATING & EVIDENCE NOTES (§4, FR-SKILL-005)        */}
       {/* ========================================================================= */}
-      {activeTab === "gap_analysis" && (
-        <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, padding: "1.5rem", boxShadow: shadows.xs }}>
-          <div style={{ marginBottom: "1.5rem" }}>
-            <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
-              Skill Gap Analysis
-            </h2>
-            <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.3rem" }}>
-              Analyse the skills in your organisation and discover the best ways to reduce gaps.
-            </p>
-          </div>
+      {activeTab === "my_skills" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: space[5] }}>
+          {/* Proficiency Scale Legend Banner (§3) */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              padding: space[4],
+              boxShadow: shadows.sm,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: space[3] }}>
+              <div>
+                <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                  Shared 5-Level Skill Proficiency Scale (FR-SKILL-003)
+                </h2>
+                <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                  Rate your own proficiency across all 20 skills (1–5) and attach verifiable evidence notes.
+                </span>
+              </div>
+              <Badge variant="info" size="sm">ESS Personal Scope Only</Badge>
+            </div>
 
-          <div style={{ maxWidth: "680px", marginBottom: "2rem" }}>
-            <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: "#1e40af", marginBottom: "0.5rem" }}>
-              Select a skill to conduct gap analysis on *
-            </label>
-
-            {/* Select Box with Search Filter inside */}
-            <div style={{ border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "0.75rem", backgroundColor: "#f8fafc" }}>
-              <div style={{ position: "relative", marginBottom: "0.5rem" }}>
-                <Icons.Search size={14} color={colors.textMuted} style={{ position: "absolute", left: "8px", top: "8px" }} />
-                <input
-                  type="text"
-                  placeholder="Search here..."
-                  value={gapSearchQuery}
-                  onChange={(e) => setGapSearchQuery(e.target.value)}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: space[3] }}>
+              {SKILL_PROFICIENCY_SCALE.map((s) => (
+                <div
+                  key={s.level}
                   style={{
-                    width: "100%",
-                    padding: "0.45rem 0.6rem 0.45rem 1.85rem",
+                    padding: space[3],
                     borderRadius: radii.sm,
+                    backgroundColor: colors.surfaceSubtle,
                     border: `1px solid ${colors.border}`,
-                    fontSize: typography.sizes.xs,
-                    backgroundColor: "#ffffff",
                   }}
-                />
-              </div>
-
-              <div style={{ maxHeight: "200px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                {skills
-                  .filter((c) => c.title.toLowerCase().includes(gapSearchQuery.toLowerCase()))
-                  .map((comp) => (
-                    <button
-                      key={comp.no}
-                      type="button"
-                      onClick={() => setGapSelectedCompId(comp.no)}
-                      style={{
-                        padding: "0.5rem 0.75rem",
-                        textAlign: "left",
-                        backgroundColor: gapSelectedCompId === comp.no ? "#eff6ff" : "transparent",
-                        border: `1px solid ${gapSelectedCompId === comp.no ? "#bfdbfe" : "transparent"}`,
-                        borderRadius: radii.sm,
-                        color: gapSelectedCompId === comp.no ? "#1e40af" : colors.textPrimary,
-                        fontSize: typography.sizes.xs,
-                        fontWeight: gapSelectedCompId === comp.no ? 700 : 400,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {comp.no}. {comp.title}
-                    </button>
-                  ))}
-              </div>
+                >
+                  <div style={{ fontSize: text.bodyStrong.fontSize, fontWeight: 600, color: colors.indigoPrimary }}>
+                    Level {s.level} · {s.label}
+                  </div>
+                  <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginTop: "2px" }}>
+                    {s.descriptor}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Diagnostic Card for Selected Skill */}
-          {selectedGapComp && (
-            <div
-              style={{
-                padding: "1.25rem",
-                borderRadius: radii.md,
-                backgroundColor: colors.surfaceSubtle,
-                border: `1px solid ${colors.border}`,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-                <div>
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase" }}>
-                    Skill Gap Diagnostic: #{selectedGapComp.no}
-                  </span>
-                  <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.indigoPrimary, margin: "0.2rem 0" }}>
-                    {selectedGapComp.title}
-                  </h3>
-                  <span style={{ fontSize: "11px", color: colors.textMuted }}>Category: {selectedGapComp.category}</span>
+          {/* 5 Category Sections with 4 Skills each */}
+          {SKILL_CATEGORIES.map((cat) => {
+            const catSkills = skills.filter((s) => s.categoryCode === cat.code);
+            return (
+              <div
+                key={cat.id}
+                style={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: radii.md,
+                  overflow: "hidden",
+                  boxShadow: shadows.sm,
+                }}
+              >
+                <div
+                  style={{
+                    padding: space[4],
+                    backgroundColor: colors.surfaceSubtle,
+                    borderBottom: `1px solid ${colors.border}`,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div>
+                    <h3 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                      {cat.name} ({cat.code})
+                    </h3>
+                    <span style={{ fontSize: text.small.fontSize, color: colors.textSecondary }}>{cat.description}</span>
+                  </div>
+                  <Badge variant="neutral" size="sm">4 Skills</Badge>
                 </div>
-                <Badge variant="warning" size="md">Identified Workforce Gap: 24%</Badge>
+
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {catSkills.map((sk) => {
+                    const rec = assessments.find((a) => a.skillCode === sk.code);
+                    return (
+                      <div
+                        key={sk.id}
+                        style={{
+                          padding: space[4],
+                          borderBottom: `1px solid ${colors.borderSubtle}`,
+                          display: "grid",
+                          gridTemplateColumns: "1.1fr 1.3fr 1fr",
+                          gap: space[4],
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+                            <span style={{ color: colors.indigoAction, marginRight: space[1] }}>{sk.code}</span>
+                            {sk.name}
+                          </div>
+                          <div style={{ fontSize: text.small.fontSize, color: colors.textMuted, marginTop: "2px" }}>
+                            {sk.description}
+                          </div>
+                          <div style={{ fontSize: text.micro.fontSize, color: colors.textSecondary, marginTop: space[1] }}>
+                            Manager Rating: <strong>{getProficiencyLabel(rec?.managerRating)}</strong> · Final:{" "}
+                            <strong>{getProficiencyLabel(rec?.finalRating)}</strong>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, marginBottom: space[1] }}>
+                            MY SELF-RATING (1–5)
+                          </div>
+                          <SkillRating
+                            value={rec?.selfRating ?? null}
+                            onChange={(lvl) => handleUpdateSelfRating(sk.code, lvl)}
+                            ariaLabel={`Self rating for ${sk.code} ${sk.name}`}
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            style={{
+                              display: "block",
+                              fontSize: text.micro.fontSize,
+                              fontWeight: 600,
+                              color: colors.textMuted,
+                              marginBottom: space[1],
+                            }}
+                          >
+                            EVIDENCE NOTE
+                          </label>
+                          <input
+                            type="text"
+                            value={rec?.evidenceNote || ""}
+                            onChange={(e) => handleUpdateEvidenceNote(sk.code, e.target.value)}
+                            placeholder="Add deliverable or metric evidence..."
+                            style={{
+                              width: "100%",
+                              height: "36px",
+                              padding: `0 ${space[2]}`,
+                              borderRadius: radii.sm,
+                              border: `1px solid ${colors.border}`,
+                              fontSize: text.small.fontSize,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-
-              {/* Metric Breakdown */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginTop: "1rem" }}>
-                <div style={{ padding: "0.75rem 1rem", backgroundColor: "#ffffff", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
-                  <div style={{ fontSize: "11px", color: colors.textMuted }}>Organizational Benchmark</div>
-                  <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.indigoPrimary, marginTop: "0.2rem" }}>
-                    4.5 / 5.0
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#166534" }}>Target standard for PSC Ghana</div>
-                </div>
-
-                <div style={{ padding: "0.75rem 1rem", backgroundColor: "#ffffff", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
-                  <div style={{ fontSize: "11px", color: colors.textMuted }}>Current Workforce Readiness</div>
-                  <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: "#d97706", marginTop: "0.2rem" }}>
-                    3.4 / 5.0
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#b45309" }}>Evaluated across 91 employees</div>
-                </div>
-
-                <div style={{ padding: "0.75rem 1rem", backgroundColor: "#ffffff", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
-                  <div style={{ fontSize: "11px", color: colors.textMuted }}>Prescribed Intervention</div>
-                  <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.emeraldDark, marginTop: "0.2rem" }}>
-                    1 Gig + 2 Courses
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: colors.textSecondary }}>Ready to dispatch via Gig Board</div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: SKILL REVIEWS (Matches Screenshot 4)                          */}
+      {/* TAB 3: INTERNAL GIG BOARD ALIGNED TO 20-SKILL TAXONOMY (§6)               */}
       {/* ========================================================================= */}
-      {activeTab === "reviews" && (
-        <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.xs }}>
-          <div style={{ padding: "1.25rem 1.5rem", borderBottom: `1px solid ${colors.borderSubtle}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <div>
-                <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
-                  Skill Reviews
-                </h2>
-                <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
-                  This is the list of all skills to be reviewed.
-                </p>
+      {activeTab === "gigs" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: space[5] }}>
+          {/* Shared Data Contract & Freshness Header (§6.1, §6.4) */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              padding: space[4],
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: space[3],
+            }}
+          >
+            <div>
+              <div style={{ fontSize: text.bodyStrong.fontSize, fontWeight: 600, color: colors.textPrimary }}>
+                Shared 20-Skill Matching Engine (FR-SKILL-012 · FR-SKILL-013 · FR-SKILL-014)
               </div>
-
-              <div style={{ fontSize: "12px", color: colors.textMuted }}>
-                Showing 1 to 6 of 91 employees • Page 1 of 5
+              <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary }}>
+                Gig fit is computed directly from your latest verified <code>final_rating</code> against each gig&apos;s required skill codes (1.1–5.4). Only your own fit is displayed in ESS.
               </div>
             </div>
+
+            <label style={{ display: "flex", alignItems: "center", gap: space[2], fontSize: text.small.fontSize, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={simulateStaleDate}
+                onChange={(e) => setSimulateStaleDate(e.target.checked)}
+              />
+              <span>Simulate &gt;12 Month Stale Rating Check (TC-SKILL-13)</span>
+            </label>
           </div>
 
-          {/* Table */}
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+          {/* Gig Cards Grid (§4.3 Card Anatomy) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: space[4] }}>
+            {gigs.map((gig) => {
+              const fit = computeGigFit(
+                gig,
+                assessments,
+                simulateStaleDate ? "2027-09-01" : "2026-11-17"
+              );
+
+              const fitBadgeVariant =
+                fit.tier === "Strong fit"
+                  ? "success"
+                  : fit.tier === "Partial fit"
+                  ? "warning"
+                  : "info";
+
+              return (
+                <div
+                  key={gig.id}
+                  style={{
+                    backgroundColor: colors.surface,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radii.md,
+                    boxShadow: shadows.sm,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  {/* Card Header Row (space-4) */}
+                  <div
+                    style={{
+                      padding: space[4],
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: space[2],
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: space[2] }}>
+                      <Badge variant="neutral" size="sm">{gig.practice}</Badge>
+                      <Badge variant={fitBadgeVariant} size="sm">
+                        {fit.tier} ({fit.metCount}/{fit.totalRequired} Skills Met)
+                      </Badge>
+                    </div>
+
+                    {fit.isStale ? (
+                      <Badge variant="error" size="sm">
+                        Stale Rating (&gt;12m · As of {formatDate(fit.asOfDate)})
+                      </Badge>
+                    ) : (
+                      <span style={{ fontSize: text.micro.fontSize, color: colors.textMuted, fontVariantNumeric: "tabular-nums" }}>
+                        Based on H1 2026 review ({formatDate(fit.asOfDate)})
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Body (space-4) */}
+                  <div style={{ padding: space[4] }}>
+                    <h3 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: `0 0 ${space[1]} 0` }}>
+                      {gig.title}
+                    </h3>
+                    <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary, marginBottom: space[3] }}>
+                      Lead: <strong>{gig.lead}</strong> · {gig.duration} ({gig.workload})
+                    </div>
+
+                    {/* Required Skills from the 20-Skill Taxonomy */}
+                    <div style={{ fontSize: text.micro.fontSize, fontWeight: 600, color: colors.textMuted, marginBottom: space[2], textTransform: "uppercase" }}>
+                      Required Skills &amp; Minimum Proficiency Levels
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: space[2], marginBottom: space[3] }}>
+                      {gig.requiredSkills.map((req) => {
+                        const sk = skills.find((s) => s.code === req.skillCode);
+                        const myRec = assessments.find((a) => a.skillCode === req.skillCode);
+                        const myLvl = myRec?.finalRating ?? null;
+                        const met = myLvl !== null && myLvl >= req.minLevel;
+                        return (
+                          <div
+                            key={req.skillCode}
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: radii.sm,
+                              backgroundColor: met ? colors.successBg : colors.warningBg,
+                              border: `1px solid ${met ? colors.successBorder : colors.warningBorder}`,
+                              fontSize: text.micro.fontSize,
+                              fontVariantNumeric: "tabular-nums",
+                            }}
+                          >
+                            <strong>{req.skillCode}</strong> {sk?.name} · Req L{req.minLevel} / Mine:{" "}
+                            <strong>{myLvl ? `L${myLvl}` : "Unassessed"}</strong> {met ? "✓" : `(&minus;${req.minLevel - (myLvl || 0)})`}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {fit.deficits.length > 0 && (
+                      <div style={{ fontSize: text.small.fontSize, color: colors.warning }}>
+                        Skill gap flagged:{" "}
+                        {fit.deficits.map((d) => `${d.skillCode} ${d.skillName} (−${d.deficit} lvl)`).join(", ")}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Footer Row (space-3) */}
+                  <div
+                    style={{
+                      padding: `${space[3]} ${space[4]}`,
+                      borderTop: `1px solid ${colors.borderSubtle}`,
+                      backgroundColor: colors.surfaceSubtle,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: space[2],
+                    }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBaseline("gig_requirements");
+                        setSelectedGigForBaseline(gig.id);
+                        setActiveTab("gap_analysis");
+                      }}
+                    >
+                      Compare in Gap Selector &rarr;
+                    </Button>
+
+                    <div style={{ display: "flex", gap: space[2] }}>
+                      {gig.applied && !gig.completed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPostGigPromptGig(gig)}
+                        >
+                          Mark Gig Completed (Reverse Link)
+                        </Button>
+                      )}
+                      <Button
+                        variant={gig.applied ? "secondary" : "primary"}
+                        size="sm"
+                        disabled={gig.applied}
+                        onClick={() => {
+                          setGigs((prev) =>
+                            prev.map((g) => (g.id === gig.id ? { ...g, applied: true } : g))
+                          );
+                          showToast(`Applied for "${gig.title}". Your verified skill profile was attached.`);
+                        }}
+                      >
+                        {gig.completed ? "Completed ✓" : gig.applied ? "Applied ✓" : "Apply for Gig"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: SYSTEM-SEEDED 20-SKILL TAXONOMY (§2, VAL-SKILL-001, TC-SKILL-02)   */}
+      {/* ========================================================================= */}
+      {activeTab === "framework" && (
+        <div
+          style={{
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radii.md,
+            overflow: "hidden",
+            boxShadow: shadows.sm,
+          }}
+        >
+          <div
+            style={{
+              padding: space[4],
+              borderBottom: `1px solid ${colors.borderSubtle}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: space[3],
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+                Canonical Skills Framework (20 Skills · 5 Categories · 4 per Category)
+              </h2>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                VAL-SKILL-001: Structure is system-seeded and immutable in v1. HR may edit skill descriptions and role-specific required levels.
+              </span>
+            </div>
+            <Badge variant="neutral" size="sm">v1 Immutable Taxonomy</Badge>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: text.body.fontSize, fontVariantNumeric: "tabular-nums" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f8fafc", borderBottom: `1.5px solid ${colors.border}`, textAlign: "left" }}>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, width: "60px" }}>NO</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>EMPLOYEE</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>STATUS</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700 }}>LAST ASSESSMENT</th>
-                <th style={{ padding: "0.85rem 1rem", color: "#1e3a8a", fontWeight: 700, textAlign: "right", width: "130px" }}>ACTIONS</th>
+              <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary, width: "80px" }}>CODE</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>SKILL NAME &amp; OBSERVABLE DESCRIPTOR</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>CATEGORY</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary }}>ROLE REQ LEVEL</th>
+                <th style={{ padding: space[3], fontSize: text.small.fontSize, fontWeight: 600, color: colors.textSecondary, textAlign: "right" }}>CONFIGURE</th>
               </tr>
             </thead>
             <tbody>
-              {reviewRecords.map((rec) => (
-                <tr key={rec.no} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
-                  <td style={{ padding: "0.9rem 1rem", fontWeight: 700, color: colors.textSecondary }}>
-                    {rec.no}
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                      <div
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                          backgroundColor: "#e0e7ff",
-                          color: "#3730a3",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 700,
-                          fontSize: "11px",
+              {skills.map((sk) => {
+                const reqLvl = roleProfiles.my_role.levels[sk.code];
+                return (
+                  <tr key={sk.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: space[3], fontWeight: 700, color: colors.indigoAction }}>{sk.code}</td>
+                    <td style={{ padding: space[3] }}>
+                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>{sk.name}</div>
+                      <div style={{ fontSize: text.small.fontSize, color: colors.textMuted, marginTop: "2px" }}>
+                        {sk.description}
+                      </div>
+                    </td>
+                    <td style={{ padding: space[3] }}>
+                      <Badge variant="neutral" size="sm">
+                        {sk.categoryCode} · {sk.categoryName.replace(/^\d+\.\s*/, "")}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: space[3], fontWeight: 600 }}>
+                      {reqLvl ? getProficiencyLabel(reqLvl) : "Not required"}
+                    </td>
+                    <td style={{ padding: space[3], textAlign: "right" }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditingSkill(sk);
+                          setEditDescription(sk.description);
+                          setEditRoleReqLevel(reqLvl ?? 4);
                         }}
                       >
-                        {rec.employeeName.split(" ").map((n) => n[0]).join("")}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, color: colors.textPrimary }}>{rec.employeeName}</div>
-                        <div style={{ fontSize: "11px", color: colors.textMuted }}>
-                          {rec.employeeId} • {rec.role}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem" }}>
-                    <span
-                      style={{
-                        padding: "0.25rem 0.65rem",
-                        borderRadius: radii.full,
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        backgroundColor:
-                          rec.status.includes("Pending Approval")
-                            ? "#fae8ff"
-                            : rec.status.includes("Pending Employee")
-                            ? "#fef3c7"
-                            : "#f1f5f9",
-                        color:
-                          rec.status.includes("Pending Approval")
-                            ? "#86198f"
-                            : rec.status.includes("Pending Employee")
-                            ? "#b45309"
-                            : "#64748b",
-                        border: `1px solid ${
-                          rec.status.includes("Pending Approval")
-                            ? "#f0abfc"
-                            : rec.status.includes("Pending Employee")
-                            ? "#fde68a"
-                            : "#e2e8f0"
-                        }`,
-                        display: "inline-block",
-                      }}
-                    >
-                      {rec.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem", color: colors.textSecondary }}>
-                    {rec.lastAssessment}
-                  </td>
-                  <td style={{ padding: "0.9rem 1rem", textAlign: "right", position: "relative" }}>
-                    <button
-                      type="button"
-                      onClick={() => setOpenReviewDropdownId(openReviewDropdownId === rec.no ? null : rec.no)}
-                      style={{
-                        backgroundColor: "#2563eb",
-                        color: "#ffffff",
-                        padding: "0.35rem 0.75rem",
-                        borderRadius: radii.sm,
-                        border: "none",
-                        fontSize: "11.5px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.3rem",
-                      }}
-                    >
-                      <span>Action</span>
-                      <Icons.ChevronDown size={12} color="#ffffff" />
-                    </button>
-
-                    {/* Review Actions Dropdown (Matches Screenshot 4) */}
-                    {openReviewDropdownId === rec.no && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: "1rem",
-                          top: "2.75rem",
-                          backgroundColor: "#ffffff",
-                          border: "1px solid #cbd5e1",
-                          borderRadius: radii.md,
-                          boxShadow: shadows.md,
-                          zIndex: 50,
-                          minWidth: "190px",
-                          textAlign: "left",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert(`Nudge sent to line manager for ${rec.employeeName}`);
-                            setOpenReviewDropdownId(null);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: colors.textPrimary,
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          Nudge line manager
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert(`Viewing assigned skills for ${rec.employeeName}`);
-                            setOpenReviewDropdownId(null);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: colors.textPrimary,
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          View skills
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            alert(`Loading assessment audit history for ${rec.employeeName}`);
-                            setOpenReviewDropdownId(null);
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: colors.textPrimary,
-                            cursor: "pointer",
-                            display: "block",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f1f5f9")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          View assessment history
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`Cancel pending skill assessment for ${rec.employeeName}?`)) {
-                              setReviewRecords(
-                                reviewRecords.map((r) =>
-                                  r.no === rec.no ? { ...r, status: "No Pending Assessment" } : r
-                                )
-                              );
-                              setOpenReviewDropdownId(null);
-                            }
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "0.6rem 0.85rem",
-                            border: "none",
-                            background: "none",
-                            textAlign: "left",
-                            fontSize: "11.5px",
-                            color: "#dc2626",
-                            cursor: "pointer",
-                            display: "block",
-                            borderTop: "1px solid #f1f5f9",
-                          }}
-                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#fef2f2")}
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                        >
-                          Cancel skill assessment
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                        Edit Role Profile
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 5: INTERNAL GIG BOARD                                                 */}
+      {/* TAB 5: AGGREGATE SKILL HEATMAP (§10, §11.4, FR-SKILL-011)                 */}
       {/* ========================================================================= */}
-      {activeTab === "gigs" && (
-        <div>
-          <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: typography.sizes.sm, color: colors.textSecondary }}>
-              Opportunity Marketplace: Internal short-term gigs matched to your verified skill graph.
-            </span>
-            <Badge variant="success" size="sm">3 Matching Gigs</Badge>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
-            {gigs.map((g) => (
-              <div
-                key={g.id}
-                style={{
-                  backgroundColor: colors.surface,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: radii.md,
-                  padding: "1.25rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                    <Badge variant="info" size="sm">{g.practice}</Badge>
-                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#059669" }}>
-                      ★ {g.matchScore}% Skill Match
-                    </span>
-                  </div>
-
-                  <h3 style={{ fontSize: typography.sizes.base, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: "0.25rem 0 0.5rem 0" }}>
-                    {g.title}
-                  </h3>
-                  <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted, marginBottom: "0.75rem" }}>
-                    Led by: <strong>{g.lead}</strong> • {g.duration} ({g.workload})
-                  </div>
-
-                  {/* Required Skills */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem", marginBottom: "1rem" }}>
-                    {g.requiredSkills.map((sk) => (
-                      <span
-                        key={sk}
-                        style={{
-                          fontSize: "10px",
-                          padding: "0.15rem 0.45rem",
-                          borderRadius: radii.sm,
-                          backgroundColor: colors.surfaceSubtle,
-                          color: colors.textSecondary,
-                          border: `1px solid ${colors.border}`,
-                        }}
-                      >
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    borderTop: `1px solid ${colors.borderSubtle}`,
-                    paddingTop: "0.75rem",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                    {g.applied ? "Application Submitted" : "Cross-Practice Project"}
-                  </span>
-                  <Button
-                    variant={g.applied ? "secondary" : "primary"}
-                    size="sm"
-                    disabled={g.applied}
-                    onClick={() => handleApplyGig(g.id)}
-                  >
-                    {g.applied ? "Applied ✓" : "Apply for Gig"}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 6: T-SHAPED RADAR                                                     */}
-      {/* ========================================================================= */}
-      {activeTab === "t_shaped" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {/* Header Banner */}
-          <div
-            style={{
-              padding: "1rem 1.25rem",
-              borderRadius: radii.lg,
-              backgroundColor: colors.indigoSubtle,
-              border: `1px solid ${colors.indigoBorder}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Icons.Award size={16} color={colors.indigoAction} />
-                <h2 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                  T-Shaped Skill Framework &amp; Blind Spot Analysis
-                </h2>
-              </div>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Dynamic skills architecture mapping horizontal baseline skills (5 Core Pillars) against vertical domain specialization (6 Solution Domains) and leadership maturity.
-              </p>
-            </div>
-            <Badge variant="info" size="sm">Certified Skills Model</Badge>
-          </div>
-
-          {/* Grid Layout: Visual Radar Chart (Left) + Blind Spot & Calibration (Right) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: "1.5rem" }}>
-            {/* Visual SVG Radar Chart */}
-            <div
-              style={{
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: radii.lg,
-                padding: "1.5rem",
-                boxShadow: shadows.sm,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                <div>
-                  <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
-                    T-Shaped Skill Radar
-                  </h3>
-                  <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                    Self-Assessment vs 360-Degree Peer &amp; Supervisor Consensus (1-5 Scale)
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: "0.85rem", fontSize: "11px", fontWeight: 600 }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#4f46e5" }}>
-                    <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: "rgba(79, 70, 229, 0.5)", border: "1px solid #4f46e5" }} />
-                    Self-Score
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#059669" }}>
-                    <span style={{ width: "10px", height: "10px", borderRadius: "2px", backgroundColor: "rgba(16, 185, 129, 0.4)", border: "1px solid #059669" }} />
-                    360 Peer Consensus
-                  </span>
-                </div>
-              </div>
-
-              {/* SVG Pentagonal Radar Chart */}
-              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "1rem 0" }}>
-                <svg width="340" height="340" viewBox="0 0 340 340" style={{ overflow: "visible" }}>
-                  {[0.2, 0.4, 0.6, 0.8, 1.0].map((level, idx) => {
-                    const r = 110 * level;
-                    const cx = 170;
-                    const cy = 170;
-                    const points = [
-                      `${cx},${cy - r}`,
-                      `${cx + r * 0.951},${cy - r * 0.309}`,
-                      `${cx + r * 0.588},${cy + r * 0.809}`,
-                      `${cx - r * 0.588},${cy + r * 0.809}`,
-                      `${cx - r * 0.951},${cy - r * 0.309}`,
-                    ].join(" ");
-
-                    return (
-                      <polygon
-                        key={idx}
-                        points={points}
-                        fill="none"
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                        strokeDasharray={idx === 4 ? "none" : "2,2"}
-                      />
-                    );
-                  })}
-
-                  {[
-                    { x: 170, y: 60, label: "Business Acumen", anchor: "middle", dx: 0, dy: -8 },
-                    { x: 274.6, y: 136, label: "Data Literacy", anchor: "start", dx: 8, dy: 0 },
-                    { x: 234.7, y: 259, label: "Digital Agility", anchor: "start", dx: 8, dy: 8 },
-                    { x: 105.3, y: 259, label: "People Advocacy", anchor: "end", dx: -8, dy: 8 },
-                    { x: 65.4, y: 136, label: "Execution Excellence", anchor: "end", dx: -8, dy: 0 },
-                  ].map((axis, idx) => (
-                    <g key={idx}>
-                      <line x1="170" y1="170" x2={axis.x} y2={axis.y} stroke="#cbd5e1" strokeWidth="1" />
-                      <text
-                        x={axis.x + axis.dx}
-                        y={axis.y + axis.dy}
-                        textAnchor={axis.anchor as any}
-                        fontSize="10"
-                        fontWeight="700"
-                        fill="#334155"
-                      >
-                        {axis.label}
-                      </text>
-                    </g>
-                  ))}
-
-                  <polygon
-                    points={[
-                      `${170},${170 - 110 * (4.2 / 5)}`,
-                      `${170 + 110 * (4.8 / 5) * 0.951},${170 - 110 * (4.8 / 5) * 0.309}`,
-                      `${170 + 110 * (4.6 / 5) * 0.588},${170 + 110 * (4.6 / 5) * 0.809}`,
-                      `${170 - 110 * (3.7 / 5) * 0.588},${170 + 110 * (3.7 / 5) * 0.809}`,
-                      `${170 - 110 * (4.4 / 5) * 0.951},${170 - 110 * (4.4 / 5) * 0.309}`,
-                    ].join(" ")}
-                    fill="rgba(16, 185, 129, 0.25)"
-                    stroke="#059669"
-                    strokeWidth="2"
-                  />
-
-                  <polygon
-                    points={[
-                      `${170},${170 - 110 * (4.6 / 5)}`,
-                      `${170 + 110 * (3.6 / 5) * 0.951},${170 - 110 * (3.6 / 5) * 0.309}`,
-                      `${170 + 110 * (4.7 / 5) * 0.588},${170 + 110 * (4.7 / 5) * 0.809}`,
-                      `${170 - 110 * (4.9 / 5) * 0.588},${170 + 110 * (4.9 / 5) * 0.809}`,
-                      `${170 - 110 * (4.5 / 5) * 0.951},${170 - 110 * (4.5 / 5) * 0.309}`,
-                    ].join(" ")}
-                    fill="rgba(79, 70, 229, 0.2)"
-                    stroke="#4f46e5"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Blind Spot Diagnostic */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div
-                style={{
-                  padding: "1.25rem",
-                  borderRadius: radii.md,
-                  backgroundColor: "#fef2f2",
-                  border: "1px solid #fecaca",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: "#991b1b", textTransform: "uppercase" }}>
-                    Critical Blind Spot (Overconfidence Gap: +1.2)
-                  </span>
-                  <Badge variant="error" size="sm">Action Required</Badge>
-                </div>
-                <h4 style={{ margin: "0.2rem 0 0.35rem 0", fontSize: typography.sizes.sm, fontWeight: 700, color: "#991b1b" }}>
-                  People Advocacy (Self: 4.9 vs 360 Peer Consensus: 3.7)
-                </h4>
-                <p style={{ margin: 0, fontSize: typography.sizes.xs, color: "#7f1d1d", lineHeight: 1.5 }}>
-                  Diagnostic: Self-perceived high advocacy contrasts with peer feedback on listening during rapid sprints.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  padding: "1.25rem",
-                  borderRadius: radii.md,
-                  backgroundColor: "#eff6ff",
-                  border: "1px solid #bfdbfe",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: "#1e40af", textTransform: "uppercase" }}>
-                    Hidden Superpower (Underconfidence Gap: -1.2)
-                  </span>
-                  <Badge variant="info" size="sm">Superpower</Badge>
-                </div>
-                <h4 style={{ margin: "0.2rem 0 0.35rem 0", fontSize: typography.sizes.sm, fontWeight: 700, color: "#1e40af" }}>
-                  Data Literacy (Self: 3.6 vs 360 Peer Consensus: 4.8)
-                </h4>
-                <p style={{ margin: 0, fontSize: typography.sizes.xs, color: "#1e3a8a", lineHeight: 1.5 }}>
-                  Diagnostic: Division heavily leverages your quantitative architecture and query models.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 7: AI CAREER NAVIGATOR                                                */}
-      {/* ========================================================================= */}
-      {activeTab === "navigator" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1.5rem" }}>
-          <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <div>
-                <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>Active Trajectory Plan</span>
-                <h3 style={{ fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: "0.2rem 0" }}>
-                  Managing Partner / Practice Director (Target: 2 Years)
-                </h3>
-              </div>
-              <Badge variant="okr" size="sm">78% Career Readiness</Badge>
-            </div>
-
-            <div style={{ marginBottom: "1.5rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: colors.textMuted, marginBottom: "0.4rem" }}>
-                <span>Skill Graph Completion</span>
-                <span style={{ fontWeight: 700, color: colors.textPrimary }}>15 of 20 Skills Verified</span>
-              </div>
-              <div style={{ height: "8px", backgroundColor: colors.surfaceSubtle, borderRadius: radii.full, overflow: "hidden" }}>
-                <div style={{ width: "78%", height: "100%", backgroundColor: colors.brandBlue }} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <Icons.Sparkles size={18} color={colors.brandBlue} />
-              <h3 style={{ fontSize: typography.sizes.base, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: 0 }}>
-                AI Career Coach Insight
-              </h3>
-            </div>
-            <p style={{ fontSize: typography.sizes.sm, color: colors.textSecondary, lineHeight: 1.6 }}>
-              Paa has demonstrated top-tier engineering stewardship. Focus on <strong>Managing and Developing Workforce</strong> and <strong>Fiscal Budgeting</strong> to prepare for Senior Principal track in 2027.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* TAB 8: PERFORMANCE JOURNAL                                                */}
-      {/* ========================================================================= */}
-      {activeTab === "journal" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1.5rem" }}>
-          <div>
-            <form
-              onSubmit={handleAddJournalEntry}
-              style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1.25rem", marginBottom: "1.5rem" }}
-            >
-              <h3 style={{ fontSize: typography.sizes.sm, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: "0 0 0.75rem 0" }}>
-                Log Continuous Quick Win / High-Impact Contribution
-              </h3>
-              <div style={{ marginBottom: "0.75rem" }}>
-                <input
-                  required
-                  type="text"
-                  placeholder="What did you achieve? (e.g. Optimized client database query by 50%)"
-                  value={newQuickWin}
-                  onChange={(e) => setNewQuickWin(e.target.value)}
-                  style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
-                />
-              </div>
-              <div style={{ marginBottom: "0.75rem" }}>
-                <input
-                  type="text"
-                  placeholder="Measurable business impact or metrics..."
-                  value={newImpact}
-                  onChange={(e) => setNewImpact(e.target.value)}
-                  style={{ width: "100%", padding: "0.5rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
-                />
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button variant="primary" size="sm" type="submit">
-                  + Record to Journal
-                </Button>
-              </div>
-            </form>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {journalEntries.map((j) => (
-                <div key={j.id} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.25rem" }}>
-                    <span style={{ fontWeight: typography.weights.semibold, color: colors.textPrimary, fontSize: typography.sizes.sm }}>{j.title}</span>
-                    <span style={{ fontSize: "11px", color: colors.textMuted }}>{formatDate(j.date)}</span>
-                  </div>
-                  <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0 0 0.5rem 0" }}>{j.impact}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <Icons.Sparkles size={18} color={colors.frameworkOkr} />
-              <h3 style={{ fontSize: typography.sizes.base, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: 0 }}>
-                AI Performance Dossier
-              </h3>
-            </div>
-            {aiSummaryGenerated ? (
-              <div style={{ padding: "1rem", backgroundColor: "#faf5ff", borderRadius: radii.md, border: "1px solid #e9d5ff", fontSize: typography.sizes.xs, lineHeight: 1.6, color: "#581c87" }}>
-                <strong>AI Executive Summary:</strong> &quot;Paa demonstrated top-tier engineering stewardship in FY26. Key measurable deliverables include database platform deployment (sub-15ms latency), 100% hardware coverage across 45 consultants, and rigorous performance calibration governance.&quot;
-              </div>
-            ) : (
-              <div style={{ padding: "1.5rem", textAlign: "center", backgroundColor: colors.surfaceSubtle, borderRadius: radii.md, color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                Ready to synthesize continuous quick wins into executive appraisal format.
-              </div>
-            )}
-            <Button variant="primary" size="sm" onClick={() => setAiSummaryGenerated(true)} style={{ marginTop: "1rem", width: "100%" }}>
-              Generate AI Performance Summary
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Add Skill Modal */}
-      {showAddSkillModal && (
+      {activeTab === "team_heatmap" && (
         <div
           style={{
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radii.md,
+            padding: space[4],
+            boxShadow: shadows.sm,
+          }}
+        >
+          <div style={{ marginBottom: space[4] }}>
+            <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
+              5-Category Aggregate Skill Heatmap (FR-SKILL-011 · VAL-SKILL-007)
+            </h2>
+            <p style={{ fontSize: text.small.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
+              Displays aggregate squad proficiency averages across the 5 canonical categories. Individual peer ratings are never exposed in ESS.
+            </p>
+          </div>
+
+          <CategoryHeatmap rows={heatmapRows} caption="Organizational 5-Category Skill Heatmap" />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: POST-GIG REVERSE LINK SKILL UPDATE PROMPT (§6.3, TC-SKILL-15)    */}
+      {/* ========================================================================= */}
+      {postGigPromptGig && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="post-gig-modal-title"
+          style={{
             position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            inset: 0,
             backgroundColor: "rgba(15, 23, 42, 0.5)",
-            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
-            padding: "1rem",
+            padding: space[4],
           }}
         >
           <div
             style={{
               backgroundColor: colors.surface,
-              borderRadius: radii.lg,
+              borderRadius: radii.md,
               border: `1px solid ${colors.border}`,
-              maxWidth: "500px",
+              maxWidth: "560px",
               width: "100%",
-              boxShadow: shadows.lg,
+              boxShadow: shadows.modal,
               overflow: "hidden",
             }}
           >
-            <div
-              style={{
-                padding: "1rem 1.25rem",
-                borderBottom: `1px solid ${colors.borderSubtle}`,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                backgroundColor: colors.surfaceSubtle,
-              }}
-            >
-              <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                Add New Organizational Skill
+            <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
+              <h3 id="post-gig-modal-title" style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                Did this gig develop any skills? Update your self-rating for review.
               </h3>
-              <button
-                type="button"
-                onClick={() => setShowAddSkillModal(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: colors.textMuted }}
-              >
-                ✕
-              </button>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                Completed Gig: {postGigPromptGig.title} (FR-SKILL-016 Reverse Link)
+              </span>
             </div>
 
-            <form onSubmit={handleAddSkill} style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
+              {postGigPromptGig.requiredSkills.map((req) => {
+                const sk = skills.find((s) => s.code === req.skillCode);
+                const rec = assessments.find((a) => a.skillCode === req.skillCode);
+                return (
+                  <div
+                    key={req.skillCode}
+                    style={{
+                      padding: space[3],
+                      borderRadius: radii.sm,
+                      border: `1px solid ${colors.border}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: space[2],
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: text.body.fontSize }}>
+                        {req.skillCode} {sk?.name}
+                      </div>
+                      <div style={{ fontSize: text.micro.fontSize, color: colors.textMuted }}>
+                        Current Self-Rating: {getProficiencyLabel(rec?.selfRating)}
+                      </div>
+                    </div>
+                    <SkillRating
+                      compact
+                      value={rec?.selfRating ?? null}
+                      onChange={(lvl) => handleUpdateSelfRating(req.skillCode, lvl)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              style={{
+                padding: space[4],
+                borderTop: `1px solid ${colors.borderSubtle}`,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: space[2],
+              }}
+            >
+              <Button variant="outline" size="sm" onClick={() => setPostGigPromptGig(null)}>
+                Skip for Now
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setGigs((prev) =>
+                    prev.map((g) => (g.id === postGigPromptGig.id ? { ...g, completed: true } : g))
+                  );
+                  showToast(`Gig "${postGigPromptGig.title}" marked complete and self-ratings queued for next review.`);
+                  setPostGigPromptGig(null);
+                }}
+              >
+                Save Updated Self-Ratings
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: HR CALIBRATION FINAL RATING ADJUSTMENT (VAL-SKILL-005, TC-SKILL-05) */}
+      {/* ========================================================================= */}
+      {calibratingSkill && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: space[4],
+          }}
+        >
+          <form
+            onSubmit={handleSaveCalibration}
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              maxWidth: "520px",
+              width: "100%",
+              boxShadow: shadows.modal,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
+              <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                Calibrate Final Skill Rating: {calibratingSkill.code} {calibratingSkill.name}
+              </h3>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                VAL-SKILL-005: Adjusting final_rating during calibration requires mandatory justification (audit-logged).
+              </span>
+            </div>
+
+            <div style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
               <div>
-                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                  Skill Title &amp; Definition *
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Calibrated Final Proficiency Level (1–5)
                 </label>
-                <input
-                  type="text"
-                  value={newCompTitle}
-                  onChange={(e) => setNewCompTitle(e.target.value)}
-                  placeholder="e.g. Delivering Results & Ensuring Customer Satisfaction"
-                  style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
-                  required
+                <SkillRating value={calibratedLevel} onChange={setCalibratedLevel} />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Calibration Justification * (Mandatory)
+                </label>
+                <textarea
+                  rows={3}
+                  value={calibrationJustification}
+                  onChange={(e) => {
+                    setCalibrationJustification(e.target.value);
+                    if (calibrationError) setCalibrationError(null);
+                  }}
+                  placeholder="Document calibration committee evidence for adjusting this skill rating..."
+                  style={{
+                    width: "100%",
+                    padding: space[2],
+                    borderRadius: radii.sm,
+                    border: `1px solid ${calibrationError ? colors.error : colors.border}`,
+                    fontSize: text.body.fontSize,
+                  }}
+                />
+                {calibrationError && (
+                  <div role="alert" style={{ color: colors.error, fontSize: text.small.fontSize, marginTop: space[1], fontWeight: 600 }}>
+                    {calibrationError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ padding: space[4], borderTop: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "flex-end", gap: space[2] }}>
+              <Button variant="outline" size="sm" type="button" onClick={() => setCalibratingSkill(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" type="submit">
+                Save Calibrated Rating
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: EDIT SKILL DESCRIPTION & ROLE REQUIRED LEVEL (VAL-SKILL-001)     */}
+      {/* ========================================================================= */}
+      {editingSkill && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: space[4],
+          }}
+        >
+          <form
+            onSubmit={handleSaveSkillMetadata}
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              maxWidth: "500px",
+              width: "100%",
+              boxShadow: shadows.modal,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
+              <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                Configure {editingSkill.code} {editingSkill.name}
+              </h3>
+              <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
+                Category: {editingSkill.categoryName} (System-Seeded v1)
+              </span>
+            </div>
+
+            <div style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
+              <div>
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Skill Behavioral Descriptor
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: space[2],
+                    borderRadius: radii.sm,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: text.body.fontSize,
+                  }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                  Category *
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Required Level for Role Profile (1–5 or Not Required)
                 </label>
                 <select
-                  value={newCompCategory}
-                  onChange={(e) => setNewCompCategory(e.target.value as SkillItem["category"])}
-                  style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                  value={editRoleReqLevel === null ? "null" : String(editRoleReqLevel)}
+                  onChange={(e) =>
+                    setEditRoleReqLevel(e.target.value === "null" ? null : Number(e.target.value))
+                  }
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    padding: `0 ${space[2]}`,
+                    borderRadius: radii.sm,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: text.body.fontSize,
+                  }}
                 >
-                  <option value="Core Skills">Core Skills</option>
-                  <option value="Non-Core Skills">Non-Core Skills</option>
-                  <option value="Human Capacity Building">Human Capacity Building</option>
-                  <option value="Functional Skills">Functional Skills</option>
-                  <option value="Leadership Skills">Leadership Skills</option>
+                  <option value="null">Not required for this role (VAL-SKILL-003)</option>
+                  {SKILL_PROFICIENCY_SCALE.map((s) => (
+                    <option key={s.level} value={s.level}>
+                      Level {s.level} — {s.label}
+                    </option>
+                  ))}
                 </select>
               </div>
+            </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <Button variant="outline" size="sm" type="button" onClick={() => setShowAddSkillModal(false)}>
-                  Cancel
-                </Button>
-                <Button variant="primary" size="sm" type="submit">
-                  Save Skill
-                </Button>
-              </div>
-            </form>
-          </div>
+            <div style={{ padding: space[4], borderTop: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "flex-end", gap: space[2] }}>
+              <Button variant="outline" size="sm" type="button" onClick={() => setEditingSkill(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" size="sm" type="submit">
+                Save Configuration
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </div>

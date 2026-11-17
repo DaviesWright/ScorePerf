@@ -1,5 +1,5 @@
 import React from "react";
-import { colors, typography, radii } from "./tokens";
+import { colors, typography, radii, frameworkBadgeText } from "./tokens";
 
 export type BadgeVariant =
   | "neutral"
@@ -10,6 +10,12 @@ export type BadgeVariant =
   | "okr"
   | "mbo"
   | "bsc";
+
+/** Maps a cycle framework code to its badge variant so the colour always matches the label. */
+export const frameworkVariant = (code?: string | null): BadgeVariant => {
+  const c = (code || "BSC").toUpperCase();
+  return c === "OKR" ? "okr" : c === "MBO" ? "mbo" : "bsc";
+};
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -36,6 +42,23 @@ export const Badge: React.FC<BadgeProps> = ({
   };
 
   const style = variantStyles[variant];
+  const isFramework = variant === "bsc" || variant === "okr" || variant === "mbo";
+
+  // Framework badges (BSC / OKR / MBO) render identically on every surface regardless of size (§2.3, FR-DS-004).
+  const geometry: React.CSSProperties = isFramework
+    ? {
+        borderRadius: radii.full,
+        padding: "0.125rem 0.5rem",
+        ...frameworkBadgeText,
+        lineHeight: 1.4,
+      }
+    : {
+        borderRadius: radii.full,
+        padding: size === "sm" ? "0.125rem 0.5rem" : "0.25rem 0.625rem",
+        fontSize: size === "sm" ? "11px" : typography.sizes.xs,
+        fontWeight: typography.weights.medium,
+        lineHeight: 1.4,
+      };
 
   return (
     <span
@@ -46,12 +69,9 @@ export const Badge: React.FC<BadgeProps> = ({
         backgroundColor: style.bg,
         color: style.text,
         border: `1px solid ${style.border}`,
-        borderRadius: radii.sm,
-        padding: size === "sm" ? "0.1rem 0.4rem" : "0.2rem 0.55rem",
-        fontSize: size === "sm" ? "0.7rem" : typography.sizes.xs,
-        fontWeight: typography.weights.medium,
-        lineHeight: 1.2,
         whiteSpace: "nowrap",
+        fontVariantNumeric: "tabular-nums",
+        ...geometry,
       }}
     >
       {dot && (

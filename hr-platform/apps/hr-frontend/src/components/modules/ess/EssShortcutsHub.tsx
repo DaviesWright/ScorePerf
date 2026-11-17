@@ -1460,7 +1460,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     </div>
                   </div>
 
-                  {/* ScoReview Edge: T-Shaped Competency Gap Recommendations */}
+                  {/* ScoReview Edge: T-Shaped Skill Gap Recommendations */}
                   <div
                     style={{
                       border: `1px solid rgba(20, 184, 166, 0.3)`,
@@ -1476,7 +1476,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                       </h4>
                     </div>
                     <p style={{ margin: "0 0 0.75rem 0", fontSize: "11px", color: colors.textSecondary }}>
-                      Synthesized directly from your H1 BSC evaluation competency scores to support your next promotion track.
+                      Synthesized directly from your H1 BSC evaluation skill scores to support your next promotion track.
                     </p>
 
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>

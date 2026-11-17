@@ -881,10 +881,10 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Executive Pack",
     type: "Strategic Dashboard",
     description: "Evaluates the company's verified skill inventory against the required capabilities for upcoming 2027 advisory mandates.",
-    kpis: ["Core Competency Coverage: 92%", "Critical Gaps: 2 Skills (Rust, Post-Quantum)", "Upskilling Pipeline: 12 Staff"],
+    kpis: ["Core Skill Coverage: 92%", "Critical Gaps: 2 Skills (Rust, Post-Quantum)", "Upskilling Pipeline: 12 Staff"],
     sampleAiInsight: "Core consulting coverage is strong at 92%. Critical future skill gaps in Rust and Post-Quantum cryptography have been targeted with dedicated internal gig cohorts.",
     metrics: [
-      { label: "Competency Coverage", value: "92.4%", trend: "up" },
+      { label: "Skill Coverage", value: "92.4%", trend: "up" },
       { label: "Active Upskilling", value: "12 Staff", trend: "up" },
     ],
     sampleRows: [

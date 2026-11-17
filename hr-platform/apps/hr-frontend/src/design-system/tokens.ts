@@ -77,31 +77,52 @@ export const colors = {
   infoBg: "#eef2ff",         // Indigo 50
   infoBorder: "#c7d2fe",     // Indigo 200
 
-  // PMS Framework Signifiers (Strict single-framework identity)
-  frameworkOkr: "#6d28d9",   // Purple 700
-  frameworkOkrBg: "#faf5ff", // Purple 50
-  frameworkOkrBorder: "#e9d5ff",
+  // PMS Framework Signifiers (Design System Addendum §3.2): BSC = blue, OKR = green, MBO = amber.
+  // `framework*Accent` is the identity accent (bars, quadrant headers, progress).
+  // `framework*` is the badge text shade, darkened so badges clear 4.5:1 on their tint (TC-DS-08).
+  frameworkBscAccent: "#2563eb",
+  frameworkBsc: "#1d4ed8",
+  frameworkBscBg: "#eff6ff",
+  frameworkBscBorder: "#bfdbfe",
 
-  frameworkMbo: "#4338ca",   // Deep Indigo 700
-  frameworkMboBg: "#eef2ff", // Indigo 50
-  frameworkMboBorder: "#c7d2fe",
+  frameworkOkrAccent: "#059669",
+  frameworkOkr: "#047857",
+  frameworkOkrBg: "#ecfdf5",
+  frameworkOkrBorder: "#a7f3d0",
 
-  frameworkBsc: "#047857",   // Emerald Green 700
-  frameworkBscBg: "#ecfdf5", // Emerald 50
-  frameworkBscBorder: "#a7f3d0",
+  frameworkMboAccent: "#d97706",
+  frameworkMbo: "#b45309",
+  frameworkMboBg: "#fffbeb",
+  frameworkMboBorder: "#fde68a",
+
+  // OKR RAG confidence (§3.3): one palette for ESS, Manager Console and HR Console.
+  ragGreen: "#059669",
+  ragAmber: "#d97706",
+  ragRed: "#dc2626",
 };
 
+// Surface differentiation (§3.4): one cue only, a 3px left accent bar on the page header.
+export type SurfaceKind = "ess" | "manager" | "hr";
+export const surfaceAccent: Record<SurfaceKind, string> = {
+  ess: "none",
+  manager: `3px solid ${colors.indigoAction}`,
+  hr: `3px solid ${colors.textPrimary}`,
+};
+
+// Typography (Design System Addendum §2). Inter is self-hosted via next/font and exposed
+// as --font-inter / --font-mono; the fallback stack is always present.
 export const typography = {
-  fontFamily: 'Inter, Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
-  fontMono: 'Geist Mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
+  fontFamily: 'var(--font-inter, "Inter"), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  fontMono: 'var(--font-mono, "JetBrains Mono"), "SF Mono", Consolas, monospace',
+  // Legacy aliases, remapped onto the 1.25 modular scale (no off-scale sizes).
   sizes: {
-    xs: "0.75rem",    // 12px: Metadata, pills, helper labels
-    sm: "0.8125rem",  // 13px: Secondary copy, table cell details
-    base: "0.875rem", // 14px: Standard enterprise body & table text
-    md: "0.9375rem",  // 15px: Primary row titles, input text
-    lg: "1.125rem",   // 18px: Card headings, section titles
-    xl: "1.375rem",   // 22px: Page titles
-    xxl: "1.875rem",  // 30px: Large metric KPI figures
+    xs: "0.75rem",    // 12px  text-small
+    sm: "0.875rem",   // 14px  text-body
+    base: "0.875rem", // 14px  text-body
+    md: "1rem",       // 16px  text-h3
+    lg: "1.25rem",    // 20px  text-h2
+    xl: "1.5rem",     // 24px  text-h1
+    xxl: "2rem",      // 32px  text-display
   },
   weights: {
     regular: 400,
@@ -109,6 +130,51 @@ export const typography = {
     semibold: 600,
     bold: 700,
   },
+};
+
+// Named text styles (§2.2). Components should prefer these over raw sizes.
+type TextStyle = { fontSize: string; fontWeight: number; lineHeight: number; letterSpacing?: string; textTransform?: "uppercase" };
+export const text: Record<
+  "display" | "h1" | "h2" | "h3" | "body" | "bodyStrong" | "small" | "micro" | "mono",
+  TextStyle
+> = {
+  display: { fontSize: "32px", fontWeight: 700, lineHeight: 1.2 },
+  h1: { fontSize: "24px", fontWeight: 600, lineHeight: 1.3 },
+  h2: { fontSize: "20px", fontWeight: 600, lineHeight: 1.35 },
+  h3: { fontSize: "16px", fontWeight: 600, lineHeight: 1.4 },
+  body: { fontSize: "14px", fontWeight: 400, lineHeight: 1.5 },
+  bodyStrong: { fontSize: "14px", fontWeight: 600, lineHeight: 1.5 },
+  small: { fontSize: "12px", fontWeight: 400, lineHeight: 1.45 },
+  micro: { fontSize: "11px", fontWeight: 500, lineHeight: 1.4 },
+  mono: { fontSize: "12px", fontWeight: 400, lineHeight: 1.5 },
+};
+
+// Framework badge (§2.3): identical on every surface.
+export const frameworkBadgeText = {
+  fontSize: "11px",
+  fontWeight: 600,
+  letterSpacing: "0.05em",
+  textTransform: "uppercase" as const,
+};
+
+// Spacing (§4.1): 4px base.
+export const space = {
+  1: "4px",
+  2: "8px",
+  3: "12px",
+  4: "16px",
+  5: "24px",
+  6: "32px",
+  7: "48px",
+  8: "64px",
+} as const;
+
+// Motion (§7).
+export const motion = {
+  fast: "150ms ease-out",
+  base: "200ms ease-out",
+  slow: "300ms ease-in-out",
+  skeleton: "1.5s linear infinite",
 };
 
 export const shadows = {
@@ -123,7 +189,7 @@ export const shadows = {
 
 export const radii = {
   sm: "4px",
-  md: "6px",
+  md: "8px", // radius-md (§4.3 card anatomy)
   lg: "8px",
   xl: "12px",
   full: "9999px",
@@ -131,8 +197,8 @@ export const radii = {
 
 // Named properties only: never "all", so layout is never animated by accident.
 export const transitions = {
-  default: "background-color 160ms cubic-bezier(0.2, 0, 0, 1), border-color 160ms cubic-bezier(0.2, 0, 0, 1), color 160ms cubic-bezier(0.2, 0, 0, 1), box-shadow 160ms cubic-bezier(0.2, 0, 0, 1), opacity 160ms cubic-bezier(0.2, 0, 0, 1)",
-  fast: "background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out",
+  default: "background-color 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out, box-shadow 200ms ease-out, opacity 200ms ease-out",
+  fast: "background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out",
 };
 
 // Keyboard focus ring: a white gap then Deep Indigo / Teal, visible on every surface.
