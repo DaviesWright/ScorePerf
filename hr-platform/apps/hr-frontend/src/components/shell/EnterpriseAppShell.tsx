@@ -25,6 +25,7 @@ import { ProfileChangesScreen } from "../modules/ProfileChangesScreen";
 import { PayslipsScreen } from "../modules/PayslipsScreen";
 import { DocumentCentreScreen } from "../modules/DocumentCentreScreen";
 import { MyPerformanceScreen } from "../modules/MyPerformanceScreen";
+import { MyLeaveScreen } from "../modules/MyLeaveScreen";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
@@ -253,6 +254,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Policies & Handbooks";
       case "organogram":
         return "Organogram";
+      case "my_leave":
+        return "My Leave Portal";
+      default:
+        return "Workforce Intelligence";
     }
   };
 
@@ -412,7 +417,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             <AssetManagementView assets={assets} employees={employees} />
           )}
 
-          {currentView === "command_centre" && (
+          {(currentView === "command_centre" || currentView === "dashboard") && (
             <CommandCentreView
               employees={employees}
               assets={assets}
@@ -429,16 +434,20 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             />
           )}
 
-          {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} onNavigate={setCurrentView} />}
-
           {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "performance_setup" && <PerformanceSetupScreen user={currentUser} realSession={!!initialUser} />}
           {currentView === "company_setup" && <CompanySetupScreen user={currentUser} realSession={!!initialUser} />}
           {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "payslips" && <PayslipsScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "document_centre" && <DocumentCentreScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "document_centre" && (
+            <DocumentCentreScreen
+              user={currentUser}
+              realSession={!!initialUser}
+              onNavigateToPolicies={() => setCurrentView("policies_handbook")}
+            />
+          )}
           {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
+          {currentView === "my_leave" && <MyLeaveScreen user={currentUser} realSession={!!initialUser} />}
 
           {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 

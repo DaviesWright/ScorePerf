@@ -74,10 +74,10 @@ function getLocalDedeAnswer(query: string): string {
   if (q.includes("organogram") || q.includes("hierarchy") || q.includes("reporting") || q.includes("manager") || q.includes("solid") || q.includes("dotted")) {
     return "You can view the interactive organization structure under **Organogram** in the navigation bar:\n\n• **Solid Lines** represent direct administrative line managers who approve leave and performance appraisals.\n• **Dotted Lines** represent functional or project/matrix alignment (e.g. Squad Leads or Practice Directors).\n• Use the toggle filters at the top of the Organogram to switch between solid and dotted reporting relationships.";
   }
-  if (q.includes("payslip") || q.includes("salary") || q.includes("compensation") || q.includes("pay")) {
-    return "To view your official payslips:\n\n1. Press **⌘K** or **Ctrl+K** and search for 'Payslip', or select **Payslips** from the Employee Self-Service menu.\n2. Select any calendar month to view earnings, deductions, pensions, and statutory tax breakdowns.\n3. Click **Download PDF** to obtain a signed, encrypted copy for your personal records.";
+  if (q.includes("document") || q.includes("certificate") || q.includes("policy") || q.includes("contract") || q.includes("id")) {
+    return "To manage your documents in ScoReview:\n\n1. Open **Document Centre** from the navigation bar.\n2. You can view company governance documents (Code of Conduct, Whistleblowing, Policies & Handbooks) and submit required employee documents (National ID, Academic Certificates, Signed Contract).\n3. HR Admin verifies all uploaded credentials for compliance.";
   }
-  return "I'm Dede, your ScoReview AI assistant. You can ask me how to apply for leave, submit performance objectives, check the 5-point appraisal rating scale, navigate the company organogram, or view your payslips. How can I assist you today?";
+  return "I'm Dede, your ScoReview AI assistant. You can ask me how to apply for leave, submit performance objectives, check the 5-point appraisal rating scale, navigate the company organogram, or upload compliance documents. How can I assist you today?";
 }
 
 export async function POST(req: NextRequest) {

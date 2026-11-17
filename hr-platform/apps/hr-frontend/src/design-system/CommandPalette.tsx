@@ -78,17 +78,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   // Build the complete Command List
   const baseActions: CommandItem[] = [
     {
-      id: "action_payslip",
-      feature: "payslip",
-      title: "View Latest Payslip · November 2026 (GH₵28,450.00 Net)",
-      subtitle: "Instant payslip inspection & certified GRA / SSNIT breakdown",
+      id: "action_document_centre",
+      view: "document_centre",
+      title: "Open Document Centre · Policies & Submissions",
+      subtitle: "Employee credential uploads, Code of Conduct & Company Handbooks",
       category: "Direct Action",
       icon: <Icons.FileText size={16} color={colors.emeraldDark} />,
-      keywords: ["payslip", "pay", "salary", "wage", "slip", "payslips", "remuneration", "net pay", "p60", "tax", "ghs"],
+      keywords: ["document", "upload", "id", "contract", "certificate", "conduct", "policy", "handbook"],
       badge: "Instant Open",
       badgeVariant: "emerald",
       onSelect: () => {
-        if (onOpenPayslip) onOpenPayslip();
+        onSelectView("document_centre");
         onClose();
       },
     },
@@ -235,12 +235,40 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_self_service",
       view: "self_service",
       title: "My Self-Service & Personal Workspace (ESS)",
-      subtitle: "Personal profile, assigned laptop, holiday balance & quick payslip",
+      subtitle: "Personal profile, assigned laptop, holiday balance & documents",
       category: "Navigation",
       icon: <Icons.Users size={16} color={colors.textSecondary} />,
       keywords: ["self service", "ess", "profile", "personal", "my space", "home"],
       onSelect: () => {
         onSelectView("self_service");
+        onClose();
+      },
+    },
+    {
+      id: "nav_my_leave",
+      view: "my_leave",
+      title: "My Leave Management",
+      subtitle: "Apply for leave, check balances & review past requests",
+      category: "Navigation",
+      icon: <Icons.Calendar size={16} color={colors.textSecondary} />,
+      keywords: ["my leave", "leave", "holiday", "pto", "apply leave", "vacation"],
+      badge: "Self-Service",
+      onSelect: () => {
+        onSelectView("my_leave");
+        onClose();
+      },
+    },
+    {
+      id: "nav_my_performance",
+      view: "my_performance",
+      title: "My Performance Workspace",
+      subtitle: "Take appraisal self-review, propose objectives & review aligned tasks",
+      category: "Navigation",
+      icon: <Icons.Target size={16} color={colors.textSecondary} />,
+      keywords: ["my performance", "self review", "appraisal", "my objectives", "tasks"],
+      badge: "Appraisal",
+      onSelect: () => {
+        onSelectView("my_performance");
         onClose();
       },
     },
@@ -611,7 +639,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             ref={inputRef}
             autoFocus
             type="text"
-            placeholder="Type 'Payslip', 'Leave', 'Vibe', 'Wallet', or search workforce..."
+            placeholder="Type 'Leave', 'Performance', 'Document', 'People', or search workforce..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -665,7 +693,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 fontSize: typography.sizes.sm,
               }}
             >
-              No commands matching &quot;{query}&quot;. Try typing &quot;Payslip&quot;, &quot;Leave&quot;, or &quot;Wallet&quot;.
+              No commands matching &quot;{query}&quot;. Try typing &quot;Leave&quot;, &quot;Performance&quot;, or &quot;Document&quot;.
             </div>
           ) : (
             combinedItems.map((item, index) => {

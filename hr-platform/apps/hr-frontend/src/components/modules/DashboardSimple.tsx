@@ -127,8 +127,10 @@ function Tile({ label, value, note, tone, onOpen }: { label: string; value?: str
 // Coverage list: each entry links to the main page of that area.
 const SECTIONS: { label: string; tone: Tone; view: ModuleViewKey; note: string }[] = [
   { label: "My Self-Service", tone: "indigo", view: "self_service", note: "Your details, documents and requests" },
-  { label: "Payslips", tone: "green", view: "payslips", note: "Your payslips" },
-  { label: "Leave", tone: "blue", view: "time_and_leave", note: "Leave requests and calendar" },
+  { label: "My Leave", tone: "teal", view: "my_leave", note: "Apply for leave and review balances" },
+  { label: "My Performance", tone: "violet", view: "my_performance", note: "Take appraisal, set objectives and view history" },
+  { label: "Document Centre", tone: "green", view: "document_centre", note: "Employee uploads and governance documents" },
+  { label: "Leave Calendar", tone: "blue", view: "time_and_leave", note: "Leave requests and calendar" },
   { label: "Performance", tone: "violet", view: "performance_pms", note: "Cycles, goals and reviews" },
   { label: "Workforce Directory", tone: "teal", view: "workforce_directory", note: "Find people and their details" },
   { label: "Organogram", tone: "orange", view: "organogram", note: "Company structure and job titles" },

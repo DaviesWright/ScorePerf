@@ -21,6 +21,7 @@ const LABELS: Record<ModuleViewKey, string> = {
   my_profile: "Bank & Tax Details",
   payslips: "Payslips",
   document_centre: "Document Centre",
+  my_leave: "My Leave",
   objectives: "Objectives",
   self_service: "My Self-Service",
   reports_analytics: "Reports",
@@ -42,7 +43,7 @@ const LABELS: Record<ModuleViewKey, string> = {
 // Major sidebar sections and the views under each. Views not listed here fall into "Other", so none disappear.
 const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
   { label: "Dashboard", views: ["command_centre", "dashboard"] },
-  { label: "My Self-Service", views: ["self_service", "my_profile", "payslips", "document_centre", "my_performance"] },
+  { label: "My Self-Service", views: ["self_service", "my_leave", "my_performance", "document_centre"] },
   { label: "People", views: ["workforce_directory", "lifecycle_portals", "disciplinary", "approval_workflows"] },
   { label: "Time & Performance", views: ["time_and_leave", "performance_pms", "performance_setup", "objectives"] },
   { label: "Assets & IT", views: ["assets", "asset_management", "helpdesk"] },

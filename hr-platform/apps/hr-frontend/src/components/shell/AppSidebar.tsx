@@ -20,6 +20,7 @@ export type ModuleViewKey =
   | "payslips"
   | "document_centre"
   | "my_performance"
+  | "my_leave"
   | "skills_marketplace"
   | "admin_nerve_center"
   | "lifecycle_portals"
@@ -136,21 +137,37 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           badge: "ESS",
           badgeType: "peach" as const,
         },
-        { key: "my_profile" as ModuleViewKey, label: "Bank & Tax Details", icon: Icons.Wallet },
-        { key: "payslips" as ModuleViewKey, label: "Payslips", icon: Icons.FileText },
-        { key: "document_centre" as ModuleViewKey, label: "Document Centre", icon: Icons.BookOpen },
-        { key: "my_performance" as ModuleViewKey, label: "My Performance", icon: Icons.Target },
+        {
+          key: "my_performance" as ModuleViewKey,
+          label: "My Performance",
+          icon: Icons.Target,
+          badge: "Appraisals",
+          badgeType: "indigo" as const,
+        },
+        {
+          key: "my_leave" as ModuleViewKey,
+          label: "My Leave",
+          icon: Icons.Calendar,
+          badge: "Leave Portal",
+          badgeType: "emerald" as const,
+        },
+        {
+          key: "document_centre" as ModuleViewKey,
+          label: "Document Centre",
+          icon: Icons.BookOpen,
+          badge: "Policies & Docs",
+          badgeType: "neutral" as const,
+        },
       ],
     },
     {
       group: "WORKFORCE INTELLIGENCE",
       items: [
-        { key: "command_centre" as ModuleViewKey, label: "Command Centre", icon: Icons.CommandCentre },
         {
-          key: "dashboard" as ModuleViewKey,
-          label: "At-a-Glance Dashboard",
-          icon: Icons.Activity,
-          badge: "Live Charts",
+          key: "command_centre" as ModuleViewKey,
+          label: "Command Centre & Dashboard",
+          icon: Icons.CommandCentre,
+          badge: "Live Intel",
           badgeType: "indigo" as const,
         },
         {
@@ -210,13 +227,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       ],
     },
     {
-      group: "AUTOMATION & REWARDS",
+      group: "OPERATIONS & AUTOMATION",
       items: [
         {
           key: "admin_nerve_center" as ModuleViewKey,
-          label: "Nerve Center & Wallet",
-          icon: Icons.Wallet,
-          badge: "Wallet",
+          label: "Operations Nerve Center",
+          icon: Icons.ShieldCheck,
+          badge: "Approvals",
           badgeType: "peach" as const,
         },
         {
@@ -227,7 +244,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       ],
     },
     {
-      group: "TIME & OPERATIONS",
+      group: "TIME & ASSETS",
       items: [
         {
           key: "time_and_leave" as ModuleViewKey,
@@ -238,7 +255,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         },
         {
           key: "asset_management" as ModuleViewKey,
-          label: "Hardware and Fleet",
+          label: "Hardware & Fleet",
           icon: Icons.Laptop,
           badge: `${counts.assets}`,
           badgeType: "neutral" as const,

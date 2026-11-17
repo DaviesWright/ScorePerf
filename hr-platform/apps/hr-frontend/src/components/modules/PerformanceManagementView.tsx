@@ -33,6 +33,7 @@ interface RevieweeEvaluation {
   role: string;
   department: string;
   selfRating: number;
+  selfComments?: string;
   managerRating: number;
   feedback: string;
   status: "CALIBRATED" | "PENDING_REVIEW";
@@ -574,6 +575,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "People & Culture Consultant",
       department: "People & Culture",
       selfRating: 4.5,
+      selfComments: "Exceeded all planned HR onboarding SLAs by 18%. Streamlined Document Centre records for 45 staff members across Accra and London.",
       managerRating: 4.2,
       feedback: "Exceptional ownership of workforce onboarding and policy documentation.",
       status: "PENDING_REVIEW",
@@ -584,6 +586,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "Senior Edge Systems Consultant",
       department: "Cloud & Edge Engineering",
       selfRating: 4.8,
+      selfComments: "Architected distributed edge worker caching with sub-15ms p99 response times across UK and West Africa hubs.",
       managerRating: 4.7,
       feedback: "Led Hyperdrive edge caching architecture with remarkable technical rigor.",
       status: "CALIBRATED",
@@ -594,6 +597,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "Director of Enterprise Advisory",
       department: "Enterprise Advisory",
       selfRating: 4.3,
+      selfComments: "Closed 2 major strategic enterprise advisory mandates in Q2, aligning corporate strategy to execution roadmaps.",
       managerRating: 4.5,
       feedback: "Strong commercial alignment and strategic engagement leadership.",
       status: "PENDING_REVIEW",
@@ -789,8 +793,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
           selectedFramework === "OKR"
             ? "Objectives & Key Results (OKR)"
             : selectedFramework === "MBO"
-            ? "Management by Objectives (MBO)"
-            : "Balanced Scorecard (BSC)",
+              ? "Management by Objectives (MBO)"
+              : "Balanced Scorecard (BSC)",
         status: "ACTIVE",
         start_date: startDate,
         end_date: endDate,
@@ -1285,17 +1289,16 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               style={{
                 backgroundColor: colors.surface,
                 borderRadius: radii.lg,
-                border: `2px solid ${
-                  dashboardDrilldownCohort === "NO_OBJECTIVES"
-                    ? "#2563eb"
-                    : dashboardDrilldownCohort === "ACTIVE"
+                border: `2px solid ${dashboardDrilldownCohort === "NO_OBJECTIVES"
+                  ? "#2563eb"
+                  : dashboardDrilldownCohort === "ACTIVE"
                     ? "#f97316"
                     : dashboardDrilldownCohort === "PENDING_APPROVAL"
-                    ? "#ef4444"
-                    : dashboardDrilldownCohort === "APPROVED"
-                    ? "#8b5cf6"
-                    : "#10b981"
-                }`,
+                      ? "#ef4444"
+                      : dashboardDrilldownCohort === "APPROVED"
+                        ? "#8b5cf6"
+                        : "#10b981"
+                  }`,
                 padding: "1.25rem 1.5rem",
                 marginBottom: "1.5rem",
                 boxShadow: shadows.md,
@@ -2074,8 +2077,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                               s.id === 3
                                 ? { ...s, status: "LOCKED_AND_SIGNED", timestamp: new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC", digitalStamp: "HOD-SEAL #1104-PASSED" }
                                 : s.id === 4
-                                ? { ...s, status: "PENDING_ENDORSEMENT" }
-                                : s
+                                  ? { ...s, status: "PENDING_ENDORSEMENT" }
+                                  : s
                             )
                           );
                           setStatusMessage({ text: "Tier 3 (HOD) endorsed successfully. Routed to Divisional Director." });
@@ -2898,202 +2901,202 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </Button>
               </div>
             ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
-              <thead>
-                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, width: "40px" }}>NO</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OWNER</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE TYPE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE REQUESTS STATUS</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>SUBSIDIARY</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL CYCLE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>DATE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredObjectiveRequests.map((req) => (
-                  <tr
-                    key={req.id}
-                    style={{
-                      borderBottom: `1px solid ${colors.borderSubtle}`,
-                      transition: "background-color 0.1s ease",
-                    }}
-                  >
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textMuted, fontWeight: 600 }}>
-                      {req.requestNo}
-                    </td>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                <thead>
+                  <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, width: "40px" }}>NO</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OWNER</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE TYPE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE REQUESTS STATUS</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>SUBSIDIARY</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL CYCLE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>DATE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredObjectiveRequests.map((req) => (
+                    <tr
+                      key={req.id}
+                      style={{
+                        borderBottom: `1px solid ${colors.borderSubtle}`,
+                        transition: "background-color 0.1s ease",
+                      }}
+                    >
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textMuted, fontWeight: 600 }}>
+                        {req.requestNo}
+                      </td>
 
-                    {/* OWNER Cell (Screenshot 4) */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                        <div
+                      {/* OWNER Cell (Screenshot 4) */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: req.ownerAvatarColor,
+                              color: colors.surface,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 700,
+                              fontSize: "11px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {req.ownerName.split(" ").map((n) => n[0]).join("")}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: colors.textPrimary }}>
+                              {req.ownerName}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textMuted, fontFamily: typography.fontMono }}>
+                              {req.ownerStaffId}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textSecondary }}>
+                              {req.ownerRole}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* OBJECTIVE TYPE */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        <span
                           style={{
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "50%",
-                            backgroundColor: req.ownerAvatarColor,
-                            color: colors.surface,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
                             fontWeight: 700,
                             fontSize: "11px",
-                            flexShrink: 0,
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: radii.sm,
+                            backgroundColor: req.objectiveType === "BSC" ? "rgba(99, 102, 241, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                            color: req.objectiveType === "BSC" ? colors.indigoPrimary : colors.emeraldDark,
                           }}
                         >
-                          {req.ownerName.split(" ").map((n) => n[0]).join("")}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: colors.textPrimary }}>
-                            {req.ownerName}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, fontFamily: typography.fontMono }}>
-                            {req.ownerStaffId}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textSecondary }}>
-                            {req.ownerRole}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* OBJECTIVE TYPE */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: "11px",
-                          padding: "0.2rem 0.5rem",
-                          borderRadius: radii.sm,
-                          backgroundColor: req.objectiveType === "BSC" ? "rgba(99, 102, 241, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                          color: req.objectiveType === "BSC" ? colors.indigoPrimary : colors.emeraldDark,
-                        }}
-                      >
-                        {req.objectiveType}
-                      </span>
-                    </td>
-
-                    {/* OBJECTIVE REQUESTS STATUS (Pill styles from Screenshot 4) */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      {req.status === "APPROVED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(16, 185, 129, 0.15)",
-                            color: "#059669",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          APPROVED
+                          {req.objectiveType}
                         </span>
-                      )}
-                      {req.status === "UNDETERMINED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(168, 85, 247, 0.15)",
-                            color: "#7e22ce",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          UNDETERMINED
-                        </span>
-                      )}
-                      {req.status === "PENDING APPROVAL" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(249, 115, 22, 0.15)",
-                            color: "#c2410c",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          PENDING APPROVAL
-                        </span>
-                      )}
-                      {req.status === "DECLINED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(239, 68, 68, 0.15)",
-                            color: "#b91c1c",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          DECLINED
-                        </span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* SUBSIDIARY */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary }}>
-                      {req.subsidiary}
-                    </td>
-
-                    {/* APPRAISAL CYCLE */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textPrimary, fontWeight: 500 }}>
-                      {req.appraisalCycle}
-                    </td>
-
-                    {/* DATE (Clean formatted date) */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary, whiteSpace: "nowrap" }}>
-                      {formatDate(req.date)}
-                    </td>
-
-                    {/* ACTIONS */}
-                    <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedRequestForDetail(req)}
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "11px" }}
-                        >
-                          Inspect
-                        </Button>
-                        {req.status !== "APPROVED" && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleApproveRequest(req.id)}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px", backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
+                      {/* OBJECTIVE REQUESTS STATUS (Pill styles from Screenshot 4) */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        {req.status === "APPROVED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(16, 185, 129, 0.15)",
+                              color: "#059669",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
                           >
-                            Approve
-                          </Button>
+                            APPROVED
+                          </span>
                         )}
-                        {req.status !== "DECLINED" && (
+                        {req.status === "UNDETERMINED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(168, 85, 247, 0.15)",
+                              color: "#7e22ce",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            UNDETERMINED
+                          </span>
+                        )}
+                        {req.status === "PENDING APPROVAL" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(249, 115, 22, 0.15)",
+                              color: "#c2410c",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            PENDING APPROVAL
+                          </span>
+                        )}
+                        {req.status === "DECLINED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(239, 68, 68, 0.15)",
+                              color: "#b91c1c",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            DECLINED
+                          </span>
+                        )}
+                      </td>
+
+                      {/* SUBSIDIARY */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary }}>
+                        {req.subsidiary}
+                      </td>
+
+                      {/* APPRAISAL CYCLE */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textPrimary, fontWeight: 500 }}>
+                        {req.appraisalCycle}
+                      </td>
+
+                      {/* DATE (Clean formatted date) */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary, whiteSpace: "nowrap" }}>
+                        {formatDate(req.date)}
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeclineRequest(req.id)}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                            onClick={() => setSelectedRequestForDetail(req)}
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px" }}
                           >
-                            Decline
+                            Inspect
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {req.status !== "APPROVED" && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleApproveRequest(req.id)}
+                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {req.status !== "DECLINED" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeclineRequest(req.id)}
+                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                            >
+                              Decline
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
@@ -3109,7 +3112,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Operational Automation
                 </span>
-                
+
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Bulk Actions & Mass Management
@@ -3374,7 +3377,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
+
 
       {/* ========================================================================= */}
       {/* TAB 3: OBJECTIVES SETUP (Screenshot 5)                                     */}
@@ -3794,10 +3797,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                           ci.status === "COMPLETED"
                             ? "success"
                             : ci.status === "ON_TRACK"
-                            ? "info"
-                            : ci.status === "NEEDS_ATTENTION"
-                            ? "warning"
-                            : "error"
+                              ? "info"
+                              : ci.status === "NEEDS_ATTENTION"
+                                ? "warning"
+                                : "error"
                         }
                         size="sm"
                       >
@@ -3822,9 +3825,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
 
-      
+
+
 
       {/* ========================================================================= */}
       {/* TAB 5: FORMAL APPRAISAL CYCLES                                            */}
@@ -3934,9 +3937,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
 
-      
+
+
 
       {/* ========================================================================= */}
       {/* TAB 6: APPRAISALS & CALIBRATION                                           */}
@@ -3978,9 +3981,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EMPLOYEE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>DEPARTMENT</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>SELF RATING</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>MANAGER RATING</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FEEDBACK</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EMPLOYEE SELF-APPRAISAL</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>SUPERVISOR REVIEW &amp; SCORE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTION</th>
                 </tr>
@@ -3993,14 +3995,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{ev.role}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{ev.department}</td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.brandBlue }}>
-                      {ev.selfRating} / 5.0
+                    <td style={{ padding: "0.85rem 1rem", maxWidth: "250px" }}>
+                      <div style={{ fontWeight: 700, color: colors.brandBlue }}>{ev.selfRating} / 5.0</div>
+                      <div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic", marginTop: "2px" }}>
+                        &ldquo;{ev.selfComments || ev.feedback}&rdquo;
+                      </div>
                     </td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.emeraldDark }}>
-                      {ev.managerRating} / 5.0
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary, fontStyle: "italic", maxWidth: "240px" }}>
-                      &ldquo;{ev.feedback}&rdquo;
+                    <td style={{ padding: "0.85rem 1rem", maxWidth: "250px" }}>
+                      <div style={{ fontWeight: 700, color: colors.emeraldDark }}>{ev.managerRating} / 5.0</div>
+                      <div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic", marginTop: "2px" }}>
+                        &ldquo;{ev.feedback}&rdquo;
+                      </div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <Badge variant={ev.status === "CALIBRATED" ? "success" : "warning"} size="sm">
@@ -4031,7 +4036,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
+
 
       {/* ========================================================================= */}
       {/* TAB 7: PERFORMANCE INSIGHTS & 9-BOX TALENT MATRIX                          */}
@@ -5746,19 +5751,33 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     </div>
                   </div>
 
-                  <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontStyle: "italic", margin: "0 0 0.75rem 0" }}>
-                    &ldquo;{ev.feedback}&rdquo;
-                  </p>
+                  <div style={{ padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.indigoBorder}`, margin: "0.5rem 0" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase", marginBottom: "0.2rem" }}>
+                      📝 Employee Self-Appraisal Comments (Visible to Supervisor):
+                    </div>
+                    <div style={{ fontSize: typography.sizes.xs, color: colors.textPrimary, fontStyle: "italic" }}>
+                      &ldquo;{ev.selfComments || ev.feedback}&rdquo;
+                    </div>
+                  </div>
+
+                  <div style={{ margin: "0.5rem 0" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: colors.emeraldDark, textTransform: "uppercase", marginBottom: "0.2rem" }}>
+                      💬 Supervisor Review Feedback:
+                    </div>
+                    <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontStyle: "italic" }}>
+                      &ldquo;{ev.feedback}&rdquo;
+                    </div>
+                  </div>
 
                   {ev.status !== "CALIBRATED" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                       <div>
-                        <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
-                          Audit Justification Note (Mandatory for HR Calibration Record)
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textPrimary, marginBottom: "0.25rem" }}>
+                          Supervisor Review Comments * (MANDATORY to score employee)
                         </label>
-                        <input
-                          type="text"
-                          placeholder="State rationale for normalized calibration adjustment..."
+                        <textarea
+                          rows={2}
+                          placeholder="Enter mandatory supervisor review commentary and score rationale..."
                           value={calibrationNotes[ev.id] || ""}
                           onChange={(e) => setCalibrationNotes((prev) => ({ ...prev, [ev.id]: e.target.value }))}
                           style={{
@@ -5766,8 +5785,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                             padding: "0.4rem 0.5rem",
                             borderRadius: radii.sm,
                             border: `1px solid ${colors.border}`,
-                            fontSize: "11px",
+                            fontSize: typography.sizes.xs,
                           }}
+                          required
                         />
                       </div>
                       <Button
@@ -5775,17 +5795,21 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         size="sm"
                         onClick={() => {
                           if (!calibrationNotes[ev.id]?.trim()) {
-                            alert("A calibration justification note is mandatory before finalizing score adjustments.");
+                            alert("Supervisor comments are MANDATORY before scoring and submitting this employee's appraisal.");
                             return;
                           }
                           setEvaluations((prev) =>
-                            prev.map((item) => (item.id === ev.id ? { ...item, status: "CALIBRATED" } : item))
+                            prev.map((item) =>
+                              item.id === ev.id
+                                ? { ...item, status: "CALIBRATED", feedback: calibrationNotes[ev.id] }
+                                : item
+                            )
                           );
-                          setStatusMessage({ text: `Calibrated rating for ${ev.name} submitted with audit justification.` });
+                          setStatusMessage({ text: `Supervisor score and mandatory review comments recorded for ${ev.name}.` });
                         }}
                         style={{ width: "100%" }}
                       >
-                        Calibrate &amp; Finalize Score (Normalized 0–100)
+                        Submit Supervisor Score &amp; Calibrate
                       </Button>
                     </div>
                   )}

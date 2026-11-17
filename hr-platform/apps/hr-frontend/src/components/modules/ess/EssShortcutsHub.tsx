@@ -113,14 +113,14 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
     },
     {
       key: "pay_rewards",
-      title: "2. Pay & Total Rewards",
-      subtitle: "Payslips, Taxes & Rewards Wallet",
-      badge: "GH₵28.4k Net",
-      badgeVariant: "info",
-      icon: Icons.Wallet,
+      title: "2. Document Vault & Compliance",
+      subtitle: "Employee Uploads & Certified Records",
+      badge: "Verified ✓",
+      badgeVariant: "success",
+      icon: Icons.FileText,
       accentColor: "#6366f1",
       accentBg: "rgba(99, 102, 241, 0.08)",
-      highlights: "Total Rewards Wallet (GH₵580k total value), encrypted RBAC & GRA/SSNIT",
+      highlights: "Direct employee uploads, national ID verification, and signed compliance acknowledgments",
     },
     {
       key: "profile_governance",
@@ -455,7 +455,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                   }}
                 >
                   {activeWorkflow === "time_off" && <Icons.Calendar size={18} />}
-                  {activeWorkflow === "pay_rewards" && <Icons.Wallet size={18} />}
+                  {activeWorkflow === "pay_rewards" && <Icons.FileText size={18} />}
                   {activeWorkflow === "profile_governance" && <Icons.Users size={18} />}
                   {activeWorkflow === "performance_inputs" && <Icons.Target size={18} />}
                   {activeWorkflow === "work_schedules" && <Icons.Clock size={18} />}
@@ -473,7 +473,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     }}
                   >
                     {activeWorkflow === "time_off" && "Requesting & Managing Time Off (Leave)"}
-                    {activeWorkflow === "pay_rewards" && "Accessing Pay & Compensation (Total Rewards Wallet)"}
+                    {activeWorkflow === "pay_rewards" && "Document Vault & Certified Compliance Records"}
                     {activeWorkflow === "profile_governance" && "Personal & Professional Profile Governance"}
                     {activeWorkflow === "performance_inputs" && "Submitting & Tracking Performance Inputs"}
                     {activeWorkflow === "work_schedules" && "Work Schedules & Attendance (Time Tracking)"}
@@ -700,7 +700,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
               )}
 
               {/* =============================================================== */}
-              {/* 2. PAY & REWARDS (TOTAL REWARDS WALLET) */}
+              {/* 2. DOCUMENT VAULT & COMPLIANCE */}
               {/* =============================================================== */}
               {activeWorkflow === "pay_rewards" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -717,20 +717,20 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <Icons.Lock size={18} color="#6366f1" />
+                      <Icons.ShieldCheck size={18} color="#6366f1" />
                       <div>
                         <div style={{ fontSize: "12px", fontWeight: 700, color: "#3730a3" }}>
-                          Field-Level RBAC Security & Encrypted Mapping Active
+                          Verified Document Vault & Compliance Pinned
                         </div>
                         <div style={{ fontSize: "11px", color: "#4f46e5" }}>
-                          Zero unauthorized peer access. Payroll records are cryptographically pinned to Staff ID: SEN-EMP-001.
+                          Official employee identification, contracts, and certifications are securely stored and verified by HR Admin.
                         </div>
                       </div>
                     </div>
-                    <Badge variant="info" size="sm">GRA & SSNIT Verified</Badge>
+                    <Badge variant="info" size="sm">Audited &amp; Compliant</Badge>
                   </div>
 
-                  {/* ScoReview Edge: Total Rewards Wallet */}
+                  {/* Summary Card */}
                   <div
                     style={{
                       background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
@@ -742,53 +742,49 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                       <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#a5b4fc" }}>
-                        Total Rewards Wallet
+                        Compliance Document Vault
                       </span>
                       <span style={{ fontSize: "11px", padding: "0.2rem 0.6rem", borderRadius: radii.full, backgroundColor: "rgba(255, 255, 255, 0.15)", color: "#ffffff" }}>
-                        Annual Comprehensive Value
+                        4 of 4 Verified
                       </span>
                     </div>
 
-                    <div style={{ fontSize: "2.1rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#ffffff" }}>
-                      GH₵580,100.00 <span style={{ fontSize: "13px", fontWeight: 400, color: "#c7d2fe" }}>Total Employment Value / Year</span>
+                    <div style={{ fontSize: "1.75rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#ffffff" }}>
+                      100% Submission Compliance
                     </div>
+                    <p style={{ margin: "0.35rem 0 1rem 0", fontSize: "12px", color: "#c7d2fe" }}>
+                      All statutory identification, employment agreements, and credential certificates are currently active and up to date.
+                    </p>
 
-                    <div style={{ height: "8px", backgroundColor: "rgba(255, 255, 255, 0.2)", borderRadius: radii.full, overflow: "hidden", margin: "1rem 0" }}>
-                      <div style={{ width: "72%", height: "100%", backgroundColor: "#38bdf8", float: "left" }} title="Base Salary (72%)" />
-                      <div style={{ width: "11%", height: "100%", backgroundColor: "#a855f7", float: "left" }} title="Performance Bonus (11%)" />
-                      <div style={{ width: "10%", height: "100%", backgroundColor: "#10b981", float: "left" }} title="Employer Pension 13% (10%)" />
-                      <div style={{ width: "7%", height: "100%", backgroundColor: "#f59e0b", float: "left" }} title="Health & Allowances (7%)" />
-                    </div>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", fontSize: "11px" }}>
-                      <div>
-                        <div style={{ color: "#38bdf8", fontWeight: 700 }}>● Base Salary</div>
-                        <div style={{ fontWeight: 600 }}>GH₵420,000.00</div>
-                      </div>
-                      <div>
-                        <div style={{ color: "#a855f7", fontWeight: 700 }}>● Performance Bonus (15%)</div>
-                        <div style={{ fontWeight: 600 }}>GH₵63,000.00</div>
-                      </div>
-                      <div>
-                        <div style={{ color: "#10b981", fontWeight: 700 }}>● Employer Pension (13%)</div>
-                        <div style={{ fontWeight: 600 }}>GH₵54,600.00</div>
-                      </div>
-                      <div>
-                        <div style={{ color: "#f59e0b", fontWeight: 700 }}>● Health & Tech Subsidies</div>
-                        <div style={{ fontWeight: 600 }}>GH₵42,500.00</div>
-                      </div>
+                    <div style={{ display: "flex", gap: "0.75rem" }}>
+                      {onNavigate && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setActiveWorkflow(null);
+                            onNavigate("document_centre");
+                          }}
+                        >
+                          <Icons.FileText size={13} />
+                          <span>Open Full Document Centre →</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Historical Payslips Table */}
+                  {/* Document Records List */}
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
                       <h4 style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: colors.textSecondary, margin: 0 }}>
-                        Recent Payslips & Tax Documents
+                        Personal Records &amp; Certifications
                       </h4>
-                      {onOpenPayslip && (
+                      {onNavigate && (
                         <button
-                          onClick={onOpenPayslip}
+                          onClick={() => {
+                            setActiveWorkflow(null);
+                            onNavigate("document_centre");
+                          }}
                           style={{
                             background: "none",
                             border: "none",
@@ -798,16 +794,17 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                             cursor: "pointer",
                           }}
                         >
-                          Open Detailed Payslip Viewer →
+                          Upload New Document →
                         </button>
                       )}
                     </div>
 
                     <div style={{ border: `1px solid ${colors.border}`, borderRadius: radii.md, overflow: "hidden" }}>
                       {[
-                        { period: "Nov 2026", gross: "GH₵35,000.00", tax: "GH₵5,250.00", ssnit: "GH₵1,300.00", net: "GH₵28,450.00", date: "28 Nov 2026" },
-                        { period: "Oct 2026", gross: "GH₵35,000.00", tax: "GH₵5,250.00", ssnit: "GH₵1,300.00", net: "GH₵28,450.00", date: "28 Oct 2026" },
-                        { period: "Sep 2026", gross: "GH₵35,000.00", tax: "GH₵5,250.00", ssnit: "GH₵1,300.00", net: "GH₵28,450.00", date: "28 Sep 2026" },
+                        { title: "National ID / Passport (Ghana Card)", date: "Verified 12 Jan 2026", status: "Verified ✓", type: "Identification" },
+                        { title: "BSc Computer Science Certificate", date: "Verified 15 Jan 2026", status: "Verified ✓", type: "Academic" },
+                        { title: "Executed Employment Contract", date: "Signed 02 Jan 2026", status: "Active ✓", type: "Contract" },
+                        { title: "Proof of Address (Utility Statement)", date: "Updated 01 Mar 2026", status: "Verified ✓", type: "Compliance" },
                       ].map((item, idx) => (
                         <div
                           key={idx}
@@ -822,23 +819,22 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                           }}
                         >
                           <div>
-                            <div style={{ fontWeight: 700, color: colors.indigoPrimary }}>{item.period} Payslip</div>
-                            <div style={{ fontSize: "11px", color: colors.textMuted }}>Paid on {item.date} • Ecobank ••••4892</div>
+                            <div style={{ fontWeight: 700, color: colors.textPrimary }}>{item.title}</div>
+                            <div style={{ fontSize: "11px", color: colors.textMuted }}>{item.date} • {item.type}</div>
                           </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ fontWeight: 700, color: colors.textPrimary }}>{item.net}</div>
-                            <div style={{ fontSize: "10px", color: colors.textMuted }}>Gross: {item.gross}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <Badge variant="success" size="sm">{item.status}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                alert(`Opening certified copy of: ${item.title}`);
+                              }}
+                            >
+                              <Icons.FileCheck size={13} />
+                              <span>View</span>
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              alert(`Downloading official signed ${item.period} Payslip PDF with GRA Tax Withholding certificate.`);
-                            }}
-                          >
-                            <Icons.Download size={13} />
-                            <span>PDF</span>
-                          </Button>
                         </div>
                       ))}
                     </div>

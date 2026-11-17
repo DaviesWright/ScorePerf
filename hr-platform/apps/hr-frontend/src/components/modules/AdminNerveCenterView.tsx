@@ -8,7 +8,7 @@ import { Icons } from "../../design-system/Icons";
 import { drillProps } from "../../utils/drill";
 
 export const AdminNerveCenterView: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<"manager_digest" | "builder" | "change_hub" | "compliance" | "wallet">("manager_digest");
+  const [activeSection, setActiveSection] = useState<"manager_digest" | "builder" | "change_hub" | "compliance">("manager_digest");
 
   // Manager Digest Pending Action Items State
   const [pendingApprovals, setPendingApprovals] = useState([
@@ -41,7 +41,7 @@ export const AdminNerveCenterView: React.FC = () => {
       name: "Statutory Leave Resumption Unfreeze",
       trigger: "IF Leave Resumption Request is APPROVED",
       condition: "AND Leave Type is 'Maternity' OR 'Study' OR 'Medical'",
-      action: "THEN Restore Hardware Biometric Access & Update Payroll Status from Absent to Active",
+      action: "THEN Restore Hardware Biometric Access & Update Employment Status from Absent to Active",
       active: true,
     },
   ]);
@@ -128,13 +128,6 @@ export const AdminNerveCenterView: React.FC = () => {
             onClick={() => setActiveSection("compliance")}
           >
             Compliance Radar
-          </Button>
-          <Button
-            variant={activeSection === "wallet" ? "primary" : "outline"}
-            size="sm"
-            onClick={() => setActiveSection("wallet")}
-          >
-            Total Rewards Wallet
           </Button>
         </div>
       </div>
@@ -377,181 +370,6 @@ export const AdminNerveCenterView: React.FC = () => {
                   ⚡ Need Guidance (+8% Fatigue)
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 1: Total Rewards Wallet (Apple Wallet standard) */}
-      {activeSection === "wallet" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <div>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>
-                Total Annual Compensation (Beyond Basic Payslips)
-              </span>
-              <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: colors.textPrimary, margin: "0.2rem 0" }}>
-                GH₵450,000 <span style={{ fontSize: "13px", fontWeight: 400, color: colors.textMuted }}>Total Package Value (GHS)</span>
-              </h2>
-            </div>
-            <Badge variant="success" size="sm">Executive Tier 1 Compensation</Badge>
-          </div>
-
-          {/* Apple Wallet Style Card Stack */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
-            {/* Card 1: Base Salary */}
-            <div
-              style={{
-                backgroundColor: "#0f172a",
-                color: "#ffffff",
-                borderRadius: radii.lg,
-                padding: "1.25rem",
-                boxShadow: shadows.md,
-                border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "150px",
-                background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8" }}>Base Guaranteed</span>
-                <Icons.Wallet size={16} color="#38bdf8" />
-              </div>
-              <div>
-                <div style={{ fontSize: "1.625rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                  GH₵300,000
-                </div>
-                <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "0.2rem" }}>
-                  Monthly Gross: GH₵25,000 • Paid 28th
-                </div>
-              </div>
-              <span style={{ fontSize: "10px", color: "#38bdf8" }}>SENRAB SALARY TIER 1</span>
-            </div>
-
-            {/* Card 2: Performance Bonus */}
-            <div
-              style={{
-                backgroundColor: "#1e1b4b",
-                color: "#ffffff",
-                borderRadius: radii.lg,
-                padding: "1.25rem",
-                boxShadow: shadows.md,
-                border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "150px",
-                background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#c7d2fe" }}>Target Bonus</span>
-                <Icons.Target size={16} color="#818cf8" />
-              </div>
-              <div>
-                <div style={{ fontSize: "1.625rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                  GH₵60,000
-                </div>
-                <div style={{ fontSize: "11px", color: "#c7d2fe", marginTop: "0.2rem" }}>
-                  20% On-Target • Paid against OKR score
-                </div>
-              </div>
-              <span style={{ fontSize: "10px", color: "#818cf8" }}>ANNUAL PMS BONUS POOL</span>
-            </div>
-
-            {/* Card 3: Equity / Phantom Share */}
-            <div
-              style={{
-                backgroundColor: "#064e3b",
-                color: "#ffffff",
-                borderRadius: radii.lg,
-                padding: "1.25rem",
-                boxShadow: shadows.md,
-                border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "150px",
-                background: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#a7f3d0" }}>Equity & Shares</span>
-                <Icons.Sparkles size={16} color="#34d399" />
-              </div>
-              <div>
-                <div style={{ fontSize: "1.625rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                  GH₵65,000
-                </div>
-                <div style={{ fontSize: "11px", color: "#a7f3d0", marginTop: "0.2rem" }}>
-                  50% Vested • 4-Year Schedule
-                </div>
-              </div>
-              <span style={{ fontSize: "10px", color: "#34d399" }}>PARTNER PHANTOM POOL</span>
-            </div>
-
-            {/* Card 4: Health & Wellness */}
-            <div
-              style={{
-                backgroundColor: "#18181b",
-                color: "#ffffff",
-                borderRadius: radii.lg,
-                padding: "1.25rem",
-                boxShadow: shadows.md,
-                border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "150px",
-                background: "linear-gradient(135deg, #18181b 0%, #27272a 100%)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#a1a1aa" }}>Health & Benefits</span>
-                <Icons.LifeBuoy size={16} color="#fb7185" />
-              </div>
-              <div>
-                <div style={{ fontSize: "1.625rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                  GH₵15,000
-                </div>
-                <div style={{ fontSize: "11px", color: "#a1a1aa", marginTop: "0.2rem" }}>
-                  Metropolitan Private Health + Dental
-                </div>
-              </div>
-              <span style={{ fontSize: "10px", color: "#fb7185" }}>COMPREHENSIVE GHANA CARE</span>
-            </div>
-
-            {/* Card 5: Learning Stipend */}
-            <div
-              style={{
-                backgroundColor: "#431407",
-                color: "#ffffff",
-                borderRadius: radii.lg,
-                padding: "1.25rem",
-                boxShadow: shadows.md,
-                border: "1px solid rgba(255,255,255,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: "150px",
-                background: "linear-gradient(135deg, #431407 0%, #7c2d12 100%)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#fed7aa" }}>Learning Stipend</span>
-                <Icons.BookOpen size={16} color="#fb923c" />
-              </div>
-              <div>
-                <div style={{ fontSize: "1.625rem", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-                  GH₵10,000
-                </div>
-                <div style={{ fontSize: "11px", color: "#fed7aa", marginTop: "0.2rem" }}>
-                  Annual Executive Training Budget
-                </div>
-              </div>
-              <span style={{ fontSize: "10px", color: "#fb923c" }}>PROFESSIONAL CPD FUND</span>
             </div>
           </div>
         </div>

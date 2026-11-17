@@ -30,12 +30,12 @@ export const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
       {
         id: "emp_1",
         stepNumber: 1,
-        title: "Explore Your 8-Pillar Self-Service Hub & Rewards Wallet",
-        promptText: "Start in Employee Self-Service (ESS) to inspect your Total Rewards Wallet (GH₵580,100/yr), download payslips, or generate an instant AI visa/bank letter.",
+        title: "Explore Your Self-Service Hub & Verified Profile",
+        promptText: "Start in Employee Self-Service (ESS) to review your personal profile, update contact information with HR approval, or generate an instant AI visa/bank letter.",
         actionLabel: "Go to Self-Service (ESS)",
         targetView: "self_service",
         estimatedTime: "1 min",
-        outcome: "Verified personal compensation, payslips & official letters",
+        outcome: "Verified personal profile, compliance status & official letters",
       },
       {
         id: "emp_2",
@@ -266,12 +266,17 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedLabel: "Go to Objectives →",
   },
   my_profile: {
-    whatToDoHere: "Ask HR to change a bank or tax detail here. The stored value changes only after HR approves the request.",
-    nextSuggestedView: "payslips",
-    nextSuggestedLabel: "Go to Payslips →",
+    whatToDoHere: "Review and update your profile details here. All updates require HR Admin approval before publishing live.",
+    nextSuggestedView: "document_centre",
+    nextSuggestedLabel: "Go to Document Centre →",
+  },
+  my_leave: {
+    whatToDoHere: "Apply for annual, sick, or compassionate leave, view pending decisions, and review your historical absences.",
+    nextSuggestedView: "my_performance",
+    nextSuggestedLabel: "Go to My Performance →",
   },
   payslips: {
-    whatToDoHere: "Download your payslips as PDFs. HR uploads each payslip here, one PDF per employee and month.",
+    whatToDoHere: "Official documents and records repository.",
     nextSuggestedView: "document_centre",
     nextSuggestedLabel: "Go to Document Centre →",
   },
