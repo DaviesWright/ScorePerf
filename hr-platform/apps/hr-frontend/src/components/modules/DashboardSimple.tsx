@@ -34,12 +34,23 @@ interface DashboardData {
   charts?: Charts | null;
 }
 
-const C = { text: "#1c1b19", muted: "#79756c", border: "#e4e1da", surface: "#ffffff", page: "#f7f6f3", accent: "#0f5c4d", danger: "#b91c1c", warn: "#92400e" };
+const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+
+const C = {
+  text: "#1c1b19",
+  muted: "#79756c",
+  border: "#e4e1da",
+  surface: "#ffffff",
+  page: isStaging ? "#f7f6f3" : "#f8fafc",
+  accent: isStaging ? "#0f5c4d" : "#4f46e5",
+  danger: "#b91c1c",
+  warn: "#92400e",
+};
 
 // Rainbow for the charts only. Each series keeps one colour for every chart it appears in.
-const RAINBOW = ["#d9534f", "#f08a24", "#e5b72e", "#4caf7a", "#20a4a4", "#3b82c4", "#5b5bd6", "#9b5de5"];
-const APPROVED = "#4caf7a";
-const PENDING = "#f08a24";
+const RAINBOW = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316"];
+const APPROVED = "#10b981";
+const PENDING = "#f59e0b";
 const colourFor = (names: string[], name: string) => RAINBOW[Math.max(0, names.indexOf(name)) % RAINBOW.length];
 
 const S = {
@@ -61,17 +72,28 @@ const Caption = ({ children }: { children: string }) => <caption style={{ textAl
 const fmt = (iso: string) => formatDate(iso);
 
 type Tone = "blue" | "green" | "amber" | "violet" | "rose" | "teal" | "indigo" | "orange";
-// Teal shades for most tiles, with blue and gold for contrast. The tone prop is kept so call sites do not change.
-const TONES: Record<Tone, { edge: string; bg: string; text: string }> = {
-  indigo: { edge: "#0b3f35", bg: "#e7f0ed", text: "#0b3f35" },
-  violet: { edge: "#0f5c4d", bg: "#e7f0ed", text: "#0b3f35" },
-  green: { edge: "#2f8474", bg: "#e6f2ef", text: "#1f5f52" },
-  teal: { edge: "#4f9a88", bg: "#eef7f4", text: "#2f6f61" },
-  blue: { edge: "#2f5d8a", bg: "#e8eef6", text: "#1f4370" },
-  amber: { edge: "#b7892b", bg: "#fbf5e6", text: "#7a5a14" },
-  orange: { edge: "#b7892b", bg: "#fbf5e6", text: "#7a5a14" },
-  rose: { edge: "#c9a24a", bg: "#fdf8ec", text: "#7a5a14" },
-};
+// Customised tile tones: Teal for staging, Indigo and modern enterprise accents for production.
+const TONES: Record<Tone, { edge: string; bg: string; text: string }> = isStaging
+  ? {
+      indigo: { edge: "#0b3f35", bg: "#e7f0ed", text: "#0b3f35" },
+      violet: { edge: "#0f5c4d", bg: "#e7f0ed", text: "#0b3f35" },
+      green: { edge: "#2f8474", bg: "#e6f2ef", text: "#1f5f52" },
+      teal: { edge: "#4f9a88", bg: "#eef7f4", text: "#2f6f61" },
+      blue: { edge: "#2f5d8a", bg: "#e8eef6", text: "#1f4370" },
+      amber: { edge: "#b7892b", bg: "#fbf5e6", text: "#7a5a14" },
+      orange: { edge: "#b7892b", bg: "#fbf5e6", text: "#7a5a14" },
+      rose: { edge: "#c9a24a", bg: "#fdf8ec", text: "#7a5a14" },
+    }
+  : {
+      indigo: { edge: "#4f46e5", bg: "#eef2ff", text: "#1e1b4b" },
+      violet: { edge: "#7c3aed", bg: "#f5f3ff", text: "#3b0764" },
+      green: { edge: "#10b981", bg: "#ecfdf5", text: "#064e3b" },
+      teal: { edge: "#06b6d4", bg: "#ecfeff", text: "#164e63" },
+      blue: { edge: "#2563eb", bg: "#eff6ff", text: "#1e3a8a" },
+      amber: { edge: "#f59e0b", bg: "#fffbeb", text: "#78350f" },
+      orange: { edge: "#f97316", bg: "#fff7ed", text: "#7c2d12" },
+      rose: { edge: "#f43f5e", bg: "#fff1f2", text: "#881337" },
+    };
 
 /** A coloured tile. With onOpen it is a button that opens the page behind it. */
 function Tile({ label, value, note, tone, onOpen }: { label: string; value?: string | number; note?: string; tone: Tone; onOpen?: () => void }) {
@@ -218,18 +240,61 @@ function LeaveTrend({ rows }: { rows: Charts["leaveByMonth"] }) {
 
 const pctOf = (n: number, max: number) => (max === 0 ? 0 : Math.round((n / max) * 100));
 
+const MOCK_DEMO_DASHBOARD: DashboardData = {
+  onLeaveToday: 2,
+  myPendingLeave: 1,
+  cycle: { id: 1, title: "2026 Annual Performance Cycle", status: "open", open: true },
+  objectives: {
+    company: { total: 22, approved: 18, approvedPct: 82, awaiting: 4 },
+    mine: { total: 4, approved: 4, approvedPct: 100, awaiting: 0 },
+  },
+  approvals: { leavePending: 3, peopleWaiting: 2 },
+  upcomingLeave: [
+    { startDate: "2026-05-18", endDate: "2026-05-22", leaveType: "Annual Leave", employeeName: "Benedicta Agbesi", department: "People & Culture" },
+    { startDate: "2026-06-01", endDate: "2026-06-05", leaveType: "Annual Leave", employeeName: "Philip Aryee", department: "Cloud Engineering" },
+    { startDate: "2026-06-15", endDate: "2026-06-19", leaveType: "Casual Leave", employeeName: "Doreen Wesley", department: "Customer Operations" },
+  ],
+  charts: {
+    leaveByMonth: [
+      { month: "Jan 2026", approved: 4, pending: 1 },
+      { month: "Feb 2026", approved: 6, pending: 0 },
+      { month: "Mar 2026", approved: 5, pending: 2 },
+      { month: "Apr 2026", approved: 8, pending: 1 },
+      { month: "May 2026", approved: 11, pending: 3 },
+      { month: "Jun 2026", approved: 9, pending: 2 },
+    ],
+    headcount: [
+      { department: "Technology Advisory", office: "Accra", n: 8 },
+      { department: "Technology Advisory", office: "London", n: 3 },
+      { department: "People & Culture", office: "Accra", n: 4 },
+      { department: "People & Culture", office: "London", n: 1 },
+      { department: "Finance & Governance", office: "Accra", n: 3 },
+      { department: "Customer Operations", office: "Accra", n: 3 },
+    ],
+    objectivesByDepartment: [
+      { department: "Technology Advisory", total: 11, approved: 10, avgProgress: 78 },
+      { department: "People & Culture", total: 5, approved: 5, avgProgress: 88 },
+      { department: "Finance & Governance", total: 3, approved: 2, avgProgress: 65 },
+      { department: "Customer Operations", total: 3, approved: 1, avgProgress: 60 },
+    ],
+  },
+};
+
 export const DashboardScreen: React.FC<{
   user: { id: string; persona: AccessRole };
   realSession: boolean;
   onNavigate?: (view: ModuleViewKey) => void;
 }> = ({ user, realSession, onNavigate }) => {
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<DashboardData | null>(realSession ? null : MOCK_DEMO_DASHBOARD);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(realSession);
   const [leaveWindow, setLeaveWindow] = useState(14);
 
   useEffect(() => {
-    if (!realSession) return;
+    if (!realSession) {
+      setData(MOCK_DEMO_DASHBOARD);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     fetch("/api/dashboard", { cache: "no-store" })
@@ -271,7 +336,6 @@ export const DashboardScreen: React.FC<{
         <p style={{ margin: "0.35rem 0 0", opacity: 0.92 }}>{data?.cycle ? `Cycle: ${data.cycle.title}` : "No performance cycle is open for goal setting."}</p>
       </div>
 
-      {!realSession && <p role="status" style={{ ...S.note, marginTop: "1rem" }}>Sign in to see live figures. The demo login has no data behind this screen.</p>}
       {realSession && loading && <p role="status">Loading…</p>}
       {realSession && error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
 

@@ -254,6 +254,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
+      id: "nav_dashboard",
+      view: "dashboard",
+      title: "At-a-Glance Dashboard",
+      subtitle: "Merged overview with live charts, progress heatmaps, and leave heatmaps",
+      category: "Navigation",
+      icon: <Icons.Activity size={16} color={colors.indigoAction} />,
+      keywords: ["dashboard", "glance", "heatmap", "overview", "charts", "headcount", "leave trend", "progress"],
+      badge: "Live Charts",
+      badgeVariant: "indigo",
+      onSelect: () => {
+        onSelectView("dashboard");
+        onClose();
+      },
+    },
+    {
       id: "nav_reports_analytics",
       view: "reports_analytics",
       title: "Strategic Dashboards & 60 HR Reports Catalog",
@@ -292,6 +307,36 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       keywords: ["performance", "pms", "appraisals", "reviews", "okr", "mbo", "bsc", "framework"],
       onSelect: () => {
         onSelectView("performance_pms");
+        onClose();
+      },
+    },
+    {
+      id: "nav_objectives",
+      view: "objectives",
+      title: "OKR & BSC Objectives Management",
+      subtitle: "Standalone goal setting, weighting to 100%, manager approvals & HR amendments",
+      category: "Navigation",
+      icon: <Icons.Target size={16} color={colors.emeraldDark} />,
+      keywords: ["objectives", "okr", "bsc", "goals", "key results", "targets", "weighting", "amendments"],
+      badge: "Strategy",
+      badgeVariant: "emerald",
+      onSelect: () => {
+        onSelectView("objectives");
+        onClose();
+      },
+    },
+    {
+      id: "nav_performance_setup",
+      view: "performance_setup",
+      title: "Performance Setup & Corporate Strategy Import",
+      subtitle: "Cycle configuration, review stages, custom rating scales & CSV strategy import",
+      category: "Navigation",
+      icon: <Icons.Settings size={16} color={colors.peachAccent} />,
+      keywords: ["performance setup", "setup", "rating scale", "scales", "cycle", "workflow stages", "strategy import", "csv", "reporting lines"],
+      badge: "Config",
+      badgeVariant: "peach",
+      onSelect: () => {
+        onSelectView("performance_setup");
         onClose();
       },
     },
@@ -426,6 +471,34 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       keywords: ["governance", "data", "audit", "import", "compliance"],
       onSelect: () => {
         onSelectView("governance_import");
+        onClose();
+      },
+    },
+    {
+      id: "nav_company_setup",
+      view: "company_setup",
+      title: "Company Setup & Office Management",
+      subtitle: "Offices, departments, approval levels, and system integrations",
+      category: "Navigation",
+      icon: <Icons.Settings size={16} color={colors.textSecondary} />,
+      keywords: ["company setup", "offices", "departments", "accra", "london", "levels", "roles", "integrations"],
+      onSelect: () => {
+        onSelectView("company_setup");
+        onClose();
+      },
+    },
+    {
+      id: "nav_organogram",
+      view: "organogram",
+      title: "Corporate Organogram",
+      subtitle: "Interactive organizational hierarchy with solid & dotted reporting lines",
+      category: "Navigation",
+      icon: <Icons.GitBranch size={16} color={colors.emeraldDark} />,
+      keywords: ["organogram", "hierarchy", "org chart", "reporting lines", "tree", "structure"],
+      badge: "Hierarchy",
+      badgeVariant: "emerald",
+      onSelect: () => {
+        onSelectView("organogram");
         onClose();
       },
     },

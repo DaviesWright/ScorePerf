@@ -145,6 +145,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       items: [
         { key: "command_centre" as ModuleViewKey, label: "Command Centre", icon: Icons.CommandCentre },
         {
+          key: "dashboard" as ModuleViewKey,
+          label: "At-a-Glance Dashboard",
+          icon: Icons.Activity,
+          badge: "Live Charts",
+          badgeType: "indigo" as const,
+        },
+        {
           key: "reports_analytics" as ModuleViewKey,
           label: "Strategic Reports & AI",
           icon: Icons.BarChart,
@@ -176,6 +183,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           icon: Icons.Target,
           badge: `${counts.cycles}`,
           badgeType: "indigo" as const,
+        },
+        {
+          key: "objectives" as ModuleViewKey,
+          label: "OKR & BSC Objectives",
+          icon: Icons.Target,
+          badge: "Strategy",
+          badgeType: "emerald" as const,
+        },
+        {
+          key: "performance_setup" as ModuleViewKey,
+          label: "Performance Setup",
+          icon: Icons.Settings,
+          badge: "Cycles & Scales",
+          badgeType: "peach" as const,
         },
         {
           key: "skills_marketplace" as ModuleViewKey,
@@ -247,6 +268,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           badgeType: "emerald" as const,
         },
         { key: "company_setup" as ModuleViewKey, label: "Company Setup", icon: Icons.Settings },
+        {
+          key: "organogram" as ModuleViewKey,
+          label: "Organogram",
+          icon: Icons.GitBranch,
+          badge: "Hierarchy",
+          badgeType: "emerald" as const,
+        },
         { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
         { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
         { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },
