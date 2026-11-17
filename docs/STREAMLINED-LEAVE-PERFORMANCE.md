@@ -33,7 +33,7 @@ Also present outside the sidebar: command palette (Cmd+K), omni-agent drawer, "C
 
 ### 1.3 Performance Management today (`PerformanceManagementView.tsx`, 5,612 lines)
 
-- **Tabs (14):** Dashboard, Cascading BSC, Sequential Sign-off, Strict Trait Matrix, OKR Heatmap, 9-Box Succession, Appraisal Cycles, Requests, Objectives Setup, Appraisals, Bulk Actions, 1-on-1 Check-ins, Settings, Performance Insights.
+- **Tabs (14):** Dashboard, Cascading BSC, Sequential Sign-off, Core Values Review, OKR Heatmap, 9-Box Succession, Appraisal Cycles, Requests, Objectives Setup, Appraisals, Bulk Actions, 1-on-1 Check-ins, Settings, Performance Insights.
 - **Workflow:** an HR user creates a cycle under one framework (OKR, MBO or BSC; the framework cannot change once set) -> objectives are set and approved -> self and manager scores -> calibration -> cycle closes.
 - **Data (database):** `performance_cycles` (framework, title, dates, `status`), `framework_types`, `framework_configurations`, `kpis`, `performance_assignments`, `performance_reviews` (cycle, employee, reviewer, self/manager/calibrated score, `status`, `feedback`).
 - **API:** `GET/POST /cycles`, `POST /cycles/:id/transition`, `GET/POST /appraisals`, `POST /kpis`, `POST /scores/calculate`, `GET /frameworks`. Performance has real endpoints; Leave does not.
@@ -62,7 +62,7 @@ Also present outside the sidebar: command palette (Cmd+K), omni-agent drawer, "C
 ### Suppress
 - **Modules:** Command Centre, Reports & AI, Workforce Directory, Client Engagements, Skills & Gig Board, Nerve Center, Onboarding & Exit, Hardware and Fleet, IT Helpdesk, Employee Settings, Approval Workflows, Data Governance, Disciplinary, Policies & Handbooks, Self-Service.
 - **Inside Leave:** Attendance by Time Zone, Department Schedules & Rosters, Upload History, Plan History, Reserved / Additional / Blocked days, Allowances (hold as phase 2, see Q4).
-- **Inside Performance:** Cascading BSC grid, Sequential Sign-off, Strict Trait Matrix, OKR Heatmap, 9-Box Succession, Bulk Actions, Performance Insights, PMS Settings.
+- **Inside Performance:** Cascading BSC grid, Sequential Sign-off, Core Values Review, OKR Heatmap, 9-Box Succession, Bulk Actions, Performance Insights, PMS Settings.
 - **Chrome:** AI drawer and "Dede AI" labels, EN/FR toggle, sandbox toggle, persona switcher (real roles only), payslip shortcut, welcome briefing, decorative badges.
 
 ### Suppression approach (reversible)

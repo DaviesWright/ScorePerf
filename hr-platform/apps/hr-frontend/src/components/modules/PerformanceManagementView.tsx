@@ -956,7 +956,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
             { key: "cascading_bsc", label: "Cascading BSC", icon: Icons.Layers },
             { key: "military_chain", label: "Sequential Sign-off", icon: Icons.ShieldCheck },
-            { key: "trait_matrix", label: "Strict Trait Matrix", icon: Icons.Award },
+            { key: "trait_matrix", label: "Core Values Review", icon: Icons.Award },
             { key: "okr_heatmap", label: "OKR Heatmap", icon: Icons.Activity },
             { key: "nine_box", label: "9-Box Succession", icon: Icons.Users },
             { key: "cycles", label: "Appraisal Cycles", icon: Icons.Calendar },
@@ -2096,11 +2096,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Icons.Award size={18} color={colors.indigoAction} />
                 <h2 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                  Strict Numeric Competency Scoring Matrix (1-5 Scale)
+                  Core Values &amp; Behavioral Competency Review (1-5 Scale)
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Evaluates behavioral, operational, and disciplinary traits on a strict numeric scale (1 = Unsatisfactory, 2 = Marginal, 3 = Competent, 4 = Superior, 5 = Exemplary) completely independent of goal OKRs.
+                Evaluates behavioral, operational, and organizational core values on a 5-point scale (1 = Unsatisfactory, 2 = Marginal, 3 = Competent, 4 = Superior, 5 = Exemplary) aligned with enterprise standards.
               </p>
             </div>
           </div>
