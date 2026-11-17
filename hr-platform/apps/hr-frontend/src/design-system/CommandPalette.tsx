@@ -30,6 +30,7 @@ interface CommandPaletteProps {
   employees: EmployeeRecord[];
   onSelectEmployee?: (emp: EmployeeRecord) => void;
   onOpenPayslip?: () => void;
+  onOpenDede?: () => void;
   onOpenOmniAgent?: () => void;
   onQuickAction?: (action: string) => void;
 }
@@ -41,6 +42,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   employees,
   onSelectEmployee,
   onOpenPayslip,
+  onOpenDede,
   onOpenOmniAgent,
   onQuickAction,
 }) => {
@@ -91,17 +93,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     },
     {
-      id: "action_omni_agent",
+      id: "action_dede_ai",
       feature: "ai_assistant",
-      title: "Launch Dede AI Copilot (⌘J)",
-      subtitle: "Zero-UI conversational assistant, leave drafting & OCR document parser",
+      title: "Launch Dede AI Assistant (⌘J)",
+      subtitle: "Conversational workforce assistant, policy guidance & HR intelligence",
       category: "Direct Action",
       icon: <Icons.Sparkles size={16} color={colors.indigoAction} />,
-      keywords: ["dede", "omni", "agent", "ai", "copilot", "samira", "assistant", "workflow", "accra"],
+      keywords: ["dede", "ai", "copilot", "assistant", "workflow", "accra"],
       badge: "⌘J",
       badgeVariant: "indigo",
       onSelect: () => {
-        if (onOpenOmniAgent) onOpenOmniAgent();
+        window.dispatchEvent(new Event("dede:open"));
+        if (onOpenDede) onOpenDede();
+        else if (onOpenOmniAgent) onOpenOmniAgent();
         onClose();
       },
     },

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 // Dede: the ScoReview assistant. A launcher with Dede's avatar opens a chat panel. Answers come from /api/dede.
 // Any part of the app can open it by dispatching the window event "dede:open".
-const C = { text: "#1c1b19", muted: "#79756c", border: "#e4e1da", surface: "#ffffff", page: "#f7f6f3", accent: "#0f5c4d" };
+const C = { text: "#1c1b19", muted: "#79756c", border: "#e4e1da", surface: "#ffffff", page: "#f7f6f3" };
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -13,6 +13,13 @@ const GREETING: Message = {
   content: "Hi, I'm Dede. I can explain leave, objectives, appraisals, assets and reports, and walk you through each one.",
 };
 
+const QUICK_PROMPTS = [
+  "How do I submit my performance objectives?",
+  "Explain my leave balances and how to apply",
+  "How does the calibration rating scale work?",
+  "Where can I find the company organogram?",
+];
+
 export function DedeWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([GREETING]);
@@ -20,6 +27,11 @@ export function DedeWidget() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+  const accent = isStaging ? "#0f5c4d" : "#4f46e5";
+  const accentBorder = isStaging ? "#0b3f35" : "#4338ca";
+  const accentShadow = isStaging ? "0 6px 18px rgba(11, 63, 53, 0.25)" : "0 6px 18px rgba(79, 70, 229, 0.3)";
 
   useEffect(() => {
     const show = () => setOpen(true);
@@ -37,8 +49,8 @@ export function DedeWidget() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const send = async () => {
-    const text = draft.trim();
+  const send = async (textToSend?: string) => {
+    const text = (textToSend || draft).trim();
     if (!text || busy) return;
     const next: Message[] = [...messages, { role: "user", content: text }];
     setMessages(next);
@@ -81,8 +93,8 @@ export function DedeWidget() {
         aria-label="Open Dede, the ScoReview assistant"
         style={{
           position: "fixed", right: "24px", bottom: "24px", zIndex: 60, display: "flex", alignItems: "center", gap: "10px",
-          padding: "6px 16px 6px 6px", border: "1px solid #0b3f35", borderRadius: "999px", background: C.accent, color: "#ffffff",
-          font: "600 14px/1 Inter, sans-serif", cursor: "pointer", boxShadow: "0 6px 18px rgba(11, 63, 53, 0.25)",
+          padding: "6px 16px 6px 6px", border: `1px solid ${accentBorder}`, borderRadius: "999px", background: accent, color: "#ffffff",
+          font: "600 14px/1 Inter, sans-serif", cursor: "pointer", boxShadow: accentShadow,
         }}
       >
         {avatar(32)}
@@ -125,7 +137,7 @@ export function DedeWidget() {
               style={{
                 maxWidth: "85%", padding: "9px 12px", whiteSpace: "pre-wrap", fontSize: "14px",
                 borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                background: m.role === "user" ? C.accent : C.surface, color: m.role === "user" ? "#ffffff" : C.text,
+                background: m.role === "user" ? accent : C.surface, color: m.role === "user" ? "#ffffff" : C.text,
                 border: m.role === "user" ? "none" : `1px solid ${C.border}`,
               }}
             >
@@ -133,6 +145,39 @@ export function DedeWidget() {
             </div>
           </div>
         ))}
+        {messages.length === 1 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+            <span style={{ fontSize: "11px", fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>Suggested Questions:</span>
+            {QUICK_PROMPTS.map((qp, qIdx) => (
+              <button
+                key={qIdx}
+                type="button"
+                onClick={() => void send(qp)}
+                style={{
+                  textAlign: "left",
+                  padding: "7px 10px",
+                  borderRadius: "8px",
+                  border: `1px solid ${C.border}`,
+                  backgroundColor: "#ffffff",
+                  fontSize: "12px",
+                  color: C.text,
+                  cursor: "pointer",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = accent;
+                  e.currentTarget.style.backgroundColor = isStaging ? "#e6f4f1" : "#eef2ff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = C.border;
+                  e.currentTarget.style.backgroundColor = "#ffffff";
+                }}
+              >
+                💬 {qp}
+              </button>
+            ))}
+          </div>
+        )}
         {busy && <div style={{ fontSize: "12px", color: C.muted }}>Dede is thinking…</div>}
         {error && <div role="alert" style={{ fontSize: "12px", color: "#b91c1c" }}>{error}</div>}
       </div>
@@ -165,7 +210,7 @@ export function DedeWidget() {
           type="submit"
           disabled={inputEmpty}
           style={{
-            alignSelf: "flex-end", minHeight: "36px", padding: "0 14px", border: "none", borderRadius: "8px", background: C.accent, color: "#ffffff",
+            alignSelf: "flex-end", minHeight: "36px", padding: "0 14px", border: "none", borderRadius: "8px", background: accent, color: "#ffffff",
             font: "inherit", fontWeight: 600, cursor: inputEmpty ? "not-allowed" : "pointer", opacity: inputEmpty ? 0.5 : 1,
           }}
         >

@@ -146,11 +146,7 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
           <button
             onClick={() => {
               onClose();
-              if (onStartFollowPrompt) {
-                onStartFollowPrompt();
-              } else {
-                onOpenOmniAgent();
-              }
+              window.dispatchEvent(new Event("dede:open"));
             }}
             style={{
               display: "flex",
@@ -167,8 +163,12 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
               cursor: "pointer",
             }}
           >
-            <Icons.Sparkles size={14} color={colors.indigoAction} />
-            <span>Open Dede AI &amp; Guided Prompts (⌘J)</span>
+            <img
+              src="/dede/dede-avatar-light-32.png"
+              alt="Dede"
+              style={{ width: "16px", height: "16px", borderRadius: "50%", objectFit: "cover" }}
+            />
+            <span>Ask Dede AI (⌘J)</span>
           </button>
 
           <Button

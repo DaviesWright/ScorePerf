@@ -1031,7 +1031,7 @@ export const EmployeeSettingsView: React.FC = () => {
                         checked={expiryReminders.autoDraftRenewal}
                         onChange={(e) => setExpiryReminders((p) => ({ ...p, autoDraftRenewal: e.target.checked }))}
                       />
-                      <span><strong>Auto-draft contract renewal addendum</strong> via Omni-Agent when manager clicks "Renew"</span>
+                      <span><strong>Auto-draft contract renewal addendum</strong> via Dede AI when manager clicks "Renew"</span>
                     </label>
                   </div>
                 </div>

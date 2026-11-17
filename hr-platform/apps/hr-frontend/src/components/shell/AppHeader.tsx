@@ -135,7 +135,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Right: Actions, Omni-Agent & Notifications */}
+      {/* Right: Actions, Dede AI & Notifications */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         {/* Unified Dede AI & Assistant Trigger */}
         <Button

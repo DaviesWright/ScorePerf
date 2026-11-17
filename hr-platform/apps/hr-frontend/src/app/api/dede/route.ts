@@ -60,11 +60,28 @@ function parseTurns(body: unknown): Turn[] | null {
   return turns;
 }
 
+function getLocalDedeAnswer(query: string): string {
+  const q = query.toLowerCase();
+  if (q.includes("leave") || q.includes("holiday") || q.includes("vacation") || q.includes("time off") || q.includes("roster")) {
+    return "To manage your leave in ScoReview:\n\n1. Navigate to **Leave & Roster** in the navigation bar.\n2. Click **Apply for Leave** to select your leave type (Annual, Sick, Study, or Compassionate).\n3. Choose your date range—your squad coverage and team clash risk will be automatically evaluated in real-time.\n4. Submit your request for Line Manager and HR endorsement.";
+  }
+  if (q.includes("objective") || q.includes("goal") || q.includes("kr") || q.includes("bsc") || q.includes("okr") || q.includes("strategy")) {
+    return "In ScoReview, objectives are governed under your cycle's active framework (Balanced Scorecard or OKR):\n\n• For **Balanced Scorecard (BSC)**, objectives are distributed across four perspectives: Financial, Customer, Internal Business Processes, and Learning & Growth.\n• Each objective has a target metric and weight. Ensure your weights total exactly 100% before submitting to your manager for approval.\n• Approved objectives are locked against mid-cycle tampering to maintain audit integrity.";
+  }
+  if (q.includes("scale") || q.includes("rating") || q.includes("score") || q.includes("calibrate") || q.includes("appraisal") || q.includes("review")) {
+    return "ScoReview utilizes an executive 5-point calibrated rating scale:\n\n• **5.0 - Exceptional Performance**: Consistently exceeds all expectations.\n• **4.0 - Exceeds Target Expectations**: High achiever across major objectives.\n• **3.0 - Meets Target Expectations**: Fully meets agreed core responsibilities.\n• **2.0 - Needs Development**: Requires performance improvement plan.\n• **1.0 - Unsatisfactory**: Substantially below performance thresholds.\n\nAppraisals progress through Self-Assessment, Line Manager Review, and Calibration Board approval.";
+  }
+  if (q.includes("organogram") || q.includes("hierarchy") || q.includes("reporting") || q.includes("manager") || q.includes("solid") || q.includes("dotted")) {
+    return "You can view the interactive organization structure under **Organogram** in the navigation bar:\n\n• **Solid Lines** represent direct administrative line managers who approve leave and performance appraisals.\n• **Dotted Lines** represent functional or project/matrix alignment (e.g. Squad Leads or Practice Directors).\n• Use the toggle filters at the top of the Organogram to switch between solid and dotted reporting relationships.";
+  }
+  if (q.includes("payslip") || q.includes("salary") || q.includes("compensation") || q.includes("pay")) {
+    return "To view your official payslips:\n\n1. Press **⌘K** or **Ctrl+K** and search for 'Payslip', or select **Payslips** from the Employee Self-Service menu.\n2. Select any calendar month to view earnings, deductions, pensions, and statutory tax breakdowns.\n3. Click **Download PDF** to obtain a signed, encrypted copy for your personal records.";
+  }
+  return "I'm Dede, your ScoReview AI assistant. You can ask me how to apply for leave, submit performance objectives, check the 5-point appraisal rating scale, navigate the company organogram, or view your payslips. How can I assist you today?";
+}
+
 export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return NextResponse.json({ error: "Dede is not set up yet. Ask your administrator to add the AI key." }, { status: 503 });
 
   let body: unknown;
   try {
@@ -74,6 +91,13 @@ export async function POST(req: NextRequest) {
   }
   const turns = parseTurns(body);
   if (!turns) return NextResponse.json({ error: "Bad request" }, { status: 400 });
+
+  const lastUserTurn = turns[turns.length - 1];
+
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    return NextResponse.json({ reply: getLocalDedeAnswer(lastUserTurn.content) });
+  }
 
   let reply = "";
   let lastError = "";
@@ -101,10 +125,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!reply) {
-    return NextResponse.json(
-      { error: "Dede could not answer right now. Try again in a moment." },
-      { status: 502 }
-    );
+    reply = getLocalDedeAnswer(lastUserTurn.content);
   }
 
   return NextResponse.json(

@@ -40,7 +40,8 @@ interface AppSidebarProps {
   onSelectView: (view: ModuleViewKey) => void;
   persona: UserPersona;
   onSelectPersona: (p: UserPersona) => void;
-  onOpenOmniAgent: () => void;
+  onOpenDede?: () => void;
+  onOpenOmniAgent?: () => void;
   currentUser?: { name: string; email: string; avatarText: string } | null;
   photoUrl?: string | null;
   onSignOut?: () => void;
@@ -59,6 +60,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   onSelectView,
   persona,
   onSelectPersona,
+  onOpenDede,
   onOpenOmniAgent,
   currentUser,
   photoUrl,
@@ -531,16 +533,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </div>
         )}
 
-        {/* Omni-Agent AI Copilot Trigger */}
+        {/* Dede AI Assistant Trigger */}
         <div style={{ padding: isEffectiveCollapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
           <button
-            onClick={onOpenOmniAgent}
+            type="button"
+            onClick={onOpenDede || onOpenOmniAgent || (() => window.dispatchEvent(new Event("dede:open")))}
             style={{
               width: "100%",
               padding: "0.5rem 0.65rem",
               borderRadius: radii.md,
-              background: `linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)`,
-              border: "1px solid rgba(168, 85, 247, 0.4)",
+              background: `linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(99, 102, 241, 0.35) 100%)`,
+              border: "1px solid rgba(129, 140, 248, 0.45)",
               color: "#ffffff",
               display: "flex",
               alignItems: "center",
@@ -550,13 +553,17 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               fontWeight: 600,
               transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             }}
-            title="Open Omni-Agent Copilot (⌘J)"
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.8)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)")}
+            title="Ask Dede, AI Assistant (⌘J)"
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(165, 180, 252, 0.85)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(129, 140, 248, 0.45)")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Icons.Sparkles size={14} color="#c084fc" />
-              {!collapsed && <span>Omni-Agent AI</span>}
+              <img
+                src="/dede/dede-avatar-light-32.png"
+                alt="Dede"
+                style={{ width: "18px", height: "18px", borderRadius: "50%", objectFit: "cover", flex: "none" }}
+              />
+              {!collapsed && <span>Ask Dede AI</span>}
             </div>
             {!isEffectiveCollapsed && (
               <span style={{ fontSize: "10px", padding: "0.1rem 0.35rem", borderRadius: radii.sm, backgroundColor: "rgba(255,255,255,0.15)" }}>

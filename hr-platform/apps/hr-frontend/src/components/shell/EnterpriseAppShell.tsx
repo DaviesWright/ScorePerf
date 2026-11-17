@@ -5,7 +5,6 @@ import { colors } from "../../design-system/tokens";
 import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CommandPalette } from "../../design-system/CommandPalette";
-import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
 import { DedeWidget } from "../ai/DedeWidget";
 import { WorkforceDirectoryView, EmployeeRecord, AssetRecord } from "../modules/WorkforceDirectoryView";
 import { PerformanceManagementView, CycleRecord } from "../modules/PerformanceManagementView";
@@ -102,8 +101,6 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 || initialUser ? initialProjects : DEMO_PROJECTS);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isOmniAgentOpen, setIsOmniAgentOpen] = useState(false);
-  const [omniInitialTab, setOmniInitialTab] = useState<"prompts" | "chat">("prompts");
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
@@ -188,12 +185,12 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     setIsWelcomeModalOpen(false);
   };
 
-  // Keyboard shortcut listener: ⌘J for Omni-Agent
+  // Keyboard shortcut listener: ⌘J / Ctrl+J for Dede AI
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
-        setIsOmniAgentOpen((prev) => !prev);
+        window.dispatchEvent(new Event("dede:open"));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -281,22 +278,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     }
   };
 
-  const handleOmniWorkflow = (workflow: string) => {
-    if (workflow === "accra_leave") {
-      const newLeave: LeaveRecord = {
-        id: Date.now(),
-        first_name: "Paa",
-        last_name: "Barnes",
-        leave_type_name: "Annual Leave",
-        start_date: "2026-05-08",
-        end_date: "2026-05-08",
-        requested_days: "1.0",
-        status: "APPROVED",
-        reason: "Travel to Accra (Auto-drafted by Omni-Agent)",
-      };
-      setLeaves((prev) => [newLeave, ...prev]);
-    }
-  };
+
 
   if (!hasCheckedAuth) {
     return (
@@ -554,19 +536,6 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           {viewContent}
         </PlainShell>
         <DedeWidget />
-        <OmniAgentDrawer
-          isOpen={isOmniAgentOpen}
-          onClose={() => setIsOmniAgentOpen(false)}
-          onOpen={(tab) => {
-            setOmniInitialTab(tab || "prompts");
-            setIsOmniAgentOpen(true);
-          }}
-          initialTab={omniInitialTab}
-          persona={persona}
-          currentView={currentView}
-          onNavigate={setCurrentView}
-          onExecuteWorkflow={handleOmniWorkflow}
-        />
         <CommandPalette
           isOpen={isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
@@ -574,10 +543,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           employees={employees}
           onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
           onOpenPayslip={() => setIsPayslipModalOpen(true)}
-          onOpenOmniAgent={() => {
-            setOmniInitialTab("chat");
-            setIsOmniAgentOpen(true);
-          }}
+          onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
           onQuickAction={handleQuickAction}
         />
       </>
@@ -601,29 +567,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         photoUrl={photoUrl}
         onUploadPhoto={handleUploadPhoto}
         onNavigate={setCurrentView}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen(true);
-        }}
-        onStartFollowPrompt={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen(true);
-        }}
-      />
-
-      {/* Unified Dede AI & Follow the Prompt Floating Sidebar */}
-      <OmniAgentDrawer
-        isOpen={isOmniAgentOpen}
-        onClose={() => setIsOmniAgentOpen(false)}
-        onOpen={(tab) => {
-          setOmniInitialTab(tab || "prompts");
-          setIsOmniAgentOpen(true);
-        }}
-        initialTab={omniInitialTab}
-        persona={persona}
-        currentView={currentView}
-        onNavigate={setCurrentView}
-        onExecuteWorkflow={handleOmniWorkflow}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
+        onStartFollowPrompt={() => window.dispatchEvent(new Event("dede:open"))}
       />
 
       {/* Interactive Official Payslip Modal (Triggered via Cmd+K 'Payslip', ESS or Header) */}
@@ -642,10 +587,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         employees={employees}
         onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
         onOpenPayslip={() => setIsPayslipModalOpen(true)}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("chat");
-          setIsOmniAgentOpen(true);
-        }}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
+        onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
         onQuickAction={handleQuickAction}
       />
 
@@ -655,10 +598,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         onSelectView={setCurrentView}
         persona={persona}
         onSelectPersona={setPersona}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen((prev) => !prev);
-        }}
+        onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
         currentUser={currentUser}
         photoUrl={photoUrl}
         onSignOut={handleSignOut}
@@ -678,7 +619,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           breadcrumb={getBreadcrumb()}
           apiOnline={apiOnline}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenOmniAgent={() => setIsOmniAgentOpen((prev) => !prev)}
+          onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
           onQuickAction={handleQuickAction}
           onOpenPayslip={() => setIsPayslipModalOpen(true)}
           user={currentUser}
