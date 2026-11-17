@@ -334,29 +334,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: "1140px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* ESS Scope Governance Banner (The One-Line Rule) */}
-      <div
-        style={{
-          padding: "0.85rem 1.25rem",
-          borderRadius: radii.md,
-          backgroundColor: "#eff6ff",
-          border: "1px solid #bfdbfe",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "0.75rem",
-          boxShadow: shadows.xs,
-        }}
-      >
-        <Icons.Info size={18} color="#2563eb" style={{ flexShrink: 0, marginTop: "2px" }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: "#1e40af" }}>
-            Employee Self-Service (ESS) Personal Workspace Rule
-          </div>
-          <div style={{ fontSize: "11.5px", color: "#1e3a8a", marginTop: "2px", lineHeight: "1.4" }}>
-            <strong>ESS is where I act on my own HR life.</strong> Manager Console is where I act on my team. HR Console is where I act on the company. Directory is where I look up colleagues — read-only, and never performance or leave data.
-          </div>
-        </div>
-      </div>
+      
 
       {/* Header Banner */}
       <div
@@ -419,7 +397,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
             size="sm"
             onClick={() => {
               if (cyclePhase === "In Review") {
-                alert("Goal creation is LOCKED during the 'In Review' phase (TC-ESS-06). Switch cycle phase to 'Open' to propose new objectives.");
+                alert("Goal creation is LOCKED during the 'In Review' phase. Switch cycle phase to 'Open' to propose new objectives.");
               } else {
                 setShowAddObjModal(true);
               }
@@ -583,7 +561,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
               {cyclePhase === "In Review" && (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", fontSize: "11px", color: "#b45309", marginTop: "0.25rem" }}>
                   <Icons.Lock size={12} color="#b45309" />
-                  <strong>Objectives Locked:</strong> Review phase is active. Objectives cannot be edited or added (TC-ESS-06).
+                  <strong>Objectives Locked:</strong> Review phase is active. Objectives cannot be edited or added.
                 </span>
               )}
             </div>
@@ -593,7 +571,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
               size="sm"
               onClick={() => {
                 if (cyclePhase === "In Review") {
-                  alert("Objectives are locked while appraisal cycle is In Review (TC-ESS-06). Switch cycle phase to 'Open' to propose new goals.");
+                  alert("Objectives are locked while appraisal cycle is In Review. Switch cycle phase to 'Open' to propose new goals.");
                 } else {
                   setShowAddObjModal(true);
                 }
@@ -955,7 +933,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
             <Icons.ShieldCheck size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: "2px" }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "12px", fontWeight: 700, color: "#15803d" }}>
-                Scoped Objective Cascade Guarantee (FR-PERF-014)
+                Objective Alignment Cascade
               </div>
               <div style={{ fontSize: "11.5px", color: "#166534", marginTop: "2px", lineHeight: "1.4" }}>
                 In ESS, you see <strong>only your own objectives and the direct parent chain</strong> they attach to (My OKR &rarr; Department OKR &rarr; Company OKR). Sibling objectives owned by peers and other departments are strictly isolated to Manager Console and HR Console.
@@ -1074,7 +1052,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
             <Icons.ShieldCheck size={18} color="#b45309" style={{ flexShrink: 0, marginTop: "2px" }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "12px", fontWeight: 700, color: "#92400e" }}>
-                Confidential Task-Scoped Review Surface (FR-PERF-027)
+                Assigned Peer & Upward Reviews
               </div>
               <div style={{ fontSize: "11.5px", color: "#78350f", marginTop: "2px", lineHeight: "1.4" }}>
                 As an assigned reviewer, you evaluate the colleague solely on the assigned questions below. In compliance with governance standards, <strong>the reviewee’s personal goals, self-appraisal score, and historical ratings are strictly withheld</strong> to guarantee impartial assessment.
@@ -1614,7 +1592,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
 
             <form onSubmit={submitPeerReview} style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div style={{ padding: "0.6rem 0.85rem", borderRadius: radii.sm, backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", fontSize: "11px", color: "#1e40af" }}>
-                🔒 <strong>Strict Review Boundary:</strong> You are evaluating this colleague on observable collaboration and execution. In accordance with FR-PERF-027, their self-rating, individual goals, and ratings history are not exposed.
+                🔒 <strong>Strict Review Boundary:</strong> You are evaluating this colleague on observable collaboration and execution. Their self-rating, individual goals, and ratings history are not exposed.
               </div>
 
               <div>

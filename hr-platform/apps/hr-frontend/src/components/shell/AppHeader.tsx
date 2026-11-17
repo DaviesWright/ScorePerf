@@ -112,12 +112,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         zIndex: 20,
       }}
     >
-      {/* Left: URL Namespace, Experience Badge & Breadcrumb (§3.4, FR-ARCH-001, FR-ARCH-006) */}
+      {/* Left: Experience Context & Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
         <span
           style={{
             fontSize: "11px",
-            fontFamily: typography.fontMono,
             fontWeight: 700,
             padding: "0.15rem 0.45rem",
             borderRadius: radii.sm,
@@ -125,9 +124,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             color: colors.indigoPrimary,
             border: `1px solid ${colors.indigoBorder}`,
           }}
-          title={expMeta.subtitle}
         >
-          {expMeta.namespace}
+          {expMeta.shortLabel}
         </span>
         <span style={{ fontSize: typography.sizes.xs, color: colors.borderStrong }}>/</span>
         <span style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary, fontWeight: 700 }}>
@@ -135,7 +133,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Middle: Scoped Omni-Search Bar (§4 Shared Services Layer — Scoped Search) */}
+      {/* Middle: Scoped Omni-Search Bar */}
       <div
         onClick={onOpenCommandPalette}
         style={{
@@ -156,10 +154,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <Icons.Search size={15} color={colors.indigoAction} />
         <span style={{ flex: 1, fontSize: typography.sizes.xs, color: colors.textMuted }}>
           {activeExperience === "ESS"
-            ? "Search my own records (Leave, Goals, Skills)..."
+            ? "Search my records (Leave, Goals, Skills)..."
             : activeExperience === "MSS"
-            ? `Search my team subtree (${liveScope.subtree.length} reports)...`
-            : "Search company records, policies, cycles & audit..."}
+            ? "Search my team..."
+            : "Search employees, policies, cycles..."}
         </span>
         <span
           style={{
@@ -177,11 +175,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Right: Experience Switcher (§3.4: My Work [ESS] · My Team [MSS] · HR [HRMS]), Scope Inspector, Dede AI */}
+      {/* Right: Experience Switcher & Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", position: "relative" }}>
         <div
           role="group"
-          aria-label="Experience Switcher (ESS, MSS, HRMS)"
+          aria-label="Workspace Switcher"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -191,18 +189,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             padding: "2px",
             gap: "2px",
           }}
-          title="Switch experience context: My Work (ESS) · My Team (MSS) · HR (HRMS)"
         >
-          <span style={{ fontSize: "10px", fontWeight: 700, color: colors.textMuted, padding: "0 0.4rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-            Context:
-          </span>
           <button
             type="button"
-            title="ESS — What I do for myself (/ess)"
-            onClick={() => {
-              onSelectPersona?.("employee");
-              if (typeof window !== "undefined") window.history.replaceState(null, "", "#/ess");
-            }}
+            onClick={() => onSelectPersona?.("employee")}
             style={{
               padding: "0.24rem 0.6rem",
               borderRadius: radii.sm,
@@ -214,15 +204,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               cursor: "pointer",
             }}
           >
-            My Work (ESS)
+            My Work
           </button>
           <button
             type="button"
-            title="MSS — What I do for my team (/mss)"
-            onClick={() => {
-              onSelectPersona?.("line_manager");
-              if (typeof window !== "undefined") window.history.replaceState(null, "", "#/mss");
-            }}
+            onClick={() => onSelectPersona?.("line_manager")}
             style={{
               padding: "0.24rem 0.6rem",
               borderRadius: radii.sm,
@@ -234,15 +220,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               cursor: "pointer",
             }}
           >
-            My Team (MSS)
+            My Team
           </button>
           <button
             type="button"
-            title="HRMS — What HR administers & governs (/hrms)"
-            onClick={() => {
-              onSelectPersona?.("hr_admin");
-              if (typeof window !== "undefined") window.history.replaceState(null, "", "#/hrms");
-            }}
+            onClick={() => onSelectPersona?.("hr_admin")}
             style={{
               padding: "0.24rem 0.6rem",
               borderRadius: radii.sm,
@@ -254,107 +236,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               cursor: "pointer",
             }}
           >
-            HR (HRMS)
+            HR
           </button>
         </div>
-
-        {/* Org-Graph Scope & Architecture Inspector Trigger */}
-        <button
-          type="button"
-          onClick={() => setShowScopeInspector((v) => !v)}
-          title="Inspect resolved org-graph scope, employment edges, workflow routing & audit log"
-          style={{
-            padding: "0.28rem 0.55rem",
-            borderRadius: radii.sm,
-            border: `1px solid ${colors.border}`,
-            backgroundColor: showScopeInspector ? colors.indigoSubtle : colors.surface,
-            color: colors.textSecondary,
-            fontSize: "11px",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          <Icons.GitBranch size={13} color={colors.indigoAction} />
-          <span>
-            Scope:{" "}
-            {activeExperience === "ESS"
-              ? "SELF"
-              : activeExperience === "MSS"
-              ? `TEAM (${liveScope.subtree.length})`
-              : "COMPANY"}
-          </span>
-        </button>
-
-        {showScopeInspector && (
-          <div
-            role="dialog"
-            aria-label="Organisational Core & Scope Resolver Inspector"
-            style={{
-              position: "absolute",
-              top: "2.6rem",
-              right: 0,
-              width: "440px",
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.borderStrong}`,
-              borderRadius: radii.md,
-              boxShadow: shadows.lg,
-              padding: "1rem",
-              zIndex: 100,
-              fontSize: typography.sizes.xs,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-              <strong style={{ color: colors.textPrimary }}>
-                Shared Organisational Core · Scope Resolver (§3.2)
-              </strong>
-              <button
-                type="button"
-                onClick={() => setShowScopeInspector(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: colors.textMuted }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <div style={{ padding: "0.5rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm }}>
-                <div>
-                  <strong>Active Experience:</strong> {expMeta.switcherLabel} (<code>{expMeta.namespace}</code>)
-                </div>
-                <div>
-                  <strong>resolve_scope(&quot;EMP-PKB-001&quot;, &quot;2026-11-17&quot;):</strong> Direct: [{liveScope.direct.join(", ")}] · Subtree: {liveScope.subtree.length} reports ({liveScope.resolvedInMs}ms &lt; 50ms NFR-ARCH-001)
-                </div>
-              </div>
-
-              <div style={{ padding: "0.5rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm }}>
-                <strong>TC-ARCH-08 (Mid-Cycle Transfer Ownership):</strong>
-                <div style={{ color: colors.textSecondary, marginTop: "2px" }}>
-                  Abena Osei (<code>EMP-AO-006</code>) transferred 2026-05-16. Cycle start (2026-04-01) manager:{" "}
-                  <strong>{cycleStartOwner.managerName}</strong> (<code>{cycleStartOwner.edgeId}</code>) vs current:{" "}
-                  <strong>{currentOwner.managerName}</strong>. Review ownership preserved!
-                </div>
-              </div>
-
-              <div style={{ padding: "0.5rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm }}>
-                <strong>TC-ARCH-09 (Manager On-Leave Escalation):</strong>
-                <div style={{ color: colors.textSecondary, marginTop: "2px" }}>
-                  Approver for <code>EMP-AO-006</code>: <strong>{escalationDemo.approverName}</strong> —{" "}
-                  {escalationDemo.escalationReason}
-                </div>
-              </div>
-
-              <div style={{ padding: "0.5rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.sm }}>
-                <strong>TC-ARCH-12 (Scoped Audit Log Latest Entry):</strong>
-                <div style={{ color: colors.textSecondary, marginTop: "2px", fontFamily: typography.fontMono }}>
-                  {INITIAL_ARCH_AUDIT_LOG[0].id} · ctx={INITIAL_ARCH_AUDIT_LOG[0].context} · scope={INITIAL_ARCH_AUDIT_LOG[0].scopeType} · {INITIAL_ARCH_AUDIT_LOG[0].action}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         {/* Unified Dede AI & Assistant Trigger */}
         <Button
           variant="outline"

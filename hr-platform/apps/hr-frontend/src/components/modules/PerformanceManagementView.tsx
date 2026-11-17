@@ -1589,7 +1589,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                In <strong>{selectedAppraisalCycle}</strong>, 38 total objective requests have been processed. Ghana Practice exhibits a <strong>100% adherence rate</strong> to Balanced Scorecard four-pillar weighting (Financial, Customer, Internal Processes, Learning & Growth). <strong>4 continuous 1-on-1 check-ins</strong> were logged this sprint with an average progress velocity of <strong>79.8%</strong>.
+                In <strong>{selectedAppraisalCycle}</strong>, 38 total objective requests have been processed. <strong>4 continuous 1-on-1 check-ins</strong> were logged this sprint.
               </p>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
                 <button
@@ -2377,7 +2377,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     Hierarchical OKR Alignment Tree
                   </h3>
                   <p style={{ fontSize: "11px", color: colors.textMuted, margin: "0.2rem 0 0 0" }}>
-                    Enforces mandatory alignment (D4). Individual OKRs attach to Team OKRs or directly to Company OKRs (skip-level permitted per D5).
+                    Enforces mandatory alignment. Individual OKRs attach to Team OKRs or directly to Company OKRs.
                   </p>
                 </div>
                 <Badge variant="info" size="sm">Cascading Hierarchy Verified</Badge>
@@ -2439,7 +2439,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Badge variant="success" size="sm">92% (On Track)</Badge>
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
-                      Attached directly to Company OKR (Skip-level allowed per D5). Parent: Accelerate Pan-African Digital Infrastructure.
+                      Attached directly to Company OKR. Parent: Accelerate Pan-African Digital Infrastructure.
                     </div>
                   </div>
                 </div>
@@ -2475,7 +2475,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Badge variant="success" size="sm">95% (On Track)</Badge>
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
-                      Attached directly to Company OKR (Skip-level allowed per D5).
+                      Attached directly to Company OKR.
                     </div>
                   </div>
                 </div>
@@ -4868,7 +4868,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         Anonymity &amp; Blind Spot Detection Shield
                       </div>
                       <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: colors.textSecondary }}>
-                        Peer feedback comments are blinded if reviewer group is $\ge {peerReviewConfig.anonymityThreshold}$ personnel. Automatic Blind Spot alerts fire when self-evaluations diverge by $\ge {peerReviewConfig.blindSpotGapThreshold}$ points from peer consensus.
+                        Peer feedback comments are blinded if reviewer group is at least {peerReviewConfig.anonymityThreshold} personnel. Automatic Blind Spot alerts fire when self-evaluations diverge by at least {peerReviewConfig.blindSpotGapThreshold} points from peer consensus.
                       </p>
                     </div>
                   </div>

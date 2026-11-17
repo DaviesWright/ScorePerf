@@ -291,7 +291,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Time, Attendance & Leave",
     pack: "Manager Pack",
     type: "Strategic Dashboard",
-    description: "Calculates Bradford Factor scores ($S^2 \times D$) to identify disruptive short-term unplanned absence patterns.",
+    description: "Calculates Bradford Factor scores (S² × D) to identify disruptive short-term unplanned absence patterns.",
     kpis: ["Low Risk (<50): 97.8%", "Moderate Risk (51-200): 2.2%", "Action Triggered (>200): 0"],
     sampleAiInsight: "97.8% of staff maintain Bradford scores below 50 (zero operational concern). No personnel have reached the 200 threshold requiring line manager review.",
     metrics: [

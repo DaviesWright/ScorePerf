@@ -1065,7 +1065,6 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                     Calibrated ratings comparing employee self-evaluation with line supervisor and committee scorecards.
                   </p>
                 </div>
-                <Badge variant="bsc" size="sm">Calibrated Framework</Badge>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>

@@ -437,7 +437,7 @@ export const ROLE_SKILL_PROFILES: Record<
   },
   team_benchmark: {
     label: "Team Benchmark (Platform Engineering Median)",
-    subtitle: "Aggregate team median per skill — individual peer ratings are never exposed (FR-SKILL-011)",
+    subtitle: "Aggregate team median per skill — individual peer ratings are never exposed",
     levels: {
       "1.1": 3.8, "1.2": 3.6, "1.3": 4.0, "1.4": 3.8,
       "2.1": 3.5, "2.2": 3.9, "2.3": 3.7, "2.4": 3.0,
@@ -447,7 +447,7 @@ export const ROLE_SKILL_PROFILES: Record<
     },
   },
   company_benchmark: {
-    label: "Company Benchmark (Org-Wide Median — HR Console Only)",
+    label: "Company Benchmark (Organization-Wide Median)",
     subtitle: "Aggregate organization-wide median across all 91 employees",
     levels: {
       "1.1": 3.5, "1.2": 3.2, "1.3": 3.4, "1.4": 3.4,

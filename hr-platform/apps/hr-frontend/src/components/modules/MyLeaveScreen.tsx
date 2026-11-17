@@ -168,7 +168,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
   const [handoverColleague, setHandoverColleague] = useState("Sarah Jenkins (Senior Consultant)");
   const [saveAsDraftMode, setSaveAsDraftMode] = useState(false);
 
-  // Linked Extension Modal state (LV-022)
+  // Linked Extension Modal state
   const [extendingLeave, setExtendingLeave] = useState<MyLeaveItem | null>(null);
   const [extEndDate, setExtEndDate] = useState("2026-07-02");
   const [extReason, setExtReason] = useState("");
@@ -216,7 +216,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
     }
     if (!saveAsDraftMode && isInsufficientBalance) {
       alert(
-        `LEAVE_INSUFFICIENT_BALANCE (LV-003): Requested ${calc.chargedDays} working days exceeds available balance of ${activeTypeBal.availableBalance} days.`
+        `Requested ${calc.chargedDays} working days exceeds available balance of ${activeTypeBal.availableBalance} days.`
       );
       return;
     }
@@ -361,7 +361,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
       )
     );
     showToast(
-      `Created linked LeaveExtension ${extRecord.id} (+${extCalc.chargedDays} working days) attached to ${extendingLeave.applicationNumber} without mutating original approved dates (LV-022).`
+      `Created linked LeaveExtension ${extRecord.id} (+${extCalc.chargedDays} working days) attached to ${extendingLeave.applicationNumber} without mutating original approved dates.`
     );
     setExtendingLeave(null);
     setExtReason("");
@@ -417,7 +417,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             <h1 style={{ fontSize: text.h1.fontSize, fontWeight: text.h1.fontWeight, color: colors.textPrimary, margin: 0 }}>
               My Leave (Employee Self-Service)
             </h1>
-            <Badge variant="success" size="sm">BUILD.md v2.0 · Ledger-Derived</Badge>
+            <Badge variant="success" size="sm">Self-Service</Badge>
           </div>
           <p style={{ fontSize: text.body.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
             Apply for leave with work-calendar day calculation, inspect append-only ledger balances, plan annual leave, and confirm return-to-duty resumption.
@@ -437,7 +437,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             size="sm"
             onClick={() => setActiveSubTab("ledger")}
           >
-            Append-Only Balance Ledger ({ledger.length})
+            Balance Ledger ({ledger.length})
           </Button>
           <Button
             variant={activeSubTab === "plan_leave" ? "primary" : "outline"}
@@ -599,7 +599,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 My Leave Applications &amp; Episode History ({leaves.length})
               </h2>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                Retains effective policy version, work-calendar charged days, resumption status, and linked extensions (LV-022).
+                Retains effective policy version, work-calendar charged days, resumption status, and linked extensions.
               </span>
             </div>
             <Badge variant="neutral" size="sm">Append-Only Audit Trail</Badge>
@@ -669,7 +669,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                     <div style={{ display: "inline-flex", gap: space[1], flexWrap: "wrap", justifyContent: "flex-end" }}>
                       {l.status === "APPROVED" && (
                         <Button variant="outline" size="sm" onClick={() => setExtendingLeave(l)}>
-                          Extend (LV-022)
+                          Extend
                         </Button>
                       )}
                       {(l.status === "PENDING" || l.status === "DRAFT" || l.status === "APPROVED") && (
@@ -697,10 +697,10 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
           <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-                Append-Only Leave Entitlement &amp; Reservation Ledger ({ledger.length} Transactions)
+                Leave Entitlement &amp; Balance Ledger ({ledger.length} Transactions)
               </h2>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                Section 0.1 Rule: Every balance change is traceable to an immutable ledger entry in fixed precision NUMERIC(12,4).
+                Complete history of entitlement allocations, accruals, reservations, and leave taken.
               </span>
             </div>
             <Badge variant="info" size="sm">Immutable Audit Ledger</Badge>
@@ -779,7 +779,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 Plan Annual Leave Window
               </h2>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                Proposed leave plans are indicative until converted into a formal application (§4.7, §4.8).
+                Proposed leave plans are indicative until converted into a formal application.
               </span>
             </div>
 
@@ -901,10 +901,10 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
         <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: space[4], boxShadow: shadows.sm }}>
           <div style={{ marginBottom: space[4] }}>
             <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-              Confirm Return-to-Duty Resumption (§4.6 · LV-010)
+              Confirm Return-to-Duty Resumption
             </h2>
             <p style={{ fontSize: text.small.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
-              Confirming return reclassifies your approved reservation into confirmed <code>LEAVE_TAKEN</code> in the append-only ledger without double-deducting entitlement (§5.3).
+              Confirming return reclassifies your approved reservation into confirmed <code>LEAVE_TAKEN</code> in the append-only ledger without double-deducting entitlement.
             </p>
           </div>
 
@@ -1019,7 +1019,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
             <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: colors.surfaceSubtle }}>
               <div>
                 <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
-                  Leave Application (Work-Calendar Aware · §4.3)
+                  Leave Application
                 </h3>
                 <span style={{ fontSize: text.micro.fontSize, color: colors.textMuted }}>
                   Calendar: <code>{calc.calendarVersion}</code> · Policy: <code>{calc.policyVersion}</code>
@@ -1116,7 +1116,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                 <div style={{ marginTop: "4px", color: isInsufficientBalance ? colors.error : colors.textSecondary }}>
                   Balance Snapshot: Available <strong>{activeTypeBal.availableBalance}d</strong> &rarr; Projected Remaining:{" "}
                   <strong>{(activeTypeBal.availableBalance - calc.chargedDays).toFixed(1)}d</strong>{" "}
-                  {isInsufficientBalance && "(Exceeds Available Balance · LV-003)"}
+                  {isInsufficientBalance && "(Exceeds Available Balance)"}
                 </div>
                 <div style={{ marginTop: "4px", fontSize: text.micro.fontSize, color: colors.textMuted }}>
                   Approval Route Preview: Stage 1 Line Manager (Sarah Jenkins) &rarr; Stage 2 HR Verification
@@ -1209,7 +1209,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
           >
             <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
               <h3 style={{ fontSize: text.h3.fontSize, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
-                Request Linked Leave Extension (LV-022)
+                Request Linked Leave Extension
               </h3>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
                 Parent Episode: {extendingLeave.applicationNumber} ({formatDate(extendingLeave.startDate)} &rarr; {formatDate(extendingLeave.endDate)})
@@ -1218,7 +1218,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
 
             <div style={{ padding: space[4], display: "flex", flexDirection: "column", gap: space[3] }}>
               <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary }}>
-                Rule LV-022: Extending an approved leave creates a linked <code>LeaveExtension</code> record routed for approval — it never silently overwrites the original approved dates.
+                Extending an approved leave creates a linked extension request routed for manager approval.
               </div>
 
               <div>

@@ -203,7 +203,7 @@ export const SkillsMarketplaceView: React.FC = () => {
     if (!calibratingSkill) return;
     if (!calibrationJustification.trim() || calibrationJustification.trim().length < 10) {
       setCalibrationError(
-        "VAL-SKILL-005 Violation: Justification is mandatory (minimum 10 characters) to adjust a final skill rating during calibration."
+        "Justification is mandatory (minimum 10 characters) to adjust a final skill rating during calibration."
       );
       return;
     }
@@ -256,7 +256,7 @@ export const SkillsMarketplaceView: React.FC = () => {
     {
       id: "SQUAD-EDGE",
       label: "Cloud & Edge Engineering Squad (18 Staff)",
-      subtitle: "Aggregate squad mean — individual peer ratings withheld (VAL-SKILL-007)",
+      subtitle: "Aggregate squad mean — individual peer ratings withheld",
       categoryAverages: { TECH: 4.5, EXEC: 3.9, PPL: 3.8, LEAD: 3.5, PERS: 4.4 },
     },
     {
@@ -419,7 +419,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                     textTransform: "uppercase",
                   }}
                 >
-                  Comparison Baseline Selector (FR-SKILL-007)
+                  Comparison Baseline Selector
                 </label>
                 <select
                   id="gap-baseline-select"
@@ -727,7 +727,7 @@ export const SkillsMarketplaceView: React.FC = () => {
             }}
           >
             <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: `0 0 ${space[3]} 0` }}>
-              Category-Level Gap Summary (5 Categories · FR-SKILL-009)
+              Category-Level Gap Summary
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: space[3] }}>
               {categorySummaries.map((cs) => {
@@ -955,7 +955,7 @@ export const SkillsMarketplaceView: React.FC = () => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: space[3] }}>
               <div>
                 <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-                  Shared 5-Level Skill Proficiency Scale (FR-SKILL-003)
+                  Shared 5-Level Skill Proficiency Scale
                 </h2>
                 <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
                   Rate your own proficiency across all 20 skills (1–5) and attach verifiable evidence notes.
@@ -1117,21 +1117,14 @@ export const SkillsMarketplaceView: React.FC = () => {
           >
             <div>
               <div style={{ fontSize: text.bodyStrong.fontSize, fontWeight: 600, color: colors.textPrimary }}>
-                Shared 20-Skill Matching Engine (FR-SKILL-012 · FR-SKILL-013 · FR-SKILL-014)
+                Shared 20-Skill Matching Engine
               </div>
               <div style={{ fontSize: text.small.fontSize, color: colors.textSecondary }}>
                 Gig fit is computed directly from your latest verified <code>final_rating</code> against each gig&apos;s required skill codes (1.1–5.4). Only your own fit is displayed in ESS.
               </div>
             </div>
 
-            <label style={{ display: "flex", alignItems: "center", gap: space[2], fontSize: text.small.fontSize, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={simulateStaleDate}
-                onChange={(e) => setSimulateStaleDate(e.target.checked)}
-              />
-              <span>Simulate &gt;12 Month Stale Rating Check (TC-SKILL-13)</span>
-            </label>
+            
           </div>
 
           {/* Gig Cards Grid (§4.3 Card Anatomy) */}
@@ -1269,7 +1262,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                           size="sm"
                           onClick={() => setPostGigPromptGig(gig)}
                         >
-                          Mark Gig Completed (Reverse Link)
+                          Mark Gig Completed
                         </Button>
                       )}
                       <Button
@@ -1323,10 +1316,10 @@ export const SkillsMarketplaceView: React.FC = () => {
                 Canonical Skills Framework (20 Skills · 5 Categories · 4 per Category)
               </h2>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                VAL-SKILL-001: Structure is system-seeded and immutable in v1. HR may edit skill descriptions and role-specific required levels.
+                Standardized 20-skill framework across 5 categories. Authorized HR administrators may customize descriptions and role target levels.
               </span>
             </div>
-            <Badge variant="neutral" size="sm">v1 Immutable Taxonomy</Badge>
+            <Badge variant="neutral" size="sm">20 Skills · 5 Categories</Badge>
           </div>
 
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: text.body.fontSize, fontVariantNumeric: "tabular-nums" }}>
@@ -1395,7 +1388,7 @@ export const SkillsMarketplaceView: React.FC = () => {
         >
           <div style={{ marginBottom: space[4] }}>
             <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>
-              5-Category Aggregate Skill Heatmap (FR-SKILL-011 · VAL-SKILL-007)
+              5-Category Aggregate Skill Heatmap
             </h2>
             <p style={{ fontSize: text.small.fontSize, color: colors.textSecondary, margin: `${space[1]} 0 0 0` }}>
               Displays aggregate squad proficiency averages across the 5 canonical categories. Individual peer ratings are never exposed in ESS.
@@ -1441,7 +1434,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                 Did this gig develop any skills? Update your self-rating for review.
               </h3>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                Completed Gig: {postGigPromptGig.title} (FR-SKILL-016 Reverse Link)
+                Completed Gig: {postGigPromptGig.title}
               </span>
             </div>
 
@@ -1546,7 +1539,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                 Calibrate Final Skill Rating: {calibratingSkill.code} {calibratingSkill.name}
               </h3>
               <span style={{ fontSize: text.small.fontSize, color: colors.textMuted }}>
-                VAL-SKILL-005: Adjusting final_rating during calibration requires mandatory justification (audit-logged).
+                Adjusting a final skill rating during calibration requires a documented justification.
               </span>
             </div>
 
@@ -1674,7 +1667,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                     fontSize: text.body.fontSize,
                   }}
                 >
-                  <option value="null">Not required for this role (VAL-SKILL-003)</option>
+                  <option value="null">Not required for this role</option>
                   {SKILL_PROFICIENCY_SCALE.map((s) => (
                     <option key={s.level} value={s.level}>
                       Level {s.level} — {s.label}

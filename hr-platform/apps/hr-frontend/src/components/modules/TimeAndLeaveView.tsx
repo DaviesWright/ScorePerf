@@ -634,7 +634,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
                   <span style={{ fontSize: "11px", fontWeight: 700, color: selected ? colors.indigoAction : colors.textMuted, textTransform: "uppercase" }}>
-                    Experience {exp.num}
+                    {exp.badge}
                   </span>
                   <Badge variant={selected ? "info" : "neutral"} size="sm">
                     {exp.badge}
@@ -2436,10 +2436,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               }}
             >
               <div style={{ fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase", fontSize: "11px" }}>
-                Decision-Support Approval Context (§4.4 · LV-003..LV-018)
+                Approval Context & Availability Check
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: colors.textSecondary }}>Balance Sufficiency (LV-003):</span>
+                <span style={{ color: colors.textSecondary }}>Balance Sufficiency:</span>
                 <strong style={{ color: colors.emeraldDark }}>Sufficient (15.0d available vs {selectedLeaveForDetail.requested_days}d requested)</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -2451,15 +2451,15 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <strong style={{ color: colors.emeraldDark }}>✓ Above 75% configured floor</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: colors.textSecondary }}>Relief Officer Assigned (LV-018):</span>
+                <span style={{ color: colors.textSecondary }}>Relief Officer Assigned:</span>
                 <strong style={{ color: colors.indigoPrimary }}>Assigned &amp; Accepted</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: colors.textSecondary }}>Blocked Period Check (LV-017):</span>
+                <span style={{ color: colors.textSecondary }}>Blocked Period Check:</span>
                 <strong style={{ color: colors.emeraldDark }}>✓ No blackout conflict</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: colors.textSecondary }}>Segregation of Duties (LV-007):</span>
+                <span style={{ color: colors.textSecondary }}>Approval Eligibility:</span>
                 <strong style={{ color: colors.emeraldDark }}>✓ Approver ≠ Applicant (No self-approval)</strong>
               </div>
             </div>
@@ -2475,13 +2475,13 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   }}
                   style={{ flex: 1, backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
                 >
-                  Approve &amp; Reserve (LV-008)
+                  Approve Request
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const instructions = prompt("Enter mandatory amendment instructions for the employee (§4.4):");
+                    const instructions = prompt("Enter mandatory amendment instructions for the employee:");
                     if (!instructions || !instructions.trim()) return;
                     setFeedback(`Returned application #${selectedLeaveForDetail.id} for amendment: "${instructions.trim()}"`);
                     setSelectedLeaveForDetail(null);
@@ -2493,7 +2493,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    const rejectReason = prompt("Enter mandatory rejection reason (§4.4):");
+                    const rejectReason = prompt("Enter mandatory rejection reason:");
                     if (!rejectReason || !rejectReason.trim()) return;
                     handleAction(selectedLeaveForDetail.id, "REJECTED");
                     setSelectedLeaveForDetail(null);
@@ -2693,7 +2693,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   Departmental Utilisation, Financial Liabilities &amp; Predictive Absence Forecast
                 </h3>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                  Experience 5 · Management Intelligence: Accrued balance-sheet liability, absence trends, and Q4 capacity projections.
+                  Accrued balance-sheet liability, absence trends, and Q4 capacity projections.
                 </span>
               </div>
               <Badge variant="info" size="sm">Management Intelligence</Badge>

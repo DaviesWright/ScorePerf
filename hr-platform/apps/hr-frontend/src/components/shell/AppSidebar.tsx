@@ -120,10 +120,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   }, [isPinned]);
 
   const personaLabels: Record<UserPersona, { title: string; badge: string }> = {
-    hr_director: { title: "HRMS · Executive / HR", badge: "/hrms" },
-    hr_admin: { title: "HRMS · HR Governance", badge: "/hrms" },
-    line_manager: { title: "MSS · My Team", badge: "/mss" },
-    employee: { title: "ESS · My Work", badge: "/ess" },
+    hr_director: { title: "Executive / HR", badge: "HR" },
+    hr_admin: { title: "HR Governance", badge: "HR" },
+    line_manager: { title: "My Team", badge: "Team" },
+    employee: { title: "My Work", badge: "Self" },
   };
 
   const getNavSections = () => {
@@ -131,7 +131,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     if (persona === "employee") {
       return [
         {
-          group: "ESS · MY WORK (/ess)",
+          group: "MY WORK",
           items: [
             {
               key: "self_service" as ModuleViewKey,
@@ -189,7 +189,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     if (persona === "line_manager") {
       return [
         {
-          group: "MSS · MY TEAM (/mss)",
+          group: "MY TEAM",
           items: [
             {
               key: "workforce_directory" as ModuleViewKey,
@@ -236,7 +236,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           ],
         },
         {
-          group: "ESS · MY WORK (/ess)",
+          group: "MY WORK",
           items: [
             {
               key: "self_service" as ModuleViewKey,

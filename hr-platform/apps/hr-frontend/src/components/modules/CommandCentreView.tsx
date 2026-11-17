@@ -226,7 +226,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <Icons.Sparkles size={14} color={colors.indigoAction} />
               <span>Dede — AI Daily Brief • {formatDate(new Date())}</span>
             </span>
-            <Badge variant="success" size="sm">Sentiment +5%</Badge>
           </div>
           <div style={{ fontSize: typography.sizes.sm, color: colors.textPrimary, lineHeight: 1.5 }}>
             <div style={{ marginBottom: "0.4rem", fontWeight: 600 }}>Good morning, Paa. Here is your morning briefing:</div>
@@ -236,9 +235,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               </li>
               <li>
                 <strong>Benedicta&apos;s Q4 OKR self-review</strong> is in calibration.
-              </li>
-              <li>
-                Your 45-member team&apos;s average sentiment is <strong>94% positive</strong> this week across Accra and London hubs.
               </li>
             </ul>
           </div>
