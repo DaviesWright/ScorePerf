@@ -129,7 +129,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       `Tenant ID: 1 • Domain: senrab.com`,
       `Total Active Workforce: ${stats.totalEmployees}`,
       `Hardware Allocation: ${coveragePct}% (${allocatedAssetsCount} / ${stats.totalAssets} fleet units assigned)`,
-      `Active Appraisal Cycles: ${stats.activeCycles} (Pure OKR, MBO, BSC)`,
+      `Active Appraisal Cycles: ${stats.activeCycles} (OKR, MBO, BSC)`,
       `Pending Approvals: ${stats.pendingLeaves}`,
       "",
       "PRACTICE / DEPARTMENT BREAKDOWN:",
@@ -361,7 +361,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           subtext="OKR, MBO & BSC cycles active"
           variant="purple"
           icon={<Icons.Target size={15} />}
-          badge={<Badge variant="okr" size="sm">Standardized</Badge>}
           onClick={() => onNavigate("performance_pms")}
         />
         <MetricCard
@@ -790,7 +789,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   subtitle: "Enterprise Advisory • 10 objectives ready for manager sign-off",
                   actionText: "Calibrate",
                   view: "performance_pms" as ModuleViewKey,
-                  badge: <Badge variant="okr" size="sm">OKR Pure</Badge>,
                 },
               ].map((item, idx) => (
                 <div
@@ -829,9 +827,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <h2 style={{ fontSize: typography.sizes.base, fontWeight: typography.weights.semibold, color: colors.textPrimary, margin: 0 }}>
                 Appraisal Framework Governance
               </h2>
-              <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                Calibrated
-              </span>
             </div>
 
             <div
@@ -842,9 +837,6 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 padding: "1rem",
               }}
             >
-              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5, marginBottom: "0.75rem" }}>
-                Each appraisal cycle operates strictly under a single governance framework. Framework mixing is prohibited at the database schema level.
-              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem" }}>
                 <div style={{ padding: "0.5rem", backgroundColor: colors.frameworkOkrBg, borderRadius: radii.sm, border: `1px solid ${colors.frameworkOkrBorder}` }}>
                   <div style={{ fontSize: "11px", fontWeight: 700, color: colors.frameworkOkr }}>OKR</div>

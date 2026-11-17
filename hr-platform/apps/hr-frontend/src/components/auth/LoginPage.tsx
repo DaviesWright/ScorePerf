@@ -82,7 +82,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [workspaceDomain, setWorkspaceDomain] = useState<string>("senrab.scoreview.com");
 
   const handleUserSelect = (user: AuthenticatedUser) => {
     setSelectedUser(user);
@@ -146,11 +145,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{ fontSize: "11px", color: colors.textMuted }}>
-            Domain: <strong style={{ color: colors.textPrimary }}>{workspaceDomain}</strong>
-          </div>
-        </div>
       </header>
 
       {/* Main Content Form */}
@@ -449,13 +443,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <span>SOC2 Type II &amp; ISO 27001 Certified</span>
           </span>
           <span>•</span>
-          <span>256-Bit TLS Edge Encryption</span>
+          <span>256-Bit TLS Encryption</span>
         </div>
 
         <div style={{ display: "flex", gap: "1rem" }}>
           <span>Hubs: Accra (GH) • London (UK)</span>
-          <span>•</span>
-          <span>Enterprise Calibration Active</span>
         </div>
       </footer>
     </div>

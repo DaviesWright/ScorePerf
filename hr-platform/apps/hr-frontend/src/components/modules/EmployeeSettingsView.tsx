@@ -90,7 +90,7 @@ const SETTINGS_TABS: TabDefinition[] = [
   {
     key: "document_formats",
     label: "Document Formats",
-    description: "Allowed file MIME types, 10MB size ceilings, Cloudflare AI OCR and virus scanning",
+    description: "Allowed file MIME types, 10MB size ceilings, AI OCR and virus scanning",
     icon: Icons.FileCheck,
   },
   {
@@ -405,7 +405,7 @@ export const EmployeeSettingsView: React.FC = () => {
 
         <div style={{ display: "flex", gap: "0.6rem" }}>
           <button
-            onClick={() => showNotification("All settings synchronized to Cloudflare Hyperdrive Postgres.")}
+            onClick={() => showNotification("All settings saved.")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -791,7 +791,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   >
                     <Icons.ShieldCheck size={18} color={colors.emeraldDark} />
                     <div style={{ fontSize: typography.sizes.sm, color: colors.textPrimary }}>
-                      <strong>Strict Collision Safeguard Active:</strong> The Cloudflare D1 / Hyperdrive Postgres index enforces unique constraints. If an existing ID exists in the database, the generator automatically increments to the next free integer.
+                      <strong>Strict Collision Safeguard Active:</strong> The system enforces unique IDs. If an existing ID exists in the database, the generator automatically increments to the next free integer.
                     </div>
                   </div>
                 </div>
@@ -1460,7 +1460,7 @@ export const EmployeeSettingsView: React.FC = () => {
                       checked={docFormatConfig.enableWorkersAiOcr}
                       onChange={(e) => setDocFormatConfig((p) => ({ ...p, enableWorkersAiOcr: e.target.checked }))}
                     />
-                    <span><strong>Enable Cloudflare Workers AI OCR</strong> — Automatically transcribe uploaded medical notes, passports, and utility bills for instant verification.</span>
+                    <span><strong>Enable AI OCR</strong> — Automatically transcribe uploaded medical notes, passports, and utility bills for instant verification.</span>
                   </label>
 
                   <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontSize: typography.sizes.sm, color: colors.textPrimary, cursor: "pointer" }}>

@@ -502,7 +502,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                   { name: "People Operations & Payroll", icon: "⚙️", desc: "Statutory labor compliance, payroll, benefits" },
                   { name: "Total Rewards & Compensation", icon: "💎", desc: "Executive incentive plans, salary banding, equity" },
                   { name: "Organizational Development & Culture", icon: "🏛️", desc: "Org design, M&A integrations, psychological safety" },
-                  { name: "HR Technology & Analytics", icon: "🤖", desc: "Cloudflare edge HRIS, D1 databases, AI copilot" },
+                  { name: "HR Technology & Analytics", icon: "🤖", desc: "HRIS platforms, analytics, AI copilot" },
                   { name: "Employee Experience & Relations", icon: "🤝", desc: "Engagement pulses, grievance mediation, DEI" },
                 ].map((dom) => (
                   <div
@@ -972,7 +972,7 @@ export const SkillsMarketplaceView: React.FC = () => {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
                 <Icons.Sparkles size={18} color={colors.frameworkOkr} />
                 <h3 style={{ fontSize: typography.sizes.base, fontWeight: typography.weights.bold, color: colors.textPrimary, margin: 0 }}>
-                  Bias-Free AI Performance Dossier
+                  AI Performance Dossier
                 </h3>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5, marginBottom: "1rem" }}>
@@ -981,7 +981,7 @@ export const SkillsMarketplaceView: React.FC = () => {
 
               {aiSummaryGenerated ? (
                 <div style={{ padding: "1rem", backgroundColor: "#faf5ff", borderRadius: radii.md, border: "1px solid #e9d5ff", fontSize: typography.sizes.xs, lineHeight: 1.6, color: "#581c87" }}>
-                  <strong>AI Executive Summary:</strong> &quot;Paa demonstrated top-tier engineering stewardship in FY26. Key measurable deliverables include Cloudflare Hyperdrive edge pool deployment (sub-15ms latency), 100% hardware coverage across 45 consultants, and rigorous performance calibration governance. Recommended rating: <strong>4.8 / 5.0 (Exceptional Impact)</strong>.&quot;
+                  <strong>AI Executive Summary:</strong> &quot;Paa demonstrated top-tier engineering stewardship in FY26. Key measurable deliverables include database platform deployment (sub-15ms latency), 100% hardware coverage across 45 consultants, and rigorous performance calibration governance. Recommended rating: <strong>4.8 / 5.0 (Exceptional Impact)</strong>.&quot;
                 </div>
               ) : (
                 <div style={{ padding: "1.5rem", textAlign: "center", backgroundColor: colors.surfaceSubtle, borderRadius: radii.md, color: colors.textMuted, fontSize: typography.sizes.xs }}>

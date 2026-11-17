@@ -151,7 +151,7 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
     return (
       <div style={S.page}>
         <h1 style={{ margin: "0 0 0.5rem", fontSize: "22px" }}>Assets</h1>
-        <p style={S.note}>Sign in to see live assets. The demo login has no data behind this screen.</p>
+        <p style={S.note}>Sign in to see live assets.</p>
       </div>
     );
   }

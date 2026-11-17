@@ -183,7 +183,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Sandbox Environment Toggle */}
         <button
           onClick={handleSandboxClick}
-          title={currentSandbox ? "Active in Sandbox Mode (Safe testing)" : "Active in Live Production"}
+          title={currentSandbox ? "Sandbox mode: safe for testing" : "Live mode"}
           style={{
             display: "flex",
             alignItems: "center",
@@ -207,7 +207,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               backgroundColor: currentSandbox ? "#d97706" : "#16a34a",
             }}
           />
-          <span>{currentSandbox ? "SANDBOX 🟡" : "LIVE PROD 🟢"}</span>
+          <span>{currentSandbox ? "Sandbox" : "Live"}</span>
         </button>
         {/* Notifications Icon Button */}
         <button

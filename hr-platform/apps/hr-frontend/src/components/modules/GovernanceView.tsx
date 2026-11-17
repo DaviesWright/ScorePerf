@@ -85,7 +85,7 @@ export const GovernanceView: React.FC = () => {
       action: "LEAVE_REQUEST_AUTO_DRAFTED",
       resource: "leave:draft:accra_travel",
       details: "AI auto-drafted travel leave to Accra after balance and calendar conflict checks.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      ipAddress: "",
       immutableHash: "a149c9586fe54716b5394a81cfb5fa350e93a7d4a29a6744047a0640f09a63c7",
       complianceTag: "ISO27001-A.12.4.1",
     },
@@ -112,8 +112,8 @@ export const GovernanceView: React.FC = () => {
       actorRole: "AI Ingestion Engine",
       action: "DOCUMENT_E2EE_ENCRYPTED",
       resource: "document:passport_kwesi_osei.pdf",
-      details: "Client-side encrypted candidate identity document with AES-GCM-256 before Cloudflare R2 persistence.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      details: "Client-side encrypted candidate identity document with AES-GCM-256 before storage.",
+      ipAddress: "",
       immutableHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       complianceTag: "ISO27001-A.10.1.1",
     },
@@ -141,7 +141,7 @@ export const GovernanceView: React.FC = () => {
       action: "SICK_NOTE_INGESTION_PARSED",
       resource: "claim:medical:DrKofiMensah",
       details: "Extracted diagnostic code, verified 3-day recovery period, and filed confidential health claim.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      ipAddress: "",
       immutableHash: "c5d24b6113824f995874de388b17b2b73b22cfc857731737e58fc20fb14dfa49",
       complianceTag: "HIPAA-Sec.164.312",
     },
@@ -514,7 +514,7 @@ export const GovernanceView: React.FC = () => {
 
             <div style={{ fontSize: "11px", color: colors.textMuted, display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <Icons.Check size={14} color={colors.emeraldDark} />
-              <span>Cryptographic hash chain validated against Cloudflare D1 tamper ledger</span>
+              <span>Cryptographic hash chain validated</span>
             </div>
           </div>
 
@@ -586,7 +586,7 @@ export const GovernanceView: React.FC = () => {
 
                     <td style={{ padding: "0.85rem 1rem", fontFamily: typography.fontMono, color: colors.textSecondary }}>
                       <div>{log.resource}</div>
-                      <div style={{ fontSize: "10px", color: colors.textMuted }}>IP: {log.ipAddress}</div>
+                      {log.ipAddress && <div style={{ fontSize: "10px", color: colors.textMuted }}>IP: {log.ipAddress}</div>}
                     </td>
 
                     <td style={{ padding: "0.85rem 1rem" }}>
@@ -718,7 +718,7 @@ export const GovernanceView: React.FC = () => {
               End-to-End Encrypted Documents Registry (AES-GCM-256)
             </h3>
             <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-              Passports, confidential contracts, doctor notes, and P60s are encrypted client-side before transport and stored as zero-knowledge blobs in Cloudflare R2.
+              Passports, confidential contracts, doctor notes, and P60s are encrypted client-side before transport and stored as zero-knowledge encrypted files.
             </p>
 
             <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, overflow: "hidden" }}>
@@ -912,7 +912,7 @@ export const GovernanceView: React.FC = () => {
                   Master Workforce CSV Ingestion
                 </h3>
                 <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                  Bulk import workforce rosters directly into PostgreSQL via Neon / Hyperdrive edge connection.
+                  Bulk import workforce rosters directly into the platform.
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>

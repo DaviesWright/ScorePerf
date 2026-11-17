@@ -605,9 +605,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
   const [showNewCheckInModal, setShowNewCheckInModal] = useState(false);
   const [cycleTitle, setCycleTitle] = useState("");
   const [cycleDesc, setCycleDesc] = useState("");
-  const [selectedFramework, setSelectedFramework] = useState<"OKR" | "MBO" | "BSC">("OKR");
+  const [selectedFramework, setSelectedFramework] = useState<"OKR" | "MBO" | "BSC">("BSC");
   const [startDate, setStartDate] = useState("2026-04-01");
   const [endDate, setEndDate] = useState("2026-06-30");
+  const [okrViewMode, setOkrViewMode] = useState<"heatmap" | "tree">("heatmap");
+  const [calibrationNotes, setCalibrationNotes] = useState<Record<number, string>>({});
 
   // New Check-in modal form state
   const [newCheckInEmployee, setNewCheckInEmployee] = useState("Benedicta Agbesi");
@@ -622,6 +624,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
   const [newCheckInNextDate, setNewCheckInNextDate] = useState("2026-11-20");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Active Cycle constraint: at most one active cycle (Open, In Review, Calibration, or Active) per company
+  const activeCycle = cycles.find((c) => {
+    const s = (c.status || "").toUpperCase();
+    return s === "ACTIVE" || s === "OPEN" || s === "IN REVIEW" || s === "IN_REVIEW" || s === "CALIBRATION";
+  });
 
   // Performance Management Settings Configuration State
   const [frameworkConfig, setFrameworkConfig] = useState({
@@ -932,12 +940,19 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span>Log 1-on-1 Check-in</span>
               </span>
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setShowNewCycleModal(true)}>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <Icons.Plus size={14} />
-                <span>Initiate Cycle</span>
-              </span>
-            </Button>
+            <span title={activeCycle ? `Close or finalize cycle "${activeCycle.title}" before creating a new one.` : undefined}>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={Boolean(activeCycle)}
+                onClick={() => setShowNewCycleModal(true)}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.Plus size={14} />
+                  <span>Initiate Cycle</span>
+                </span>
+              </Button>
+            </span>
           </div>
         </div>
 
@@ -1650,7 +1665,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       </div>
                     </div>
                     <Badge variant="bsc" size="sm">
-                      {cycle.framework_code || "OKR"} Pure
+                      {cycle.framework_code || "BSC"}
                     </Badge>
                   </div>
                 ))}
@@ -1741,6 +1756,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
                 Four-pillar strategic weighting (Financial {bscWeights.financial}%, Customer {bscWeights.customer}%, Internal Processes {bscWeights.internal}%, Learning &amp; Growth {bscWeights.learning}%). Direct ladder-up from individual contributor KPIs to executive corporate objectives.
               </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.35rem" }}>
+              <Badge variant="info" size="sm">Labels Snapshotted at Cycle Open</Badge>
+              <span style={{ fontSize: "11px", color: colors.textMuted }}>Frozen across active appraisal cycle</span>
             </div>
           </div>
 
@@ -2226,94 +2245,238 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Real-time organizational heatmap categorizing key results across 4 performance thresholds: 🚨 Critical (&lt;30%), 🛠 Off Track (30-69%), 👌 On Track (70-99%), 🚀 Exceeded (&gt;100%).
+                Real-time organizational heatmap and cascading alignment tree (Company → Team → Individual).
               </p>
             </div>
-          </div>
-
-          {/* Threshold Summary Stat Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-            {[
-              { label: "🚀 Exceeded (>100%)", count: 4, pct: "18%", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-              { label: "👌 On Track (70-99%)", count: 12, pct: "55%", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-              { label: "🛠 Off Track (30-69%)", count: 5, pct: "23%", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-              { label: "🚨 Critical (<30%)", count: 1, pct: "4%", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                style={{
-                  padding: "1rem",
-                  borderRadius: radii.md,
-                  backgroundColor: stat.bg,
-                  border: `1px solid ${stat.border}`,
-                }}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Button
+                variant={okrViewMode === "heatmap" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => setOkrViewMode("heatmap")}
               >
-                <div style={{ fontSize: "11px", fontWeight: 700, color: stat.color, textTransform: "uppercase" }}>
-                  {stat.label}
-                </div>
-                <div style={{ fontSize: "1.75rem", fontWeight: 800, color: stat.color, marginTop: "0.25rem" }}>
-                  {stat.count} <span style={{ fontSize: "12px", fontWeight: 500, color: colors.textMuted }}>({stat.pct})</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Departmental OKR Heatmap Grid */}
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              border: `1px solid ${colors.border}`,
-              padding: "1.5rem",
-              boxShadow: shadows.xs,
-            }}
-          >
-            <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1rem 0" }}>
-              Active Key Results by Department
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {[
-                { dept: "Cloud & Edge Engineering", okr: "Achieve sub-15ms edge latency across UK & Accra hubs", progress: 104, threshold: "🚀 Exceeded", color: "#16a34a" },
-                { dept: "Healthcare Operations", okr: "Zero clinical medication errors and 98% shift handover compliance", progress: 99, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "People & Culture", okr: "Close 84 missing objective submissions via Dede automated nudges", progress: 88, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "Advisory & Client Delivery", okr: "Deliver 12 enterprise digital twin roadmaps for Pan-African clients", progress: 74, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "Finance & Total Rewards", okr: "Automate Ghana SSNIT, GRA, and UK PAYE tax compliance filing", progress: 58, threshold: "🛠 Off Track", color: "#d97706" },
-                { dept: "Commercial & Business Development", okr: "Expand West Africa FinTech client pipeline by GHS 2.5M", progress: 28, threshold: "🚨 Critical", color: "#dc2626" },
-              ].map((row, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: "0.85rem 1rem",
-                    borderRadius: radii.md,
-                    backgroundColor: colors.surfaceSubtle,
-                    border: `1px solid ${colors.border}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{ flex: 1, marginRight: "1.5rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted }}>{row.dept}</span>
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: row.color }}>{row.threshold}</span>
-                    </div>
-                    <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
-                      {row.okr}
-                    </div>
-                  </div>
-
-                  <div style={{ width: "160px", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <div style={{ flex: 1, height: "8px", borderRadius: radii.full, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(row.progress, 100)}%`, height: "100%", backgroundColor: row.color }} />
-                    </div>
-                    <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: row.color, minWidth: "40px", textAlign: "right" }}>
-                      {row.progress}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+                Heatmap Radar
+              </Button>
+              <Button
+                variant={okrViewMode === "tree" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => setOkrViewMode("tree")}
+              >
+                Cascading Alignment Tree
+              </Button>
             </div>
           </div>
+
+          {okrViewMode === "heatmap" ? (
+            <>
+              {/* Threshold Summary Stat Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                {[
+                  { label: "🚀 Exceeded (>100%)", count: 4, pct: "18%", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+                  { label: "👌 On Track (70-99%)", count: 12, pct: "55%", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+                  { label: "🛠 Off Track (30-69%)", count: 5, pct: "23%", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+                  { label: "🚨 Critical (<30%)", count: 1, pct: "4%", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    style={{
+                      padding: "1rem",
+                      borderRadius: radii.md,
+                      backgroundColor: stat.bg,
+                      border: `1px solid ${stat.border}`,
+                    }}
+                  >
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: stat.color, textTransform: "uppercase" }}>
+                      {stat.label}
+                    </div>
+                    <div style={{ fontSize: "1.75rem", fontWeight: 800, color: stat.color, marginTop: "0.25rem" }}>
+                      {stat.count} <span style={{ fontSize: "12px", fontWeight: 500, color: colors.textMuted }}>({stat.pct})</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Departmental OKR Heatmap Grid */}
+              <div
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  border: `1px solid ${colors.border}`,
+                  padding: "1.5rem",
+                  boxShadow: shadows.xs,
+                }}
+              >
+                <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1rem 0" }}>
+                  Active Key Results by Department
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {[
+                    { dept: "Cloud & Edge Engineering", okr: "Achieve sub-15ms edge latency across UK & Accra hubs", progress: 104, threshold: "🚀 Exceeded", color: "#16a34a" },
+                    { dept: "Healthcare Operations", okr: "Zero clinical medication errors and 98% shift handover compliance", progress: 99, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "People & Culture", okr: "Close 84 missing objective submissions via Dede automated nudges", progress: 88, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "Advisory & Client Delivery", okr: "Deliver 12 enterprise digital twin roadmaps for Pan-African clients", progress: 74, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "Finance & Total Rewards", okr: "Automate Ghana SSNIT, GRA, and UK PAYE tax compliance filing", progress: 58, threshold: "🛠 Off Track", color: "#d97706" },
+                    { dept: "Commercial & Business Development", okr: "Expand West Africa FinTech client pipeline by GHS 2.5M", progress: 28, threshold: "🚨 Critical", color: "#dc2626" },
+                  ].map((row, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "0.85rem 1rem",
+                        borderRadius: radii.md,
+                        backgroundColor: colors.surfaceSubtle,
+                        border: `1px solid ${colors.border}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ flex: 1, marginRight: "1.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted }}>{row.dept}</span>
+                          <span style={{ fontSize: "11px", fontWeight: 800, color: row.color }}>{row.threshold}</span>
+                        </div>
+                        <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          {row.okr}
+                        </div>
+                      </div>
+
+                      <div style={{ width: "160px", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ flex: 1, height: "8px", borderRadius: radii.full, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.min(row.progress, 100)}%`, height: "100%", backgroundColor: row.color }} />
+                        </div>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: row.color, minWidth: "40px", textAlign: "right" }}>
+                          {row.progress}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Hierarchical Alignment Tree (Company -> Team -> Individual) */
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                border: `1px solid ${colors.border}`,
+                padding: "1.5rem",
+                boxShadow: shadows.xs,
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.75rem" }}>
+                <div>
+                  <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
+                    Hierarchical OKR Alignment Tree
+                  </h3>
+                  <p style={{ fontSize: "11px", color: colors.textMuted, margin: "0.2rem 0 0 0" }}>
+                    Enforces mandatory alignment (D4). Individual OKRs attach to Team OKRs or directly to Company OKRs (skip-level permitted per D5).
+                  </p>
+                </div>
+                <Badge variant="info" size="sm">Cascading Hierarchy Verified</Badge>
+              </div>
+
+              {/* Company OKR Root Node 1 */}
+              <div style={{ border: `1px solid ${colors.indigoBorder}`, borderRadius: radii.md, padding: "1rem", backgroundColor: colors.surfaceSubtle }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Badge variant="okr" size="sm">Company OKR</Badge>
+                    <strong style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary }}>
+                      Accelerate Pan-African Digital Infrastructure Expansion
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <span style={{ fontSize: "11px", color: colors.textMuted }}>Owner: Executive Leadership</span>
+                    <Badge variant="success" size="sm">88% (On Track)</Badge>
+                  </div>
+                </div>
+
+                {/* Level 2 Children */}
+                <div style={{ marginTop: "1rem", marginLeft: "1.5rem", paddingLeft: "1rem", borderLeft: `2px dashed ${colors.borderStrong}`, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Team OKR Child */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Team OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Cloud &amp; Edge Engineering: Sub-15ms edge latency across UK &amp; Accra hubs
+                        </span>
+                      </div>
+                      <Badge variant="success" size="sm">104% (Exceeded)</Badge>
+                    </div>
+
+                    {/* Level 3 Child: Individual OKR attached to Team */}
+                    <div style={{ marginTop: "0.5rem", marginLeft: "1.25rem", paddingLeft: "0.75rem", borderLeft: `2px solid ${colors.borderSubtle}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.4rem 0" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                          <span style={{ fontSize: "11px", color: colors.textSecondary }}>
+                            Kwesi Barnes: Deploy Cloudflare Workers &amp; KV Edge Caching Engine
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}>100%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skip-Level Child: Individual OKR attached directly to Company OKR */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Kwame Mensah: Direct Executive Board Briefing &amp; Pan-African Strategic Sponsor Engagement
+                        </span>
+                        <Badge variant="info" size="sm">Direct Alignment</Badge>
+                      </div>
+                      <Badge variant="success" size="sm">92% (On Track)</Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
+                      Attached directly to Company OKR (Skip-level allowed per D5). Parent: Accelerate Pan-African Digital Infrastructure.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Company OKR Root Node 2 */}
+              <div style={{ border: `1px solid ${colors.indigoBorder}`, borderRadius: radii.md, padding: "1rem", backgroundColor: colors.surfaceSubtle }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Badge variant="okr" size="sm">Company OKR</Badge>
+                    <strong style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary }}>
+                      Institutionalize World-Class People Governance &amp; High-Trust Culture
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <span style={{ fontSize: "11px", color: colors.textMuted }}>Owner: People &amp; Culture</span>
+                    <Badge variant="success" size="sm">91% (On Track)</Badge>
+                  </div>
+                </div>
+
+                {/* Level 2 Children */}
+                <div style={{ marginTop: "1rem", marginLeft: "1.5rem", paddingLeft: "1rem", borderLeft: `2px dashed ${colors.borderStrong}`, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Skip-Level Child: Individual OKR attached directly to Company OKR */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Akosua Mensah: Lead ISO-27001 People Governance &amp; Data Ethics Certification
+                        </span>
+                        <Badge variant="info" size="sm">Direct Alignment</Badge>
+                      </div>
+                      <Badge variant="success" size="sm">95% (On Track)</Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
+                      Attached directly to Company OKR (Skip-level allowed per D5).
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3677,13 +3840,43 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Enforces framework consistency across evaluation cycles. Each cycle uses a dedicated scoring methodology.
               </p>
             </div>
-            <Button variant="primary" size="sm" onClick={() => setShowNewCycleModal(true)}>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <Icons.Plus size={14} />
-                <span>Launch Cycle</span>
-              </span>
-            </Button>
+            <span title={activeCycle ? `Close or finalize cycle "${activeCycle.title}" before creating a new one.` : undefined}>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={Boolean(activeCycle)}
+                onClick={() => setShowNewCycleModal(true)}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.Plus size={14} />
+                  <span>Launch Cycle</span>
+                </span>
+              </Button>
+            </span>
           </div>
+
+          {activeCycle && (
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "0.75rem 1rem",
+                borderRadius: radii.md,
+                backgroundColor: colors.surfaceSubtle,
+                border: `1px solid ${colors.indigoBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Icons.ShieldCheck size={16} color={colors.indigoAction} />
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textPrimary }}>
+                  <strong>Active Cycle:</strong> &ldquo;{activeCycle.title}&rdquo; ({activeCycle.framework_code || "BSC"}) is currently <strong>{activeCycle.status}</strong>. Only one active appraisal cycle is permitted at a time.
+                </span>
+              </div>
+              <Badge variant="info" size="sm">Active Cycle Lock Enforced</Badge>
+            </div>
+          )}
 
           <div
             style={{
@@ -3713,7 +3906,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <Badge variant="bsc" size="sm">
-                        {c.framework_code || "OKR"} Pure
+                        {c.framework_code || "BSC"}
                       </Badge>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>
@@ -5435,8 +5628,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   onChange={(e) => setSelectedFramework(e.target.value as typeof selectedFramework)}
                   style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                 >
+                  <option value="BSC">BSC — Balanced Scorecard (4 Quadrants, weighted %) — Default</option>
                   <option value="OKR">OKR — Objectives & Key Results (0.0 to 1.0 scoring)</option>
-                  <option value="BSC">BSC — Balanced Scorecard (4 Quadrants, weighted %)</option>
                   <option value="MBO">MBO — Management by Objectives (Target % completion)</option>
                 </select>
               </div>
@@ -5499,12 +5692,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         isOpen={Boolean(selectedCycleForReview)}
         onClose={() => setSelectedCycleForReview(null)}
         title={selectedCycleForReview ? selectedCycleForReview.title : ""}
-        subtitle={selectedCycleForReview ? `Calibration & Manager Assessments • [${selectedCycleForReview.framework_code || "OKR"} Pure]` : ""}
+        subtitle={selectedCycleForReview ? `Calibration & Manager Assessments • [${selectedCycleForReview.framework_code || "BSC"}]` : ""}
       >
         {selectedCycleForReview && (
           <div>
             <div style={{ marginBottom: "1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
-              Review self-ratings, submit manager scores, and calibrate performance scores for your direct reports under {selectedCycleForReview.framework_code || "OKR"} methodology.
+              Review self-ratings, submit manager scores, and calibrate performance scores for your direct reports under {selectedCycleForReview.framework_code || "BSC"} methodology.
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -5532,7 +5725,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     </Badge>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", margin: "0.75rem 0", padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", margin: "0.75rem 0", padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
                     <div>
                       <span style={{ fontSize: "11px", color: colors.textMuted }}>Self Assessment</span>
                       <div style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.brandBlue }}>
@@ -5540,9 +5733,15 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       </div>
                     </div>
                     <div>
-                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Manager Calibration</span>
+                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Manager Rating</span>
                       <div style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.emeraldDark }}>
                         {ev.managerRating} / 5.0
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Normalized Score</span>
+                      <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.indigoPrimary }}>
+                        {Math.round((ev.managerRating / 5.0) * 100)} / 100
                       </div>
                     </div>
                   </div>
@@ -5552,19 +5751,43 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   </p>
 
                   {ev.status !== "CALIBRATED" && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setEvaluations((prev) =>
-                          prev.map((item) => (item.id === ev.id ? { ...item, status: "CALIBRATED" } : item))
-                        );
-                        setStatusMessage({ text: `Calibrated rating for ${ev.name} submitted.` });
-                      }}
-                      style={{ width: "100%" }}
-                    >
-                      Calibrate & Finalize Score
-                    </Button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                          Audit Justification Note (Mandatory for HR Calibration Record)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="State rationale for normalized calibration adjustment..."
+                          value={calibrationNotes[ev.id] || ""}
+                          onChange={(e) => setCalibrationNotes((prev) => ({ ...prev, [ev.id]: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            padding: "0.4rem 0.5rem",
+                            borderRadius: radii.sm,
+                            border: `1px solid ${colors.border}`,
+                            fontSize: "11px",
+                          }}
+                        />
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          if (!calibrationNotes[ev.id]?.trim()) {
+                            alert("A calibration justification note is mandatory before finalizing score adjustments.");
+                            return;
+                          }
+                          setEvaluations((prev) =>
+                            prev.map((item) => (item.id === ev.id ? { ...item, status: "CALIBRATED" } : item))
+                          );
+                          setStatusMessage({ text: `Calibrated rating for ${ev.name} submitted with audit justification.` });
+                        }}
+                        style={{ width: "100%" }}
+                      >
+                        Calibrate &amp; Finalize Score (Normalized 0–100)
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}

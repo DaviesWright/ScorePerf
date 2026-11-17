@@ -31,7 +31,7 @@ export function useLoad<T>(url: string | null) {
         const data = await readJson<T>(res);
         if (cancelled) return;
         if (res.ok) setState({ data: data as T, error: "", loading: false });
-        else setState({ data: null, error: data.error ?? "Could not load this section.", loading: false });
+        else setState({ data: null, error: res.status === 401 ? "Sign in to see this section." : data.error ?? "Could not load this section.", loading: false });
       })
       .catch(() => {
         if (!cancelled) setState({ data: null, error: "The server could not be reached. Try again.", loading: false });

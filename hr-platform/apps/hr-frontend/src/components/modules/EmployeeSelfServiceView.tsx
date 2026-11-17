@@ -50,7 +50,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
   const [goals, setGoals] = useState<PersonalGoal[]>([
     {
       id: 1,
-      title: "Deliver Cloudflare SaaS Hyperdrive architecture with sub-15ms p99 latency",
+      title: "Deliver SaaS data architecture with sub-15ms p99 latency",
       target: "Production verification & benchmarks",
       progress: 90,
       category: "Engineering Excellence",
@@ -64,7 +64,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
     },
     {
       id: 3,
-      title: "Complete H1 Performance Appraisals under pure OKR governance",
+      title: "Complete H1 Performance Appraisals under OKR governance",
       target: "100% self-assessment submission rate",
       progress: 70,
       category: "Strategic Leadership",
@@ -312,7 +312,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px dashed ${colors.border}`, paddingTop: "0.6rem" }}>
               <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                {ptoDraftSubmitted ? "✓ Submitted to manager" : "Zero calendar conflict"}
+                {ptoDraftSubmitted ? "✓ Submitted to manager" : ""}
               </span>
               <Button
                 variant={ptoDraftSubmitted ? "secondary" : "primary"}
@@ -347,12 +347,12 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                 <span style={{ fontSize: "11px", fontWeight: 700, color: colors.emeraldDark, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                   <Icons.Compass size={13} color={colors.emeraldDark} />
-                  Skills-First Gig Match (96%)
+                  Skills-First Gig Match
                 </span>
                 <span style={{ fontSize: "10px", color: colors.emeraldDark, fontWeight: 700 }}>Top Candidate</span>
               </div>
               <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                New stretch engagement <strong>Cross-Border Wasm Payment Engine</strong> matches your verified skills in <em>Cloudflare Workers (95%)</em> and <em>Rust (90%)</em>. 10 hrs/wk remote allocation.
+                New stretch engagement <strong>Cross-Border Wasm Payment Engine</strong> matches your verified skills in <em>Cloud Engineering (95%)</em> and <em>Rust (90%)</em>. 10 hrs/wk remote allocation.
               </p>
             </div>
 
@@ -394,9 +394,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAccent, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                   <Icons.Target size={13} color={colors.indigoAccent} />
                   Continuous Performance Auto-Synthesis
-                </span>
-                <span style={{ fontSize: "10px", color: colors.indigoAccent, fontWeight: 700 }}>Bias-Free</span>
-              </div>
+                </span>              </div>
               <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
                 3 weekly wins were auto-aggregated from your sprint closures. The AI has pre-populated your Q4 OKR scorecard, eliminating annual review dread and recency bias.
               </p>
@@ -936,7 +934,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                       🏆 Innovation Excellence Award · Q1 2026
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                      Awarded for delivering sub-second Hyperdrive query latency across multi-region Neon pools.
+                      Awarded for delivering sub-second database query latency across multiple regions.
                     </div>
                   </div>
                   <Badge variant="success" size="sm">+GH₵10,000 Bonus Paid</Badge>

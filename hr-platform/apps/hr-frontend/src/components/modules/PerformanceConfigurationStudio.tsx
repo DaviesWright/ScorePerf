@@ -6,6 +6,9 @@ import { Icons } from "../../design-system/Icons";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 
+/** Shows a stored "{{Role_Name}}" binding as plain text ("Role Name"). The stored value is unchanged. */
+const plain = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, n: string) => n.replace(/_/g, " "));
+
 // ============================================================================
 // CONFIGURATION SCHEMA TYPES (Configuration-as-Code Model)
 // ============================================================================
@@ -342,7 +345,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
     handleValidateConfiguration();
     if (validationErrors.length === 0) {
       setIsDraft(false);
-      setToastMessage("Configuration v2.4 successfully published to Cloudflare edge runtime.");
+      setToastMessage("Configuration published successfully.");
     }
   };
 
@@ -384,7 +387,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                 Performance Engine Configuration Studio
               </h2>
               <p style={{ margin: "2px 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
-                Separation of Engine (Execution Runtime) from Rules (Configuration as Code).
+                Configure cycle stages, approvers, rating scales and notifications.
               </p>
             </div>
           </div>
@@ -394,9 +397,8 @@ export const PerformanceConfigurationStudio: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <Badge variant={isDraft ? "warning" : "success"} size="sm" dot>
-              {isDraft ? "Draft Environment (v2.4-draft)" : "Active Live Engine (v2.4)"}
+              {isDraft ? "Draft" : "Live"}
             </Badge>
-            <Badge variant="info" size="sm">Multi-Tenant</Badge>
           </div>
 
           <Button variant="outline" size="sm" onClick={handleValidateConfiguration}>
@@ -408,7 +410,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
             onClick={handlePublish}
             style={{ backgroundColor: colors.indigoAction, borderColor: colors.indigoAction }}
           >
-            Publish to Edge
+            Publish
           </Button>
         </div>
       </div>
@@ -476,7 +478,6 @@ export const PerformanceConfigurationStudio: React.FC = () => {
           { key: "scales", label: "Rating Scales & Frameworks", icon: Icons.Award },
           { key: "hierarchy", label: "Hierarchy & Cascade Rules", icon: Icons.Layers },
           { key: "notifications", label: "Notification Triggers", icon: Icons.Bell },
-          { key: "json_governance", label: "Configuration as Code (JSON)", icon: Icons.GitBranch },
         ].map((tab) => {
           const isActive = activeStudioTab === tab.key;
           const Icon = tab.icon;
@@ -541,7 +542,6 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                   Define stages, dynamic approver bindings, conditional routing branches, and immutable lock policies.
                 </p>
               </div>
-              <Badge variant="info" size="sm">State Machine v2</Badge>
             </div>
 
             {/* Visual Stage Transition Rail */}
@@ -589,7 +589,7 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                     {stage.label}
                   </span>
                   <span style={{ fontSize: "10px", color: colors.indigoAction, fontFamily: typography.fontMono, marginTop: "2px" }}>
-                    {stage.actor}
+                    {plain(stage.actor)}
                   </span>
                 </div>
               ))}
@@ -971,14 +971,14 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                   <div>
                     <span style={{ fontSize: "10px", color: colors.textMuted, display: "block" }}>Dynamic Recipient</span>
                     <div style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, fontFamily: typography.fontMono }}>
-                      {rule.recipients.join(", ")}
+                      {plain(rule.recipients.join(", "))}
                     </div>
                   </div>
 
                   <div>
                     <span style={{ fontSize: "10px", color: colors.textMuted, display: "block" }}>Template Preview</span>
                     <div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic", lineHeight: 1.3 }}>
-                      &ldquo;{rule.templateSnippet}&rdquo;
+                      &ldquo;{plain(rule.templateSnippet)}&rdquo;
                     </div>
                   </div>
                 </div>

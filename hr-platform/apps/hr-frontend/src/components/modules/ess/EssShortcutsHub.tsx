@@ -249,7 +249,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
               color: colors.textSecondary,
             }}
           >
-            Direct shortcuts to the 8 core employee workflows with automated approval routing, field-level RBAC, and ScoReview Edge tools.
+            Direct shortcuts to the 8 core employee workflows with automated approval routing, field-level RBAC, and ScoReview tools.
           </p>
         </div>
       </div>
@@ -742,7 +742,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                       <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#a5b4fc" }}>
-                        ScoReview Edge · Total Rewards Wallet
+                        Total Rewards Wallet
                       </span>
                       <span style={{ fontSize: "11px", padding: "0.2rem 0.6rem", borderRadius: radii.full, backgroundColor: "rgba(255, 255, 255, 0.15)", color: "#ffffff" }}>
                         Annual Comprehensive Value
@@ -1058,7 +1058,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                         <Icons.Sparkles size={16} color={colors.indigoAction} />
                         <h4 style={{ fontSize: "12px", fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                          ScoReview Edge · Quick Wins Journal
+                          Quick Wins Journal
                         </h4>
                       </div>
                       <span style={{ fontSize: "10px", color: colors.textMuted }}>Continuous logging prevents recency bias</span>
@@ -1211,7 +1211,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     <div style={{ border: `1px solid ${colors.indigoBorder}`, borderRadius: radii.md, padding: "1rem", backgroundColor: colors.indigoSubtle }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: "11px", color: colors.indigoAccent, textTransform: "uppercase", fontWeight: 700 }}>
-                          ScoReview Edge · Hybrid Hub
+                          Hybrid Hub
                         </span>
                         <Badge variant="info" size="sm">1-Click WFH</Badge>
                       </div>
@@ -1281,7 +1281,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.35rem" }}>
                       <Icons.Sparkles size={16} color="#ec4899" />
                       <span style={{ fontSize: "12px", fontWeight: 700, color: "#be185d" }}>
-                        ScoReview Edge · AI Natural Language Letter Generator
+                        AI Natural Language Letter Generator
                       </span>
                     </div>
                     <p style={{ margin: "0 0 0.65rem 0", fontSize: "11px", color: colors.textSecondary }}>
@@ -1475,7 +1475,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.35rem" }}>
                       <Icons.Sparkles size={16} color="#0f766e" />
                       <h4 style={{ fontSize: "12px", fontWeight: 700, color: "#0f766e", margin: 0 }}>
-                        ScoReview Edge · T-Shaped Skill Gap Recommendations
+                        T-Shaped Skill Gap Recommendations
                       </h4>
                     </div>
                     <p style={{ margin: "0 0 0.75rem 0", fontSize: "11px", color: colors.textSecondary }}>
@@ -1609,7 +1609,7 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                         <Icons.Wallet size={16} color="#f43f5e" />
                         <span style={{ fontSize: "12px", fontWeight: 700, color: "#be123c" }}>
-                          ScoReview Edge · Wellness Wallet
+                          Wellness Wallet
                         </span>
                       </div>
                       <Badge variant="success" size="sm">GH₵{wellnessBalance.toLocaleString()} Available</Badge>
