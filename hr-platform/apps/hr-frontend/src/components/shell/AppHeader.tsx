@@ -4,11 +4,13 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
 import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
-import type { ModuleViewKey } from "./AppSidebar";
+import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 
 interface AppHeaderProps {
   breadcrumb: string;
   apiOnline: boolean;
+  persona?: UserPersona;
+  onSelectPersona?: (persona: UserPersona) => void;
   onOpenCommandPalette: () => void;
   onOpenOmniAgent: () => void;
   onQuickAction?: (action: string) => void;
@@ -31,6 +33,8 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   breadcrumb,
   apiOnline,
+  persona,
+  onSelectPersona,
   onOpenCommandPalette,
   onOpenOmniAgent,
   onQuickAction,
@@ -117,7 +121,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       >
         <Icons.Search size={15} color={colors.indigoAction} />
         <span style={{ flex: 1, fontSize: typography.sizes.xs, color: colors.textMuted }}>
-          Search workforce, or type &quot;Payslip&quot;...
+          Search workforce, or type &quot;Leave&quot;...
         </span>
         <span
           style={{
@@ -135,8 +139,88 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Right: Actions, Dede AI & Notifications */}
+      {/* Right: Actions, Role Switcher, Dede AI & Notifications */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        {/* Interactive Role Switcher: Employee | Supervisor | Admin */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            backgroundColor: colors.surfaceSubtle,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radii.md,
+            padding: "2px",
+            gap: "2px",
+          }}
+          title="Switch operational role and authorization scope"
+        >
+          <span style={{ fontSize: "10px", fontWeight: 700, color: colors.textMuted, padding: "0 0.4rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            Role:
+          </span>
+          <button
+            type="button"
+            title="Switch to Employee self-service view"
+            onClick={() => onSelectPersona?.("employee")}
+            style={{
+              padding: "0.22rem 0.6rem",
+              borderRadius: radii.sm,
+              border: "none",
+              fontSize: "11px",
+              fontWeight: persona === "employee" ? 700 : 500,
+              backgroundColor: persona === "employee" ? "#10b981" : "transparent",
+              color: persona === "employee" ? "#ffffff" : colors.textSecondary,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>👤 Employee</span>
+          </button>
+          <button
+            type="button"
+            title="Switch to Supervisor (Line Manager) view"
+            onClick={() => onSelectPersona?.("line_manager")}
+            style={{
+              padding: "0.22rem 0.6rem",
+              borderRadius: radii.sm,
+              border: "none",
+              fontSize: "11px",
+              fontWeight: persona === "line_manager" ? 700 : 500,
+              backgroundColor: persona === "line_manager" ? "#4f46e5" : "transparent",
+              color: persona === "line_manager" ? "#ffffff" : colors.textSecondary,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>👔 Supervisor</span>
+          </button>
+          <button
+            type="button"
+            title="Switch to Admin (HR Administrator) view"
+            onClick={() => onSelectPersona?.("hr_admin")}
+            style={{
+              padding: "0.22rem 0.6rem",
+              borderRadius: radii.sm,
+              border: "none",
+              fontSize: "11px",
+              fontWeight: persona === "hr_admin" || persona === "hr_director" ? 700 : 500,
+              backgroundColor: persona === "hr_admin" || persona === "hr_director" ? "#0f5c4d" : "transparent",
+              color: persona === "hr_admin" || persona === "hr_director" ? "#ffffff" : colors.textSecondary,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>🛡️ Admin</span>
+          </button>
+        </div>
         {/* Unified Dede AI & Assistant Trigger */}
         <Button
           variant="outline"

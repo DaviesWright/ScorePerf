@@ -472,81 +472,88 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
         {/* Role / Persona Switcher Bar */}
         {!isEffectiveCollapsed && (
-          <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", position: "relative" }}>
-            <button
-              onClick={() => setShowPersonaMenu(!showPersonaMenu)}
-              style={{
-                width: "100%",
-                padding: "0.45rem 0.65rem",
-                borderRadius: radii.md,
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                fontSize: "11px",
-                textAlign: "left",
-              }}
-            >
-              <div>
-                <div style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Viewing As</div>
-                <div style={{ fontWeight: 600, color: "#ffffff", marginTop: "1px" }}>{personaLabels[persona].title}</div>
-              </div>
-              <Icons.ChevronDown size={14} color="#94a3b8" />
-            </button>
-
-            {showPersonaMenu && (
-              <div
+          <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Active Platform Role
+              </span>
+              <span
                 style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: "0.85rem",
-                  right: "0.85rem",
-                  backgroundColor: colors.indigoDark,
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: radii.md,
-                  boxShadow: "0 8px 18px rgba(0,0,0,0.45)",
-                  zIndex: 35,
-                  marginTop: "4px",
-                  overflow: "hidden",
+                  fontSize: "9px",
+                  padding: "0.05rem 0.35rem",
+                  borderRadius: radii.sm,
+                  backgroundColor: persona === "employee" ? "rgba(16, 185, 129, 0.2)" : persona === "line_manager" ? "rgba(99, 102, 241, 0.25)" : "rgba(15, 92, 77, 0.4)",
+                  color: persona === "employee" ? "#6ee7b7" : persona === "line_manager" ? "#c7d2fe" : "#a7f3d0",
+                  fontWeight: 600,
                 }}
               >
-                {(Object.keys(personaLabels) as UserPersona[]).map((pKey) => (
-                  <div
-                    key={pKey}
-                    onClick={() => {
-                      onSelectPersona(pKey);
-                      setShowPersonaMenu(false);
-                      if (pKey === "employee") onSelectView("self_service");
-                      if (pKey === "hr_director") onSelectView("dashboard");
-                      if (pKey === "hr_admin") onSelectView("workforce_directory");
-                      if (pKey === "line_manager") onSelectView("time_and_leave");
-                    }}
-                    style={{
-                      padding: "0.55rem 0.75rem",
-                      cursor: "pointer",
-                      fontSize: "11px",
-                      color: persona === pKey ? "#ffffff" : "#cbd5e1",
-                      backgroundColor: persona === pKey ? colors.indigoAction : "transparent",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <span style={{ fontWeight: persona === pKey ? 600 : 400 }}>{personaLabels[pKey].title}</span>
-                    <span style={{ fontSize: "9px", color: persona === pKey ? "#ffffff" : "#94a3b8" }}>{personaLabels[pKey].badge}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+                {persona === "employee" ? "ESS Mode" : persona === "line_manager" ? "Lead Mode" : "Admin Mode"}
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "3px", backgroundColor: "rgba(0, 0, 0, 0.25)", padding: "2px", borderRadius: radii.md }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("employee");
+                  onSelectView("self_service");
+                }}
+                title="Switch to Employee self-service"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "employee" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "employee" ? "#10b981" : "transparent",
+                  color: persona === "employee" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Employee
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("line_manager");
+                }}
+                title="Switch to Supervisor (Line Manager)"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "line_manager" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "line_manager" ? "#4f46e5" : "transparent",
+                  color: persona === "line_manager" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Supervisor
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("hr_admin");
+                }}
+                title="Switch to Admin (HR Administrator)"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "hr_admin" || persona === "hr_director" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "hr_admin" || persona === "hr_director" ? "#0f5c4d" : "transparent",
+                  color: persona === "hr_admin" || persona === "hr_director" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Admin
+              </button>
+            </div>
           </div>
         )}
 

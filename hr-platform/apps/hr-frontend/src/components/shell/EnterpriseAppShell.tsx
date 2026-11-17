@@ -122,7 +122,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           sessionStorage.removeItem("scoreview_show_welcome");
           setIsWelcomeModalOpen(true);
         }
-      } catch {}
+      } catch { }
       setHasCheckedAuth(true);
       return;
     }
@@ -141,13 +141,39 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     }
   }, []);
 
+  const handleSelectPersona = (newPersona: UserPersona) => {
+    setPersona(newPersona);
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const roleMap: Record<UserPersona, string> = {
+        employee: "Employee (Self-Service)",
+        line_manager: "Team Lead / Supervisor",
+        hr_admin: "HR Administrator",
+        hr_director: "Managing Principal",
+      };
+      const updated = {
+        ...prev,
+        persona: newPersona,
+        role: roleMap[newPersona] || prev.role,
+      };
+      try {
+        localStorage.setItem("scoreview_session", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (newPersona === "employee" && (currentView === "company_setup" || currentView === "performance_setup" || currentView === "admin_nerve_center" || currentView === "approval_workflows")) {
+      setCurrentView("self_service");
+    }
+  };
+
   const handleLoginSuccess = (user: AuthenticatedUser) => {
     setCurrentUser(user);
     setPersona(user.persona);
     setPhotoUrl(loadHeadshot(user.id));
     try {
       localStorage.setItem("scoreview_session", JSON.stringify(user));
-    } catch {}
+    } catch { }
     setIsWelcomeModalOpen(true);
   };
 
@@ -174,13 +200,13 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       // Real session: clear the httpOnly cookie on the server, then go to the sign-in screen.
       try {
         await fetch("/api/session", { method: "DELETE" });
-      } catch {}
+      } catch { }
       window.location.assign("/login");
       return;
     }
     try {
       localStorage.removeItem("scoreview_session");
-    } catch {}
+    } catch { }
     setCurrentUser(null);
     setPhotoUrl(null);
     setIsWelcomeModalOpen(false);
@@ -339,194 +365,194 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   // The module screen itself, shared by both frames.
   const viewContent = (
     <>
-          {!isViewEnabled(currentView) && (
-            <div role="alert" style={{ padding: "2rem" }}>
-              This module is not enabled for this deployment.
-            </div>
-          )}
-          {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
-          {currentView === "self_service" && !initialUser && (
-            <EmployeeSelfServiceView
-              currentEmployee={{
-                id: 1,
-                name: currentUser.name,
-                email: currentUser.email,
-                role: currentUser.role,
-                department: currentUser.department,
-                manager: "Board of Directors",
-                annualLeaveTotal: 25,
-                annualLeaveUsed: 7,
-              }}
-              assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
-              personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
-              onRequestLeave={() => {
-                setShowLeaveModalDirectly(true);
-                setCurrentView("time_and_leave");
-              }}
-              onReportIssue={() => setCurrentView("helpdesk")}
-              onOpenPayslip={() => setIsPayslipModalOpen(true)}
-              onNavigate={setCurrentView}
-            />
-          )}
+      {!isViewEnabled(currentView) && (
+        <div role="alert" style={{ padding: "2rem" }}>
+          This module is not enabled for this deployment.
+        </div>
+      )}
+      {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
+      {currentView === "self_service" && !initialUser && (
+        <EmployeeSelfServiceView
+          currentEmployee={{
+            id: 1,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            department: currentUser.department,
+            manager: "Board of Directors",
+            annualLeaveTotal: 25,
+            annualLeaveUsed: 7,
+          }}
+          assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
+          personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
+          onRequestLeave={() => {
+            setShowLeaveModalDirectly(true);
+            setCurrentView("time_and_leave");
+          }}
+          onReportIssue={() => setCurrentView("helpdesk")}
+          onOpenPayslip={() => setIsPayslipModalOpen(true)}
+          onNavigate={setCurrentView}
+        />
+      )}
 
-          {currentView === "reports_analytics" && (
-            <ReportsAnalyticsView />
-          )}
+      {currentView === "reports_analytics" && (
+        <ReportsAnalyticsView />
+      )}
 
-          {currentView === "workforce_directory" && (
-            <WorkforceDirectoryView
-              employees={employees}
-              assets={assets}
-              selectedInitialEmployee={selectedDirectoryEmployee}
-              onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
-              onNavigateToSettings={() => setCurrentView("employee_settings")}
-              onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
-            />
-          )}
+      {currentView === "workforce_directory" && (
+        <WorkforceDirectoryView
+          employees={employees}
+          assets={assets}
+          selectedInitialEmployee={selectedDirectoryEmployee}
+          onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
+          onNavigateToSettings={() => setCurrentView("employee_settings")}
+          onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+        />
+      )}
 
-          {currentView === "performance_pms" && (
-            <PerformanceManagementView
-              cycles={cycles}
-              onCycleCreated={(newCycle) => setCycles((prev) => [newCycle, ...prev])}
-            />
-          )}
+      {currentView === "performance_pms" && (
+        <PerformanceManagementView
+          cycles={cycles}
+          onCycleCreated={(newCycle) => setCycles((prev) => [newCycle, ...prev])}
+        />
+      )}
 
-          {currentView === "skills_marketplace" && (
-            <SkillsMarketplaceView />
-          )}
+      {currentView === "skills_marketplace" && (
+        <SkillsMarketplaceView />
+      )}
 
-          {currentView === "admin_nerve_center" && (
-            persona === "employee" || persona === "line_manager" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="admin_nerve_center"
-                requiredScope="payroll:read"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <AdminNerveCenterView />
-            )
-          )}
+      {currentView === "admin_nerve_center" && (
+        persona === "employee" || persona === "line_manager" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="admin_nerve_center"
+            requiredScope="payroll:read"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <AdminNerveCenterView />
+        )
+      )}
 
-          {currentView === "lifecycle_portals" && (
-            <LifecyclePortalView />
-          )}
+      {currentView === "lifecycle_portals" && (
+        <LifecyclePortalView />
+      )}
 
-          {currentView === "asset_management" && (
-            <AssetManagementView assets={assets} employees={employees} />
-          )}
+      {currentView === "asset_management" && (
+        <AssetManagementView assets={assets} employees={employees} />
+      )}
 
-          {(currentView === "command_centre" || currentView === "dashboard") && (
-            <CommandCentreView
-              employees={employees}
-              assets={assets}
-              cycles={cycles}
-              stats={{
-                totalEmployees: employees.length,
-                activeCycles: cycles.length,
-                totalAssets: assets.length,
-                pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
-                openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
-                activeProjects: projects.length,
-              }}
-              onNavigate={setCurrentView}
-            />
-          )}
+      {(currentView === "command_centre" || currentView === "dashboard") && (
+        <CommandCentreView
+          employees={employees}
+          assets={assets}
+          cycles={cycles}
+          stats={{
+            totalEmployees: employees.length,
+            activeCycles: cycles.length,
+            totalAssets: assets.length,
+            pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
+            openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
+            activeProjects: projects.length,
+          }}
+          onNavigate={setCurrentView}
+        />
+      )}
 
-          {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
 
-          {currentView === "performance_setup" && <PerformanceSetupScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "company_setup" && <CompanySetupScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "document_centre" && (
-            <DocumentCentreScreen
-              user={currentUser}
-              realSession={!!initialUser}
-              onNavigateToPolicies={() => setCurrentView("policies_handbook")}
-            />
-          )}
-          {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "my_leave" && <MyLeaveScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "performance_setup" && <PerformanceSetupScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "company_setup" && <CompanySetupScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "document_centre" && (
+        <DocumentCentreScreen
+          user={currentUser}
+          realSession={!!initialUser}
+          onNavigateToPolicies={() => setCurrentView("policies_handbook")}
+        />
+      )}
+      {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "my_leave" && <MyLeaveScreen user={currentUser} realSession={!!initialUser} />}
 
-          {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
 
-          {currentView === "time_and_leave" && effectiveShellMode === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "time_and_leave" && effectiveShellMode !== "plain" && (
-            <TimeAndLeaveView
-              initialLeaves={leaves}
-              showNewLeaveModal={showLeaveModalDirectly}
-              onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
-              onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
-            />
-          )}
+      {currentView === "time_and_leave" && effectiveShellMode === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "time_and_leave" && effectiveShellMode !== "plain" && (
+        <TimeAndLeaveView
+          initialLeaves={leaves}
+          showNewLeaveModal={showLeaveModalDirectly}
+          onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
+          onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+        />
+      )}
 
-          {currentView === "helpdesk" && (
-            <HelpdeskView initialTickets={tickets} />
-          )}
+      {currentView === "helpdesk" && (
+        <HelpdeskView initialTickets={tickets} />
+      )}
 
-          {currentView === "projects" && (
-            <ProjectPortfolioView initialProjects={projects} />
-          )}
+      {currentView === "projects" && (
+        <ProjectPortfolioView initialProjects={projects} />
+      )}
 
-          {currentView === "employee_settings" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="employee_settings"
-                requiredScope="settings:write"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <EmployeeSettingsView />
-            )
-          )}
+      {currentView === "employee_settings" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="employee_settings"
+            requiredScope="settings:write"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <EmployeeSettingsView />
+        )
+      )}
 
-          {currentView === "governance_import" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="governance_import"
-                requiredScope="compliance:audit"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <GovernanceView />
-            )
-          )}
+      {currentView === "governance_import" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="governance_import"
+            requiredScope="compliance:audit"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <GovernanceView />
+        )
+      )}
 
-          {currentView === "approval_workflows" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="approval_workflows"
-                requiredScope="settings:write"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <ApprovalWorkflowsView onNavigateToView={(view) => setCurrentView(view as ModuleViewKey)} />
-            )
-          )}
+      {currentView === "approval_workflows" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="approval_workflows"
+            requiredScope="settings:write"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <ApprovalWorkflowsView onNavigateToView={(view) => setCurrentView(view as ModuleViewKey)} />
+        )
+      )}
 
-          {currentView === "disciplinary" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="disciplinary"
-                requiredScope="compliance:audit"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <DisciplinaryManagementView />
-            )
-          )}
+      {currentView === "disciplinary" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="disciplinary"
+            requiredScope="compliance:audit"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <DisciplinaryManagementView />
+        )
+      )}
 
-          {currentView === "policies_handbook" && <PoliciesHandbookView />}
-          {currentView === "organogram" && <OrganogramView />}
+      {currentView === "policies_handbook" && <PoliciesHandbookView />}
+      {currentView === "organogram" && <OrganogramView />}
     </>
   );
 
@@ -606,7 +632,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         currentView={currentView}
         onSelectView={setCurrentView}
         persona={persona}
-        onSelectPersona={setPersona}
+        onSelectPersona={handleSelectPersona}
         onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
         onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
         currentUser={currentUser}
@@ -627,6 +653,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         <AppHeader
           breadcrumb={getBreadcrumb()}
           apiOnline={apiOnline}
+          persona={persona}
+          onSelectPersona={handleSelectPersona}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
           onQuickAction={handleQuickAction}
