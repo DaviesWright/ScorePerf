@@ -43,7 +43,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
     id: "EMP-002",
     name: "Benedicta Agbesi",
     email: "benedicta.agbesi@bscscoreview.com",
-    role: "Lead Software Engineer (Demo Admin)",
+    role: "Lead Software Engineer",
     persona: "hr_director",
     avatarText: "BA",
     department: "Engineering & Cloud",
@@ -53,7 +53,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
     id: "EMP-005",
     name: "Philip Aryee",
     email: "philip.aryee@bscscoreview.com",
-    role: "Cloud Engineer (Demo Admin)",
+    role: "Cloud Engineer",
     persona: "hr_director",
     avatarText: "PA",
     department: "Engineering & Cloud",
@@ -202,7 +202,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           {/* Quick Demo Persona Switcher */}
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: colors.textMuted, marginBottom: "0.45rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Select Active Enterprise Persona (Demo Mode)
+              Select Active Enterprise Persona
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               {PRESET_USERS.map((user) => {

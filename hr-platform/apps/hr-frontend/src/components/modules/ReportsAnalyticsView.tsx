@@ -1139,7 +1139,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     type: "Operational Export",
     description: "Tracks whether departing personnel have completed architectural documentation and handed off git repos to peers.",
     kpis: ["Handover Completion: 100%", "Git Repo Re-assigned: 100%", "Shadow Sessions: 4 Completed"],
-    sampleAiInsight: "All departure handovers completed with architectural ADR updates and full repository transfer before final clearance.",
+    sampleAiInsight: "All departure handovers completed with architectural documentation updates and full repository transfer before final clearance.",
     metrics: [
       { label: "Handover Complete", value: "100%", trend: "up" },
       { label: "Shadowing Done", value: "100%", trend: "up" },

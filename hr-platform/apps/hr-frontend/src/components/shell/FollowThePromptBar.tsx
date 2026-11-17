@@ -256,7 +256,7 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedLabel: "Update Performance Goals →",
   },
   command_centre: {
-    whatToDoHere: "Inspect real-time executive KPIs, click any alert card to drill down, or switch personas in the left sidebar to test role-based views.",
+    whatToDoHere: "Inspect real-time executive KPIs, click any alert card to drill down, or switch personas in the left sidebar to access role-based views.",
     nextSuggestedView: "performance_pms",
     nextSuggestedLabel: "Calibrate Cascading BSC →",
   },
