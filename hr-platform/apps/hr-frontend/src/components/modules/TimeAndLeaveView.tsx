@@ -374,10 +374,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       prev.map((l) =>
         l.id === id
           ? {
-              ...l,
-              status: newStatus,
-              reason: actionReason ? `${l.reason || ""} [Declined: ${actionReason}]`.trim() : l.reason,
-            }
+            ...l,
+            status: newStatus,
+            reason: actionReason ? `${l.reason || ""} [Declined: ${actionReason}]`.trim() : l.reason,
+          }
           : l
       )
     );
@@ -1096,8 +1096,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                           l.status === "APPROVED"
                             ? "success"
                             : l.status === "REJECTED"
-                            ? "error"
-                            : "warning"
+                              ? "error"
+                              : "warning"
                         }
                         size="sm"
                       >

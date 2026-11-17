@@ -4,6 +4,15 @@ import React from 'react';
 export const metadata: Metadata = {
   title: 'ScoReviewHR | Senrab ConsulTech Workforce Management',
   description: 'Enterprise HRMS, Workforce Intelligence, and Multi-Framework Appraisal Oversight',
+  icons: {
+    icon: [
+      { url: '/dede/dede-avatar-light-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/dede/dede-avatar-light-48.png', sizes: '48x48', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    shortcut: '/dede/dede-avatar-light-32.png',
+    apple: '/dede/dede-avatar-light-128.webp',
+  },
 };
 
 export default function RootLayout({
@@ -14,6 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" type="image/png" sizes="32x32" href="/dede/dede-avatar-light-32.png" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/dede/dede-avatar-light-48.png" />
+        <link rel="shortcut icon" href="/dede/dede-avatar-light-32.png" />
+        <link rel="apple-touch-icon" sizes="128x128" href="/dede/dede-avatar-light-128.webp" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
