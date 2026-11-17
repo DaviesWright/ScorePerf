@@ -429,7 +429,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                   Data Literacy (Self: 3.6 vs 360 Peer Consensus: 4.8)
                 </h4>
                 <p style={{ margin: 0, fontSize: typography.sizes.xs, color: "#1e3a8a", lineHeight: 1.5 }}>
-                  <strong>Diagnostic:</strong> You underestimated your quantitative influence (3.6/5), yet your division relies directly on your PostgreSQL Hyperdrive telemetry and statistical models (4.8/5 consensus).
+                  <strong>Diagnostic:</strong> You rated your quantitative influence at (3.6/5), yet your division relies directly on your data infrastructure and statistical models (4.8/5 consensus).
                 </p>
                 <div style={{ marginTop: "0.75rem", padding: "0.5rem 0.75rem", backgroundColor: "#ffffff", borderRadius: radii.sm, border: "1px solid #93c5fd", fontSize: "11px", color: "#1e40af" }}>
                   ⭐ <strong>Advancement Opportunity:</strong> Appoint as Division Data & AI Ethics Champion for Q1 FY27.

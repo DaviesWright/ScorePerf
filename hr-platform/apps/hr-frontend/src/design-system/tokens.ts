@@ -4,6 +4,8 @@
 // Palette: Deep Indigo (Trust), Emerald Green (Growth), Soft Peach (Wellness)
 // ==============================================================================
 
+const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+
 export const colors = {
   // Base & Surface (Clean white / light gray canvas)
   bgApp: "#f7f6f3",          // Warm paper canvas
@@ -16,7 +18,7 @@ export const colors = {
   borderSubtle: "#efede8",   // Hairline section dividers
   border: "#e4e1da",         // Card and container borders
   borderStrong: "#c9c5bb",   // Input outlines and distinct separators
-  borderFocus: "#0f5c4d",    // Primary input focus ring (single accent)
+  borderFocus: isStaging ? "#0f5c4d" : "#4338ca",    // Primary input focus ring
 
   // Text Hierarchy (three roles)
   textPrimary: "#1c1b19",    // Headings and values
@@ -26,14 +28,14 @@ export const colors = {
   textInverse: "#ffffff",    // Text on accent buttons
 
   // 1. Deep Indigo (Trust, Authority, Structure)
-  // The single accent. Names kept from the old indigo ramp so every screen picks it up.
-  indigoPrimary: "#0b3f35",  // Accent, deepest
-  indigoDark: "#0b3f35",     // Accent, deepest (sidebar highlights)
-  indigoMedium: "#0f5c4d",   // Accent
-  indigoAccent: "#0f5c4d",   // Primary buttons and brand marks
-  indigoAction: "#0f5c4d",   // Interactive focus and triggers
-  indigoSubtle: "#e7f0ed",   // Accent tint for active rows and soft pills
-  indigoBorder: "#bcd6cd",   // Accent hairline
+  // Deep Indigo on hr.bscscoreview.com; Dark Teal accent on staging.bscscoreview.com
+  indigoPrimary: isStaging ? "#0b3f35" : "#1e1b4b",  // Deepest Midnight Indigo
+  indigoDark: isStaging ? "#0b3f35" : "#312e81",     // Deep Indigo 900 (Sidebar highlights)
+  indigoMedium: isStaging ? "#0f5c4d" : "#3730a3",   // Indigo 800
+  indigoAccent: isStaging ? "#0f5c4d" : "#4338ca",   // Indigo 700 (Primary buttons)
+  indigoAction: isStaging ? "#0f5c4d" : "#4f46e5",   // Electric Indigo 600 (Interactive triggers)
+  indigoSubtle: isStaging ? "#e7f0ed" : "#eef2ff",   // Indigo 50 (Accent tint for active rows and soft pills)
+  indigoBorder: isStaging ? "#bcd6cd" : "#c7d2fe",   // Indigo hairline border
 
   // 2. Emerald Green (Growth, Progression, Health)
   emeraldDark: "#047857",    // Emerald 700
@@ -133,5 +135,7 @@ export const transitions = {
   fast: "background-color 100ms ease-out, border-color 100ms ease-out, color 100ms ease-out",
 };
 
-// Keyboard focus ring: a white gap then Deep Indigo, visible on every surface.
-export const focusRing = "0 0 0 2px #ffffff, 0 0 0 4px #0f5c4d";
+// Keyboard focus ring: a white gap then Deep Indigo / Teal, visible on every surface.
+export const focusRing = isStaging
+  ? "0 0 0 2px #ffffff, 0 0 0 4px #0f5c4d"
+  : "0 0 0 2px #ffffff, 0 0 0 4px #4338ca";

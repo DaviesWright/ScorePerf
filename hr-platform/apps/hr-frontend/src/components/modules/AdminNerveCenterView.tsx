@@ -166,14 +166,14 @@ export const AdminNerveCenterView: React.FC = () => {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Icons.Briefcase size={18} color={colors.indigoAction} />
                 <h2 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                  The Manager&apos;s Daily Digest: Single Pane of Glass
+                  Manager Daily Operations Digest
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Aggregates all pending reviews, probation end alerts, and leave overlap risks into a zero-fatigue 1-click dashboard.
+                Consolidated overview of pending approvals, upcoming probation milestones, and leave schedule coverage.
               </p>
             </div>
-            <Badge variant="success" size="sm">Dede Smart Triage Active</Badge>
+            <Badge variant="info" size="sm">Operational Queue Active</Badge>
           </div>
 
           {/* 4 Summary Stat Cards */}
@@ -302,7 +302,7 @@ export const AdminNerveCenterView: React.FC = () => {
                 Prevent workforce change exhaustion. Track organizational change fatigue via continuous pulse feedback and provide proactive change navigation playbooks.
               </p>
             </div>
-            <Badge variant="success" size="sm">Fatigue Index: {changeFatigueScore}% (Healthy)</Badge>
+            <Badge variant="info" size="sm">Workforce Pulse: Healthy ({changeFatigueScore}%)</Badge>
           </div>
 
           {/* Change Fatigue Real-Time Gauge */}

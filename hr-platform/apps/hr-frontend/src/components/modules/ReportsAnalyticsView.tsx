@@ -1308,7 +1308,7 @@ export const ReportsAnalyticsView: React.FC = () => {
         doc.setTextColor(67, 56, 202);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
-        doc.text("DEDE AI EXECUTIVE DIGEST (Verified Edge Telemetry)", 18, 61);
+        doc.text("DEDE AI EXECUTIVE DIGEST (Verified Operations Report)", 18, 61);
 
         doc.setTextColor(30, 27, 75);
         doc.setFont("helvetica", "normal");
