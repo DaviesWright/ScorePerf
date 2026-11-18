@@ -317,6 +317,12 @@ function getContextualNav(
   };
 }
 
+const SUBSIDIARIES = [
+  { id: "COMP-SENRAB-GH", name: "Senrab Holdings", location: "Accra HQ (Ghana)" },
+  { id: "COMP-SENRAB-UK", name: "Senrab UK Ltd", location: "London Hub (UK)" },
+  { id: "COMP-SENRAB-NA", name: "Senrab Namibia", location: "Windhoek (Namibia)" },
+];
+
 export const PlainShell: React.FC<PlainShellProps> = ({
   user,
   persona = "hr_director",
@@ -339,6 +345,17 @@ export const PlainShell: React.FC<PlainShellProps> = ({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [ctxMenuOpen, setCtxMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [activeCompanyId, setActiveCompanyId] = useState<string>(() => {
+    if (typeof window === "undefined") return SUBSIDIARIES[0].id;
+    try {
+      return localStorage.getItem("scoreview_active_company") || SUBSIDIARIES[0].id;
+    } catch {
+      return SUBSIDIARIES[0].id;
+    }
+  });
+  const activeSubsidiary =
+    SUBSIDIARIES.find((s) => s.id === activeCompanyId) ?? SUBSIDIARIES[0];
 
   const activeExperience: ExperienceContext =
     activeContext?.experience ??
@@ -401,9 +418,20 @@ export const PlainShell: React.FC<PlainShellProps> = ({
         >
           <span aria-hidden="true" style={{ fontSize: "16px", lineHeight: 1 }}>☰</span>
         </button>
-        {onOpenSearch && (
-          <button type="button" className="ps-search" onClick={onOpenSearch}>
-            Search people, pages and reports
+        {(onOpenSearch || onOpenDede) && (
+          <button
+            type="button"
+            className="ps-search"
+            onClick={onOpenSearch ?? onOpenDede}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+              <Icons.Sparkles size={14} color={C.accent} />
+              <span>Ask or Search with Dede</span>
+            </span>
+            <span style={{ fontSize: "11px", fontWeight: 600, color: C.muted, border: `1px solid ${C.border}`, borderRadius: "4px", padding: "0.05rem 0.35rem", background: C.surface }}>
+              ⌘K
+            </span>
           </button>
         )}
         <div className="ps-header-actions">
@@ -415,23 +443,137 @@ export const PlainShell: React.FC<PlainShellProps> = ({
               compact
             />
           )}
-          {onOpenDede && (
-            <button type="button" className="ps-ask" onClick={onOpenDede}>
-              Ask Dede
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={profileMenuOpen}
+              onClick={() => setProfileMenuOpen((v) => !v)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.2rem 0.55rem 0.2rem 0.2rem",
+                borderRadius: "999px",
+                border: `1px solid ${C.border}`,
+                background: C.surface,
+                cursor: "pointer",
+              }}
+            >
+              <span className="ps-avatar" aria-hidden="true" style={{ width: 28, height: 28, fontSize: "11px" }}>
+                {initials}
+              </span>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: C.text, whiteSpace: "nowrap" }}>
+                {showName ? user.name : activeSubsidiary.name}
+              </span>
+              <Icons.ChevronDown size={13} color={C.muted} />
             </button>
-          )}
-          <div className="ps-user">
-            <span className="ps-avatar" aria-hidden="true">
-              {initials}
-            </span>
-            <span className="ps-user-text">
-              <span className="ps-user-name">{showName ? user.name : roleTitle}</span>
-              {showName && user.role ? <span className="ps-user-role">{roleTitle}</span> : null}
-            </span>
+            {profileMenuOpen && (
+              <div
+                role="menu"
+                style={{
+                  position: "absolute",
+                  top: "120%",
+                  right: 0,
+                  width: "260px",
+                  background: C.surface,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: "10px",
+                  boxShadow: "0 12px 28px rgba(0,0,0,0.12)",
+                  zIndex: 60,
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ padding: "0.75rem 0.85rem", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: C.text }}>{user.name}</div>
+                  <div style={{ fontSize: "11px", color: C.muted }}>{user.email}</div>
+                </div>
+                <div style={{ padding: "0.5rem 0.85rem 0.25rem", fontSize: "10px", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Company / Subsidiary
+                </div>
+                {SUBSIDIARIES.map((sub) => {
+                  const selected = sub.id === activeSubsidiary.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        setActiveCompanyId(sub.id);
+                        try {
+                          localStorage.setItem("scoreview_active_company", sub.id);
+                        } catch { }
+                        setProfileMenuOpen(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        padding: "0.45rem 0.85rem",
+                        border: "none",
+                        background: selected ? C.accentSoft : "transparent",
+                        cursor: "pointer",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "12px",
+                        color: C.text,
+                      }}
+                    >
+                      <span>
+                        <strong style={{ display: "block", fontWeight: selected ? 700 : 600 }}>{sub.name}</strong>
+                        <span style={{ fontSize: "11px", color: C.muted }}>{sub.location}</span>
+                      </span>
+                      {selected && <span style={{ color: C.accent, fontWeight: 700 }}>●</span>}
+                    </button>
+                  );
+                })}
+                <div style={{ borderTop: `1px solid ${C.border}`, padding: "0.25rem 0" }}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      onNavigate("my_profile");
+                    }}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "0.5rem 0.85rem",
+                      border: "none",
+                      background: "transparent",
+                      fontSize: "12.5px",
+                      color: C.text,
+                      cursor: "pointer",
+                    }}
+                  >
+                    My Profile &amp; Bank Details
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      onSignOut();
+                    }}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "0.5rem 0.85rem",
+                      border: "none",
+                      background: "transparent",
+                      fontSize: "12.5px",
+                      fontWeight: 600,
+                      color: "#b91c1c",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <button type="button" className="ps-signout" onClick={onSignOut}>
-            Sign out
-          </button>
         </div>
       </header>
       {contextNotice && onDismissContextNotice && (
