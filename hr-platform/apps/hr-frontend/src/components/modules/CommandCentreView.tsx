@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { MetricCard } from "../../design-system/MetricCard";
 import { Badge } from "../../design-system/Badge";
@@ -80,6 +81,74 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   stats,
   onNavigate,
 }) => {
+  interface OnLeaveDetail {
+    id: string;
+    employeeName: string;
+    department: string;
+    leaveType: string;
+    startDate: string;
+    endDate: string;
+    days: number;
+    reliefManager: string;
+    status: string;
+  }
+
+  const seededOnLeave = useMemo<OnLeaveDetail[]>(
+    () =>
+      SEEDED_LEAVE_REQUESTS.filter((r) => r.status === "APPROVED").map((r) => ({
+        id: String(r.id),
+        employeeName: `${r.firstName} ${r.lastName}`,
+        department: r.department,
+        leaveType: r.leaveType,
+        startDate: r.startDate,
+        endDate: r.endDate,
+        days: r.requestedDays,
+        reliefManager: r.reliefOfficerName || "Unassigned",
+        status: r.status,
+      })),
+    []
+  );
+
+  const [liveOnLeave, setLiveOnLeave] = useState<OnLeaveDetail[] | null>(null);
+  const [showOnLeaveModal, setShowOnLeaveModal] = useState(false);
+  const [selectedOnLeaveEmp, setSelectedOnLeaveEmp] = useState<OnLeaveDetail | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/hr/leave/dashboard/on-leave?scope=company", {
+          credentials: "include",
+        });
+        if (res.ok && !cancelled) {
+          const body = await res.json();
+          if (Array.isArray(body.employees)) {
+            setLiveOnLeave(
+              body.employees.map((e: any, idx: number) => ({
+                id: String(e.id ?? idx),
+                employeeName: e.employee_name || e.name || "Employee",
+                department: e.department || "General",
+                leaveType: e.leave_type || "Leave",
+                startDate: String(e.start_date || "").slice(0, 10),
+                endDate: String(e.end_date || "").slice(0, 10),
+                days: Number(e.duration_days ?? e.requested_days ?? 0),
+                reliefManager: e.relief_manager || "Unassigned",
+                status: e.status || "APPROVED",
+              }))
+            );
+          }
+        }
+      } catch {
+        // Fallback to seeded data in demo mode
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onLeaveList = liveOnLeave ?? seededOnLeave;
+
   // Compute department breakdown dynamically from employees
   const departmentStats: DepartmentStat[] = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -389,6 +458,18 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           icon={<Icons.Calendar size={16} />}
           badge={stats.pendingLeaves > 0 ? <Badge variant="warning" size="sm">Action Due</Badge> : undefined}
           onClick={() => onNavigate("time_and_leave")}
+        />
+        <MetricCard
+          label="Currently On Leave"
+          value={onLeaveList.length}
+          subtext="Click to drill down by employee & dates"
+          variant="indigo"
+          icon={<Icons.Users size={16} />}
+          badge={<Badge variant="info" size="sm">Live Drill-down</Badge>}
+          onClick={() => {
+            setSelectedOnLeaveEmp(onLeaveList[0] ?? null);
+            setShowOnLeaveModal(true);
+          }}
         />
         <MetricCard
           label="Hardware & Fleet"
@@ -1206,6 +1287,153 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Currently On Leave Drill-Down Modal */}
+      {showOnLeaveModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Employees Currently On Leave"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1rem",
+            zIndex: 1000,
+          }}
+          onClick={() => setShowOnLeaveModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              border: `1px solid ${colors.border}`,
+              boxShadow: shadows.lg,
+              width: "100%",
+              maxWidth: 880,
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: "1rem 1.25rem",
+                borderBottom: `1px solid ${colors.border}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontSize: typography.sizes.lg, fontWeight: 700, color: colors.indigoPrimary }}>
+                  Employees Currently On Leave ({onLeaveList.length})
+                </h2>
+                <p style={{ margin: "0.2rem 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Select any employee row to inspect leave start date, end date, duration, and relief coverage.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <Button variant="outline" size="sm" onClick={() => { setShowOnLeaveModal(false); onNavigate("time_and_leave"); }}>
+                  Open Leave Console
+                </Button>
+                <Button variant="primary" size="sm" onClick={() => setShowOnLeaveModal(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+
+            {selectedOnLeaveEmp && (
+              <div
+                style={{
+                  padding: "0.85rem 1.25rem",
+                  backgroundColor: "#f8fafc",
+                  borderBottom: `1px solid ${colors.border}`,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                  gap: "0.75rem",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>Employee</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>{selectedOnLeaveEmp.employeeName}</div>
+                  <div style={{ fontSize: 11, color: colors.textSecondary }}>{selectedOnLeaveEmp.department}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>Leave Type</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: colors.indigoAction }}>{selectedOnLeaveEmp.leaveType}</div>
+                  <div style={{ fontSize: 11, color: colors.textSecondary }}>{selectedOnLeaveEmp.days} day(s)</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>Start Date</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>{formatDate(selectedOnLeaveEmp.startDate)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>End Date</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>{formatDate(selectedOnLeaveEmp.endDate)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: colors.textMuted, fontWeight: 600 }}>Relief Manager</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: selectedOnLeaveEmp.reliefManager === "Unassigned" ? "#b45309" : colors.textPrimary }}>
+                    {selectedOnLeaveEmp.reliefManager}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ overflowY: "auto", padding: "0.75rem 1.25rem" }}>
+              {onLeaveList.length === 0 ? (
+                <p style={{ fontSize: typography.sizes.sm, color: colors.textMuted }}>No employees currently on leave.</p>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", borderBottom: `1px solid ${colors.border}`, color: colors.textMuted, fontSize: 11 }}>
+                      <th style={{ padding: "0.5rem" }}>Employee</th>
+                      <th style={{ padding: "0.5rem" }}>Department</th>
+                      <th style={{ padding: "0.5rem" }}>Leave Type</th>
+                      <th style={{ padding: "0.5rem" }}>Start Date</th>
+                      <th style={{ padding: "0.5rem" }}>End Date</th>
+                      <th style={{ padding: "0.5rem" }}>Days</th>
+                      <th style={{ padding: "0.5rem" }}>Relief Manager</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {onLeaveList.map((emp) => {
+                      const isSelected = selectedOnLeaveEmp?.id === emp.id;
+                      return (
+                        <tr
+                          key={emp.id}
+                          onClick={() => setSelectedOnLeaveEmp(emp)}
+                          style={{
+                            cursor: "pointer",
+                            borderBottom: `1px solid ${colors.border}`,
+                            backgroundColor: isSelected ? "#eef2ff" : "transparent",
+                          }}
+                        >
+                          <td style={{ padding: "0.55rem 0.5rem", fontWeight: 600 }}>{emp.employeeName}</td>
+                          <td style={{ padding: "0.55rem 0.5rem" }}>{emp.department}</td>
+                          <td style={{ padding: "0.55rem 0.5rem" }}>{emp.leaveType}</td>
+                          <td style={{ padding: "0.55rem 0.5rem" }}>{formatDate(emp.startDate)}</td>
+                          <td style={{ padding: "0.55rem 0.5rem" }}>{formatDate(emp.endDate)}</td>
+                          <td style={{ padding: "0.55rem 0.5rem" }}>{emp.days}</td>
+                          <td style={{ padding: "0.55rem 0.5rem", color: emp.reliefManager === "Unassigned" ? "#b45309" : colors.textPrimary }}>
+                            {emp.reliefManager}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
