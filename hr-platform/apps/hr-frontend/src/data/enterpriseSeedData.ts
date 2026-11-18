@@ -300,6 +300,32 @@ export const SEEDED_EMPLOYEES: SeedEmployee[] = RAW_EMPLOYEES.map((r) => {
   const annualEntitlement = r.grade >= "G8" ? 28 : 25;
   const annualAvailable = Math.max(0, annualEntitlement - r.usedLeave - r.reservedLeave);
 
+  // Task 3 & Context Spec §3.3 / §5.3: Multi-hat role assignments for dual-context staff
+  const multiHatMap: Record<
+    number,
+    { roles: ArchitecturalRoleCode[]; hrUnits?: { unitId: string; unitName: string }[] }
+  > = {
+    1: { roles: ["SUPER_ADMIN", "DIVISION_HEAD", "HR_MANAGER"] },
+    2: {
+      roles: ["DEPARTMENT_HEAD", "HR_OFFICER"],
+      hrUnits: [{ unitId: "DEP-OPS", unitName: "Unit A · Client Services" }],
+    },
+    3: { roles: ["DEPARTMENT_HEAD", "HR_MANAGER"] },
+    18: {
+      roles: ["DEPARTMENT_HEAD", "HR_OFFICER"],
+      hrUnits: [{ unitId: "DEP-DATA", unitName: "Unit B · Data & AI" }],
+    },
+  };
+  const multi = multiHatMap[r.id];
+  const architecturalRoles = multi?.roles ?? [r.archRole];
+  const derivedExperiences: ExperienceContext[] = multi
+    ? Array.from(
+        new Set<ExperienceContext>(
+          architecturalRoles.flatMap((role) => roleToExp(role).experiences),
+        ),
+      )
+    : exp.experiences;
+
   return {
     id: r.id,
     staffId: `SEN-${String(r.id).padStart(4, "0")}`,
@@ -323,7 +349,9 @@ export const SEEDED_EMPLOYEES: SeedEmployee[] = RAW_EMPLOYEES.map((r) => {
     age: r.age,
     isActive: true,
     architecturalRole: r.archRole,
-    experiences: exp.experiences,
+    architecturalRoles,
+    assignedHrUnits: multi?.hrUnits,
+    experiences: derivedExperiences,
     defaultExperience: exp.defaultExperience,
     scopeType: exp.scopeType,
     annualEntitlement,

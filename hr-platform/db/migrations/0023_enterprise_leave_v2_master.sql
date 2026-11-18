@@ -9,7 +9,7 @@
 -- ==============================================================================
 
 -- 7.2 Core Tables: Leave Types & Effective-Dated Policy Versions
-CREATE TABLE IF NOT EXISTS leave_types (
+CREATE TABLE IF NOT EXISTS leave_types_v2 (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   code TEXT NOT NULL,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS leave_policy_versions (
   id TEXT PRIMARY KEY,
   policy_id TEXT NOT NULL REFERENCES leave_policies(id) ON DELETE RESTRICT,
   version_number INTEGER NOT NULL,
-  leave_type_id TEXT NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+  leave_type_id TEXT NOT NULL REFERENCES leave_types_v2(id) ON DELETE RESTRICT,
   jurisdiction_id TEXT NOT NULL DEFAULT 'GH',
   legal_entity_id TEXT NOT NULL DEFAULT 'PSC-GH',
   eligibility_json JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS leave_entitlement_periods (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   employee_id TEXT NOT NULL,
-  leave_type_id TEXT NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+  leave_type_id TEXT NOT NULL REFERENCES leave_types_v2(id) ON DELETE RESTRICT,
   policy_version_id TEXT NOT NULL REFERENCES leave_policy_versions(id) ON DELETE RESTRICT,
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS leave_ledger_transactions (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   employee_id TEXT NOT NULL,
-  leave_type_id TEXT NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+  leave_type_id TEXT NOT NULL REFERENCES leave_types_v2(id) ON DELETE RESTRICT,
   entitlement_period_id TEXT NOT NULL REFERENCES leave_entitlement_periods(id) ON DELETE RESTRICT,
   transaction_type TEXT NOT NULL CHECK (
     transaction_type IN (
@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS leave_applications (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   employee_id TEXT NOT NULL,
-  leave_type_id TEXT NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+  leave_type_id TEXT NOT NULL REFERENCES leave_types_v2(id) ON DELETE RESTRICT,
   application_number TEXT NOT NULL UNIQUE,
   policy_version_id TEXT NOT NULL REFERENCES leave_policy_versions(id) ON DELETE RESTRICT,
   period_start DATE NOT NULL,
@@ -302,7 +302,7 @@ CREATE TABLE IF NOT EXISTS leave_encashment_requests (
   id TEXT PRIMARY KEY,
   tenant_id TEXT NOT NULL DEFAULT 'default',
   employee_id TEXT NOT NULL,
-  leave_type_id TEXT NOT NULL REFERENCES leave_types(id) ON DELETE RESTRICT,
+  leave_type_id TEXT NOT NULL REFERENCES leave_types_v2(id) ON DELETE RESTRICT,
   requested_days NUMERIC(12,4) NOT NULL,
   retained_balance_days NUMERIC(12,4) NOT NULL,
   daily_rate_amount NUMERIC(12,2) NOT NULL,

@@ -12,7 +12,7 @@ import { ContextBadge, ContextNotice, ContextSwitcher } from "../common/ContextS
 // Selected by NEXT_PUBLIC_SHELL (default "plain"); "full" keeps the original frame.
 
 const LABELS: Record<ModuleViewKey, string> = {
-  dashboard: "Dashboard",
+  dashboard: "ScoReview Console",
   assets: "Assets Management",
   command_centre: "Command Centre",
   time_and_leave: "Leave",
@@ -44,7 +44,7 @@ const LABELS: Record<ModuleViewKey, string> = {
 
 // Major sidebar sections and the views under each. Views not listed here fall into "Other", so none disappear.
 const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
-  { label: "Dashboard", views: ["command_centre", "dashboard"] },
+  { label: "ScoReview Console", views: ["command_centre", "dashboard"] },
   { label: "My Self-Service", views: ["self_service", "my_leave", "my_performance", "my_profile", "document_centre"] },
   { label: "People", views: ["workforce_directory", "lifecycle_portals", "disciplinary", "approval_workflows"] },
   { label: "Time & Performance", views: ["time_and_leave", "performance_pms", "performance_setup", "objectives"] },
@@ -95,7 +95,7 @@ const C = {
 
 // One icon per sidebar group heading.
 const GROUP_ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
-  Dashboard: Icons.Activity,
+  "ScoReview Console": Icons.Activity,
   "My Self-Service": Icons.Smile,
   People: Icons.Users,
   "Time & Performance": Icons.Clock,

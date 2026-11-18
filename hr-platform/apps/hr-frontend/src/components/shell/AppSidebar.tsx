@@ -309,7 +309,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         items: [
           {
             key: "command_centre" as ModuleViewKey,
-            label: "Command Centre & Dashboard",
+            label: "ScoReview Console",
             icon: Icons.CommandCentre,
             badge: "Live Intel",
             badgeType: "indigo" as const,

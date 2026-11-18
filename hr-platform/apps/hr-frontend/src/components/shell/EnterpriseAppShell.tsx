@@ -17,6 +17,7 @@ import { LeaveScreen } from "../modules/LeaveSimple";
 import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { DashboardScreen } from "../modules/DashboardSimple";
 import { CommandCentreView } from "../modules/CommandCentreView";
+import { TeamDashboardView } from "../modules/TeamDashboardView";
 import { AssetsScreen } from "../modules/AssetsSimple";
 import { PerformanceSetupScreen } from "../modules/PerformanceSetupScreen";
 import { CompanySetupScreen } from "../modules/CompanySetupScreen";
@@ -43,6 +44,7 @@ import {
   availableContexts,
   ContextSwitchAuditEntry,
   contextToPersona,
+  ExperienceContext,
   switchContext,
   UserContextTuple,
 } from "../../domain/orgCore";
@@ -65,6 +67,8 @@ interface EnterpriseAppShellProps {
   apiOnline: boolean;
   /** The signed-in user from the API, when the browser has a real session. Absent only in demo-login mode. */
   initialUser?: AuthenticatedUser | null;
+  initialExperience?: ExperienceContext;
+  initialDeepLinkView?: ModuleViewKey;
 }
 
 export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
@@ -76,6 +80,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   initialProjects,
   apiOnline,
   initialUser = null,
+  initialExperience,
+  initialDeepLinkView,
 }) => {
   // Employees with a real session land on their home (self_service). Everyone else lands on the dashboard.
   const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(() =>
@@ -246,6 +252,35 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     });
   }, [currentUser, initialUser]);
 
+  // FR-CTX-014 / VAL-CTX-007: Enforce deep-link experience (/ess, /mss, /hrms)
+  useEffect(() => {
+    if (!initialExperience || !hasCheckedAuth) return;
+    const targetCtx = userContexts.find((c) => c.experience === initialExperience);
+    if (!targetCtx) {
+      const ess = userContexts[0];
+      setActiveContextId(ess.contextId);
+      setPersona("employee");
+      setCurrentView("self_service");
+      setContextNotice(
+        `Access denied (403): You do not hold the ${initialExperience} context. Redirected to My Work (ESS).`,
+      );
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", "/ess");
+      }
+      return;
+    }
+    setActiveContextId(targetCtx.contextId);
+    const nextPersona = contextToPersona(targetCtx.experience, targetCtx.role);
+    setPersona(nextPersona);
+    if (initialDeepLinkView && isViewEnabled(initialDeepLinkView)) {
+      setCurrentViewRaw(initialDeepLinkView);
+    } else if (targetCtx.experience === "ESS") {
+      setCurrentViewRaw("self_service");
+    } else {
+      setCurrentViewRaw("command_centre");
+    }
+  }, [initialExperience, initialDeepLinkView, hasCheckedAuth, userContexts]);
+
   const activeContext: UserContextTuple = React.useMemo(() => {
     if (activeContextId) {
       const found = userContexts.find((c) => c.contextId === activeContextId);
@@ -280,11 +315,33 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     handleSelectPersona(nextPersona);
     if (result.context.experience === "ESS") {
       setCurrentView("self_service");
-    } else if (result.context.experience === "MSS") {
-      setCurrentView("command_centre");
     } else {
       setCurrentView("command_centre");
     }
+
+    // Server-side context token issuance & scope verification (FR-CTX-007, FR-CTX-008)
+    void fetch("/api/context/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contextId: requestedContextId,
+        employeeId: currentUser?.email ?? currentUser?.id ?? "1",
+        userId: currentUser?.id ?? "1",
+        fromContext: activeContext.experience,
+      }),
+    })
+      .then(async (res) => {
+        if (res.status === 403) {
+          setContextNotice("Your selected context is no longer authorized. You've been returned to My Work.");
+          const ess = userContexts[0];
+          setActiveContextId(ess.contextId);
+          handleSelectPersona("employee");
+          setCurrentView("self_service");
+        }
+      })
+      .catch(() => {
+        // Offline / static fallback preserves local domain switch
+      });
   };
 
   const handleLoginSuccess = (user: AuthenticatedUser) => {
@@ -373,7 +430,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       case "objectives":
         return "Objectives";
       case "dashboard":
-        return "Dashboard";
+        return "ScoReview Console";
       case "assets":
         return "Assets";
       case "skills_marketplace":
@@ -629,6 +686,12 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             requiredScope="analytics:view"
             onNavigate={setCurrentView}
             onSwitchPersona={setPersona}
+          />
+        ) : activeContext.experience === "MSS" ? (
+          <TeamDashboardView
+            activeContext={activeContext}
+            managerEmployeeId={activeContext.scopeId ?? "1"}
+            onNavigate={setCurrentView}
           />
         ) : (
           <CommandCentreView
