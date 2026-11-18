@@ -737,7 +737,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 margin: 0,
               }}
             >
-              Time, Leave & Attendance Suite
+              Leave Management Suite
             </h1>
           </div>
 
