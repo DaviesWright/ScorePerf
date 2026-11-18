@@ -439,7 +439,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
         <MetricCard
           label="Active Workforce"
           value={stats.totalEmployees}
-          subtext="Full-time staff across 7 practices"
+          subtext={`${Math.max(0, stats.totalEmployees - onLeaveList.length)} on duty · ${onLeaveList.length} on leave · 8 departments`}
           variant="indigo"
           icon={<Icons.Users size={16} />}
           badge={<Badge variant="success" size="sm">100% Active</Badge>}

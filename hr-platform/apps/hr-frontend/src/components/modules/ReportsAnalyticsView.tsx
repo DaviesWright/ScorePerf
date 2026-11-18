@@ -63,7 +63,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     kpis: ["Total Headcount: 54", "Full-Time FTE: 52.5", "Contractors: 3", "Span of Control: 1:5.8"],
     sampleAiInsight: "FTE utilization stands at 96.6% with engineering leading headcount expansion (+18% YoY). Span of control remains healthy at 1:5.8 across core consulting practices.",
     metrics: [
-      { label: "Total FTE", value: "43.5", delta: "+4.5 YoY", trend: "up" },
+      { label: "Total FTE", value: "52.5", delta: "+4.5 YoY", trend: "up" },
       { label: "Avg Span of Control", value: "5.8:1", trend: "neutral" },
       { label: "Contingent Ratio", value: "6.7%", trend: "neutral" },
     ],

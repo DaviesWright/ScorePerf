@@ -578,7 +578,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "People & Culture Consultant",
       department: "People & Culture",
       selfRating: 4.5,
-      selfComments: "Exceeded all planned HR onboarding SLAs by 18%. Streamlined Document Centre records for 45 staff members across Accra and London.",
+      selfComments: "Exceeded all planned HR onboarding SLAs by 18%. Streamlined Document Centre records for 54 staff members across Accra and London.",
       managerRating: 4.2,
       feedback: "Exceptional ownership of workforce onboarding and policy documentation.",
       status: "PENDING_REVIEW",

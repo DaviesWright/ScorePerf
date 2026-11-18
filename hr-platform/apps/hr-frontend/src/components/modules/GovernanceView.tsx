@@ -188,7 +188,7 @@ export const GovernanceView: React.FC = () => {
     {
       id: "DOC-E2EE-903",
       name: "HMRC_P60_End_Of_Year_2025_2026.pdf.enc",
-      employee: "All 45 Active Personnel",
+      employee: "All 54 Active Personnel",
       category: "Statutory Tax Filings",
       cipher: "AES-GCM-256 (Envelope)",
       kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",

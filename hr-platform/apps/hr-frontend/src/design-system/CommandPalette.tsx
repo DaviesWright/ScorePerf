@@ -319,7 +319,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_workforce_directory",
       view: "workforce_directory",
       title: "Employee Directory & Workforce Roster",
-      subtitle: "45 active staff, departments, management hierarchies & profiles",
+      subtitle: "54 active staff, departments, management hierarchies & profiles",
       category: "Navigation",
       icon: <Icons.Users size={16} color={colors.textSecondary} />,
       keywords: ["directory", "employees", "staff", "people", "team", "roster", "workforce"],
