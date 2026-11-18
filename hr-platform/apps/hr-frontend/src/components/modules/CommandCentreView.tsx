@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
+import { LeaveAnalyticsPanel } from "../analytics/AnalyticsPrimitives";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { MetricCard } from "../../design-system/MetricCard";
 import { Badge } from "../../design-system/Badge";
@@ -986,6 +987,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
       ) : (
         /* Analytics & Heatmaps Tab: Live Charts, Progress Heatmaps & Absence Analytics (no duplicate KPIs) */
         <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
+          <LeaveAnalyticsPanel />
+
           {/* Analytics & Heatmaps 2-Column Split */}
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1.75rem" }}>
             {/* Left Column: Leave Trend & Objective Heatmap */}

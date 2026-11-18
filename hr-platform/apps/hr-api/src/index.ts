@@ -41,6 +41,7 @@ import { createLeaveConsoleRoutes } from "./leave-console-routes";
 import { createLeaveMiniDashboardRoutes } from "./leave-mini-dashboard-routes";
 import { createReportRoutes } from "./report-routes";
 import { createCelebrationsRoutes } from "./celebrations-routes";
+import { createAnalyticsRoutes } from "./analytics-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2987,6 +2988,8 @@ app.route("/", createLeaveMiniDashboardRoutes(getSql));
 app.route("/", createReportRoutes(getSql));
 // Celebrations: ESS/MSS/HRMS birthdays, work anniversaries, opt-out privacy & PRAISE recognition.
 app.route("/", createCelebrationsRoutes(getSql));
+// Analytics, Heatmaps & Trends Framework v1.0: KPI, Heatmap (dept & job role), Trend, Drilldown, Snapshots.
+app.route("/", createAnalyticsRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {
