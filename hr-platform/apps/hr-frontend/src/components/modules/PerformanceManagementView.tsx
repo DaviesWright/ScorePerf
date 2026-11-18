@@ -926,6 +926,24 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     };
   }, []);
 
+  const [appraisalPeriodOpen, setAppraisalPeriodOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("scoreview_appraisal_period_open") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleAppraisalPeriod = () => {
+    const next = !appraisalPeriodOpen;
+    setAppraisalPeriodOpen(next);
+    try {
+      localStorage.setItem("scoreview_appraisal_period_open", String(next));
+      window.dispatchEvent(new Event("scoreview:appraisal-period-changed"));
+    } catch { }
+  };
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
       {/* Platform Header & Navigation Tabs */}
@@ -955,7 +973,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </h1>
           </div>
 
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
+            <Button
+              variant={appraisalPeriodOpen ? "secondary" : "primary"}
+              size="sm"
+              onClick={toggleAppraisalPeriod}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <Icons.Lock size={14} />
+                <span>{appraisalPeriodOpen ? "Close Appraisal Period (Lock ESS)" : "Open Appraisal Period"}</span>
+              </span>
+            </Button>
             <Button
               variant="outline"
               size="sm"

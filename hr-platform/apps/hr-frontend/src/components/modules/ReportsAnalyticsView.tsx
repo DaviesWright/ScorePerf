@@ -1168,7 +1168,10 @@ const ALL_60_REPORTS: ReportItem[] = [
   },
 ];
 
-export const ReportsAnalyticsView: React.FC = () => {
+import type { UserPersona } from "../shell/AppSidebar";
+
+export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ persona }) => {
+  const isEmployeeEss = persona === "employee";
   const [activeMainSection, setActiveMainSection] = useState<"catalog" | "workforce_planning" | "role_dashboards">("catalog");
   const [reportLocale, setReportLocale] = useState<"en" | "fr">("en");
   const [selectedRoleDashboard, setSelectedRoleDashboard] = useState<"sales" | "it" | "legal">("sales");
@@ -1192,6 +1195,14 @@ export const ReportsAnalyticsView: React.FC = () => {
   // Filter Reports List
   const filteredReports = useMemo(() => {
     return ALL_60_REPORTS.filter((r) => {
+      if (
+        isEmployeeEss &&
+        r.pack !== "General" &&
+        r.category !== "Time, Attendance & Leave" &&
+        r.category !== "Performance & Development"
+      ) {
+        return false;
+      }
       // Pack filter
       if (selectedPack === "MANAGER" && r.pack !== "Manager Pack") return false;
       if (selectedPack === "EXECUTIVE" && r.pack !== "Executive Pack") return false;

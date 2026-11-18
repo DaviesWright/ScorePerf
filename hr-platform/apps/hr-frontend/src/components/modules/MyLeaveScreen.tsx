@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { colors, radii, shadows, space, text } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -52,9 +52,10 @@ export interface PlannedLeaveBlock {
 interface MyLeaveScreenProps {
   user?: { id: string; persona: string; name?: string };
   realSession?: boolean;
+  initialSubTab?: string;
 }
 
-export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
+export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = ({ initialSubTab }) => {
   const [activeSubTab, setActiveSubTab] = useState<
     "balances_history" | "ledger" | "plan_leave" | "confirm_resumption"
   >("balances_history");
@@ -161,6 +162,42 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
 
   // Apply for Leave Modal state (§4.3)
   const [showApplyModal, setShowApplyModal] = useState(false);
+
+  useEffect(() => {
+    if (!initialSubTab) return;
+    if (initialSubTab === "plan_leave") {
+      setActiveSubTab("plan_leave");
+    } else if (initialSubTab === "apply") {
+      setActiveSubTab("balances_history");
+      setShowApplyModal(true);
+    } else if (initialSubTab === "history" || initialSubTab === "balances_history") {
+      setActiveSubTab("balances_history");
+      if (initialSubTab === "history" && typeof document !== "undefined") {
+        setTimeout(() => {
+          document.getElementById("my-leave-history")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+      }
+    }
+  }, [initialSubTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("scoreview_my_leaves");
+      if (saved) {
+        const parsed = JSON.parse(saved) as MyLeaveItem[];
+        if (Array.isArray(parsed) && parsed.length > 0) setLeaves(parsed);
+      }
+    } catch { }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("scoreview_my_leaves", JSON.stringify(leaves));
+      window.dispatchEvent(new CustomEvent("scoreview:leaves-updated", { detail: leaves }));
+    } catch { }
+  }, [leaves]);
   const [leaveType, setLeaveType] = useState<MyLeaveItem["leaveType"]>("Annual Leave");
   const [startDate, setStartDate] = useState("2026-11-23");
   const [endDate, setEndDate] = useState("2026-11-29"); // Mon-Sun test case: 7 calendar days -> 5 working days charged!
@@ -597,7 +634,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
 
       {/* SUB-TAB 1: APPLICATIONS & LEAVE HISTORY (§4.3, §4.5) */}
       {activeSubTab === "balances_history" && (
-        <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.sm }}>
+        <div id="my-leave-history" style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: shadows.sm }}>
           <div style={{ padding: space[4], borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h2 style={{ fontSize: text.h3.fontSize, fontWeight: text.h3.fontWeight, color: colors.textPrimary, margin: 0 }}>

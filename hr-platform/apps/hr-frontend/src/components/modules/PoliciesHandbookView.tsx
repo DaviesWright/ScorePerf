@@ -52,7 +52,7 @@ const field: React.CSSProperties = { padding: "0.5rem", borderRadius: radii.md, 
 const label: React.CSSProperties = { display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: typography.sizes.sm, color: colors.textSecondary };
 const score = (id: string) => Math.round(((PROFILE_FIELDS.length - (MISSING[id]?.length ?? 0)) / PROFILE_FIELDS.length) * 100);
 
-export const PoliciesHandbookView: React.FC = () => {
+export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = false }) => {
   const [tab, setTab] = useState<Tab>("policies");
   const [policies, setPolicies] = useState(INITIAL_POLICIES);
   const [handbooks, setHandbooks] = useState(INITIAL_HANDBOOKS);
@@ -142,7 +142,7 @@ export const PoliciesHandbookView: React.FC = () => {
   const tabs: { key: Tab; label: string }[] = [
     { key: "policies", label: `Policies (${policies.length})` },
     { key: "handbooks", label: `Handbooks (${handbooks.length})` },
-    { key: "completeness", label: "Profile Completeness" },
+    ...(isHr ? [{ key: "completeness" as Tab, label: "Profile Completeness" }] : []),
   ];
 
   return (

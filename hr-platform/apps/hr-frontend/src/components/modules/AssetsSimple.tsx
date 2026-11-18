@@ -5,6 +5,7 @@ import { call } from "./assetApi";
 import { S, Caption } from "./assetStyles";
 import { WriteOffForm, ApprovalsPanel, RecoveryPanel } from "./AssetsWriteOff";
 import { CategoriesPanel, DetailsForm, ExportButton, TeamPanel } from "./AssetsAdmin";
+import { DEFAULT_EMPLOYEES, DEMO_ASSETS } from "../../data/demoData";
 
 // Assets screen. HR registers, assigns, returns and reviews the history of company equipment. Everyone sees the
 // assets assigned to them. Live data only; the demo login has no API behind it.
@@ -87,7 +88,37 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    if (!realSession) return;
+    if (!realSession) {
+      const mappedAssets: Asset[] = DEMO_ASSETS.map((a) => ({
+        id: a.id,
+        asset_code: a.asset_code,
+        name: a.name,
+        serial_number: null,
+        status: a.status.toLowerCase() as Status,
+        asset_condition: "good" as Condition,
+        category_name: a.category_name ?? "IT Equipment",
+        purchase_date: "2025-01-15",
+        purchase_price: null,
+        warranty_expiry: null,
+        notes: null,
+        employee_id: a.employee_id ?? null,
+        first_name: a.first_name ?? null,
+        last_name: a.last_name ?? null,
+      }));
+      setAssets(mappedAssets);
+      const myRows: MyAsset[] = mappedAssets
+        .filter((a) => a.employee_id === 1 || a.employee_id === Number(user.id.replace(/\D/g, "")))
+        .map((a) => ({
+          id: a.id,
+          assetCode: a.asset_code,
+          name: a.name,
+          allocatedDate: a.purchase_date ?? "2025-01-15",
+        }));
+      setMine(myRows.length > 0 ? myRows : mappedAssets.slice(0, 2).map((a) => ({ id: a.id, assetCode: a.asset_code, name: a.name, allocatedDate: "2025-01-15" })));
+      setPeople(DEFAULT_EMPLOYEES.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })));
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     const loads: Promise<unknown>[] = [

@@ -115,10 +115,27 @@ export const ProfileChangesScreen: React.FC<{ user: { id: string; persona: strin
     }
   };
 
+  const filledCount = details.data
+    ? PROFILE_FIELDS.filter((f) => Boolean(details.data?.values[f]?.trim())).length
+    : 0;
+  const selfCompletenessPct = Math.round((filledCount / PROFILE_FIELDS.length) * 100);
+
   return (
     <div style={{ padding: "1.5rem", maxWidth: 960 }}>
       <h1 style={{ fontSize: 22, margin: "0 0 0.25rem" }}>Bank and tax details</h1>
       <Muted>To change any of these, ask HR here. Your change is saved only after HR approves it.</Muted>
+
+      <section style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <strong style={{ fontSize: 14 }}>My Profile Completeness: {selfCompletenessPct}%</strong>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            {filledCount} of {PROFILE_FIELDS.length} required fields completed (your personal record only).
+          </div>
+        </div>
+        <div style={{ width: "180px", height: "8px", borderRadius: 999, background: "#e5e7eb", overflow: "hidden" }}>
+          <div style={{ width: `${selfCompletenessPct}%`, height: "100%", background: C.accent }} />
+        </div>
+      </section>
 
       <section style={card} aria-labelledby="values-heading">
         <h2 id="values-heading" style={{ fontSize: 18, margin: "0 0 0.5rem" }}>

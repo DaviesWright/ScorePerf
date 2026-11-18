@@ -85,8 +85,34 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
   >("my_role");
   const [essSelectedGigId, setEssSelectedGigId] = useState<string>(ALIGNED_GIGS[1].id);
 
-  // Cycle Phase Lifecycle Simulation: Open vs In Review vs Closed
-  const [cyclePhase, setCyclePhase] = useState<"Open" | "In Review" | "Calibration" | "Closed">("In Review");
+  // Cycle Phase Lifecycle: controlled by HR Admin / HR Director via localStorage ('scoreview_appraisal_period_open')
+  const [isAppraisalPeriodOpen, setIsAppraisalPeriodOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("scoreview_appraisal_period_open") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [cyclePhase, setCyclePhase] = useState<"Open" | "In Review" | "Calibration" | "Closed">(
+    isAppraisalPeriodOpen ? "In Review" : "Closed",
+  );
+
+  useEffect(() => {
+    const syncPeriod = () => {
+      try {
+        const open = localStorage.getItem("scoreview_appraisal_period_open") === "true";
+        setIsAppraisalPeriodOpen(open);
+        setCyclePhase(open ? "In Review" : "Closed");
+      } catch { }
+    };
+    window.addEventListener("scoreview:appraisal-period-changed", syncPeriod);
+    window.addEventListener("storage", syncPeriod);
+    return () => {
+      window.removeEventListener("scoreview:appraisal-period-changed", syncPeriod);
+      window.removeEventListener("storage", syncPeriod);
+    };
+  }, []);
 
   // Active Cycle State
   const activeCycle = {
@@ -305,14 +331,45 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
 
   const handleSelfAppraisalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAppraisalPeriodOpen) {
+      alert("Self-appraisal is locked (view-only) until HR Admin / HR Director opens the appraisal period.");
+      return;
+    }
     if (!selfComments.trim()) {
       alert("Self-Appraisal comments are MANDATORY before submitting your appraisal.");
       return;
     }
     setSelfSubmitted(true);
-    setStatusMessage("Self-Appraisal submitted successfully. Your comments are now visible to your supervisor for review.");
+    try {
+      localStorage.setItem(
+        "scoreview_my_appraisal_state",
+        JSON.stringify({ selfRating, selfComments, keyAchievements, selfSubmitted: true, objectives }),
+      );
+    } catch { }
+    setStatusMessage("Self-Appraisal submitted and saved. Your comments are now visible to your supervisor for review.");
     setTimeout(() => setStatusMessage(null), 6000);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = localStorage.getItem("scoreview_my_appraisal_state");
+      if (saved) {
+        const p = JSON.parse(saved) as {
+          selfRating?: number;
+          selfComments?: string;
+          keyAchievements?: string;
+          selfSubmitted?: boolean;
+          objectives?: MyObjective[];
+        };
+        if (typeof p.selfRating === "number") setSelfRating(p.selfRating);
+        if (typeof p.selfComments === "string") setSelfComments(p.selfComments);
+        if (typeof p.keyAchievements === "string") setKeyAchievements(p.keyAchievements);
+        if (typeof p.selfSubmitted === "boolean") setSelfSubmitted(p.selfSubmitted);
+        if (Array.isArray(p.objectives) && p.objectives.length > 0) setObjectives(p.objectives);
+      }
+    } catch { }
+  }, []);
 
   const handleAddObjective = (e: React.FormEvent) => {
     e.preventDefault();
@@ -436,17 +493,15 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
           <Button
             variant="outline"
             size="sm"
+            disabled={!isAppraisalPeriodOpen}
             onClick={() => {
-              if (cyclePhase === "In Review") {
-                alert("Goal creation is LOCKED during the 'In Review' phase. Switch cycle phase to 'Open' to propose new objectives.");
-              } else {
-                setShowAddObjModal(true);
-              }
+              if (!isAppraisalPeriodOpen) return;
+              setShowAddObjModal(true);
             }}
           >
             <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              {cyclePhase === "In Review" ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
-              <span>{cyclePhase === "In Review" ? "Objectives Locked" : "Propose Objective"}</span>
+              {!isAppraisalPeriodOpen ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
+              <span>{!isAppraisalPeriodOpen ? "Objectives View-Only (Closed)" : "Propose Objective"}</span>
             </span>
           </Button>
           <Button variant="primary" size="sm" onClick={() => setActiveTab("self_review")}>
@@ -523,6 +578,23 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
 
           {/* Self-Review Form */}
           <div style={{ backgroundColor: colors.surface, borderRadius: radii.lg, border: `1px solid ${colors.border}`, padding: "1.5rem", boxShadow: shadows.xs }}>
+            {!isAppraisalPeriodOpen && (
+              <div
+                role="status"
+                style={{
+                  marginBottom: "1rem",
+                  padding: "0.75rem 1rem",
+                  borderRadius: radii.md,
+                  backgroundColor: "#fffbeb",
+                  border: "1px solid #fde68a",
+                  color: "#92400e",
+                  fontSize: typography.sizes.xs,
+                  fontWeight: 600,
+                }}
+              >
+                Appraisal period is currently closed by HR (View-Only Mode). Self-appraisal and objective edits remain locked until the HR Director / HR Admin opens the appraisal window.
+              </div>
+            )}
             <h2 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1rem 0" }}>
               Employee Self-Assessment Form
             </h2>
@@ -537,6 +609,7 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
                   min="1"
                   max="5"
                   step="0.1"
+                  disabled={!isAppraisalPeriodOpen}
                   value={selfRating}
                   onChange={(e) => setSelfRating(parseFloat(e.target.value))}
                   style={{ width: "100%", accentColor: colors.indigoAction }}
@@ -557,10 +630,11 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
                 </p>
                 <textarea
                   rows={4}
+                  disabled={!isAppraisalPeriodOpen}
                   value={selfComments}
                   onChange={(e) => setSelfComments(e.target.value)}
                   placeholder="Elaborate on your deliverables, challenges overcome, and overall performance contribution (mandatory)..."
-                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs }}
+                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: isAppraisalPeriodOpen ? colors.surface : colors.surfaceSubtle }}
                   required
                 />
               </div>
@@ -571,10 +645,11 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
                 </label>
                 <textarea
                   rows={3}
+                  disabled={!isAppraisalPeriodOpen}
                   value={keyAchievements}
                   onChange={(e) => setKeyAchievements(e.target.value)}
                   placeholder="Bullet points of verified milestones..."
-                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs }}
+                  style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, backgroundColor: isAppraisalPeriodOpen ? colors.surface : colors.surfaceSubtle }}
                 />
               </div>
 
@@ -582,8 +657,12 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
                 <span style={{ fontSize: "11px", color: colors.textMuted }}>
                   🔒 Locked to single {activeCycle.framework} framework for FY2026.
                 </span>
-                <Button variant="primary" size="sm" type="submit">
-                  {selfSubmitted ? "Update & Re-Submit Self-Appraisal" : "Submit Self-Appraisal to Supervisor"}
+                <Button variant="primary" size="sm" type="submit" disabled={!isAppraisalPeriodOpen}>
+                  {!isAppraisalPeriodOpen
+                    ? "View-Only (Appraisal Period Closed)"
+                    : selfSubmitted
+                    ? "Update & Re-Submit Self-Appraisal"
+                    : "Submit Self-Appraisal to Supervisor"}
                 </Button>
               </div>
             </form>
@@ -608,19 +687,17 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSe
             </div>
 
             <Button
-              variant={cyclePhase === "In Review" ? "secondary" : "outline"}
+              variant={!isAppraisalPeriodOpen ? "secondary" : "outline"}
               size="sm"
+              disabled={!isAppraisalPeriodOpen}
               onClick={() => {
-                if (cyclePhase === "In Review") {
-                  alert("Objectives are locked while appraisal cycle is In Review. Switch cycle phase to 'Open' to propose new goals.");
-                } else {
-                  setShowAddObjModal(true);
-                }
+                if (!isAppraisalPeriodOpen) return;
+                setShowAddObjModal(true);
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                {cyclePhase === "In Review" ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
-                <span>{cyclePhase === "In Review" ? "Goal Editing Locked" : "Propose Objective"}</span>
+                {!isAppraisalPeriodOpen ? <Icons.Lock size={13} color="#94a3b8" /> : <Icons.Plus size={14} />}
+                <span>{!isAppraisalPeriodOpen ? "Objectives View-Only (Closed)" : "Propose Objective"}</span>
               </span>
             </Button>
           </div>

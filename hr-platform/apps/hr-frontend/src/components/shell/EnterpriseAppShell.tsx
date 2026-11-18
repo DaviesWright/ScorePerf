@@ -137,6 +137,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
+  const [leaveSubTab, setLeaveSubTab] = useState<string | undefined>(undefined);
   const [contextNotice, setContextNotice] = useState<string | null>(null);
   const [contextAuditLog, setContextAuditLog] = useState<ContextSwitchAuditEntry[]>([]);
   const [activeContextId, setActiveContextId] = useState<string | null>(() => {
@@ -581,17 +582,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       )}
 
       {currentView === "reports_analytics" && (
-        persona === "employee" ? (
-          <RbacGuard
-            currentPersona={persona}
-            targetView="reports_analytics"
-            requiredScope="reports:export"
-            onNavigate={setCurrentView}
-            onSwitchPersona={setPersona}
-          />
-        ) : (
-          <ReportsAnalyticsView />
-        )
+        <ReportsAnalyticsView persona={persona} />
       )}
 
       {currentView === "workforce_directory" && (
@@ -751,7 +742,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         />
       )}
       {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
-      {currentView === "my_leave" && <MyLeaveScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "my_leave" && (
+        <MyLeaveScreen user={currentUser} realSession={!!initialUser} initialSubTab={leaveSubTab} />
+      )}
 
       {currentView === "objectives" && (
         persona === "employee" ? (
@@ -850,7 +843,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         )
       )}
 
-      {currentView === "policies_handbook" && <PoliciesHandbookView />}
+      {currentView === "policies_handbook" && (
+        <PoliciesHandbookView isHr={persona === "hr_admin" || persona === "hr_director"} />
+      )}
       {currentView === "organogram" && <OrganogramView />}
     </>
   );
@@ -870,7 +865,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           pendingApprovalsCount={leaves.filter((l) => l.status === "PENDING").length}
           showName={!!initialUser}
           currentView={currentView}
-          onNavigate={setCurrentView}
+          onNavigate={(v, sub) => {
+            setLeaveSubTab(sub);
+            setCurrentView(v);
+          }}
           onSignOut={handleSignOut}
           onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
           onOpenSearch={() => setIsCommandPaletteOpen(true)}

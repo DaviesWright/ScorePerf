@@ -11,6 +11,7 @@ interface NavLeaf {
   id: string;
   label: string;
   view: ModuleViewKey;
+  subTab?: string;
   badge?: number | string;
 }
 
@@ -131,7 +132,7 @@ interface PlainShellProps {
   pendingApprovalsCount?: number;
   showName?: boolean;
   currentView: ModuleViewKey;
-  onNavigate: (view: ModuleViewKey) => void;
+  onNavigate: (view: ModuleViewKey, subTab?: string) => void;
   onSignOut: () => void;
   onOpenDede?: () => void;
   onOpenSearch?: () => void;
@@ -150,9 +151,7 @@ function getContextualNav(
           label: "My Performance",
           icon: Icons.Target,
           items: [
-            { id: "ess-goals", label: "My Goals & OKRs", view: "my_performance" },
-            { id: "ess-checkins", label: "My Check-ins", view: "my_performance" },
-            { id: "ess-reviews", label: "My Reviews & Assessment", view: "my_performance" },
+            { id: "ess-perf", label: "My Performance & Goals", view: "my_performance" },
             { id: "ess-skills", label: "My Skills & Gaps", view: "skills_marketplace" },
           ],
         },
@@ -160,19 +159,20 @@ function getContextualNav(
           label: "My Leave",
           icon: Icons.Calendar,
           items: [
-            { id: "ess-bal", label: "Leave Balances", view: "my_leave" },
-            { id: "ess-apply", label: "Apply for Leave", view: "my_leave" },
-            { id: "ess-plan", label: "My Leave Plan", view: "my_leave" },
-            { id: "ess-hist", label: "My History", view: "my_leave" },
+            { id: "ess-bal", label: "Leave Balances", view: "my_leave", subTab: "balances_history" },
+            { id: "ess-apply", label: "Apply for Leave", view: "my_leave", subTab: "apply" },
+            { id: "ess-plan", label: "My Leave Plan", view: "my_leave", subTab: "plan_leave" },
+            { id: "ess-hist", label: "My Leave History", view: "my_leave", subTab: "history" },
           ],
         },
         {
-          label: "My Records",
+          label: "My Records & Reports",
           icon: Icons.FileText,
           items: [
             { id: "ess-bank", label: "Bank & Tax Details", view: "my_profile" },
             { id: "ess-docs", label: "Document Centre", view: "document_centre" },
             { id: "ess-payslips", label: "Payslips", view: "payslips" },
+            { id: "ess-reports", label: "My Reports", view: "reports_analytics" },
           ],
         },
         {
@@ -394,7 +394,7 @@ export const PlainShell: React.FC<PlainShellProps> = ({
   const handleLeafClick = (item: NavLeaf) => {
     setActiveLeafId(item.id);
     setMobileOpen(false);
-    onNavigate(item.view);
+    onNavigate(item.view, item.subTab);
   };
 
   const isLeafActive = (item: NavLeaf) =>
