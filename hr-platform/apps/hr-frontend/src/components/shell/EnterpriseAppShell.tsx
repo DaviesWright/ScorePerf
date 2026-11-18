@@ -226,10 +226,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const userContexts: UserContextTuple[] = React.useMemo(() => {
     const matchedSeed = currentUser
       ? SEEDED_EMPLOYEES.find(
-          (e) =>
-            e.email.toLowerCase() === currentUser.email.toLowerCase() ||
-            e.staffId === currentUser.id,
-        )
+        (e) =>
+          e.email.toLowerCase() === currentUser.email.toLowerCase() ||
+          e.staffId === currentUser.id,
+      )
       : undefined;
 
     // Base held roles come from the user's record (or demo login role), NOT the currently active persona,
@@ -238,10 +238,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     const roles: ArchitecturalRoleCode[] = matchedSeed
       ? matchedSeed.architecturalRoles ?? [matchedSeed.architecturalRole]
       : demoBasePersona === "employee"
-      ? ["EMPLOYEE"]
-      : demoBasePersona === "line_manager"
-      ? ["DEPARTMENT_HEAD"]
-      : ["SUPER_ADMIN", "HR_MANAGER"];
+        ? ["EMPLOYEE"]
+        : demoBasePersona === "line_manager"
+          ? ["DEPARTMENT_HEAD"]
+          : ["SUPER_ADMIN", "HR_MANAGER"];
 
     return availableContexts({
       employeeId: String(matchedSeed?.id ?? "EMP-PKB-001"),
@@ -867,6 +867,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           onSelectContext={handleSelectContext}
           contextNotice={contextNotice}
           onDismissContextNotice={() => setContextNotice(null)}
+          pendingApprovalsCount={leaves.filter((l) => l.status === "PENDING").length}
           showName={!!initialUser}
           currentView={currentView}
           onNavigate={setCurrentView}
