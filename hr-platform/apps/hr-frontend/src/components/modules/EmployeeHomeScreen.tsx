@@ -98,6 +98,13 @@ export const EmployeeHomeScreen: React.FC<{ onNavigate: (view: ModuleViewKey) =>
         {notes.error && <p role="alert" style={{ color: C.danger }}>{notes.error}</p>}
       </Panel>
 
+      <Panel title="Celebrations & Milestones">
+        <p style={{ margin: "0 0 0.75rem", color: C.muted }}>
+          View upcoming company birthdays, work anniversaries, and manage your privacy preferences.
+        </p>
+        <Link label="Open Celebrations" view="celebrations" onNavigate={onNavigate} />
+      </Panel>
+
       <Panel title="Quick links">
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <Link label="Bank & Tax Details" view="my_profile" onNavigate={onNavigate} />

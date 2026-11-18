@@ -93,21 +93,24 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
     status: string;
   }
 
-  const seededOnLeave = useMemo<OnLeaveDetail[]>(
-    () =>
-      SEEDED_LEAVE_REQUESTS.filter((r) => r.status === "APPROVED").map((r) => ({
-        id: String(r.id),
-        employeeName: `${r.firstName} ${r.lastName}`,
-        department: r.department,
-        leaveType: r.leaveType,
-        startDate: r.startDate,
-        endDate: r.endDate,
-        days: r.requestedDays,
-        reliefManager: r.reliefOfficerName || "Unassigned",
-        status: r.status,
-      })),
-    []
-  );
+  const seededOnLeave = useMemo<OnLeaveDetail[]>(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const activeToday = SEEDED_LEAVE_REQUESTS.filter(
+      (r) => r.status === "APPROVED" && r.startDate <= today && r.endDate >= today
+    );
+    const source = activeToday.length > 0 ? activeToday : SEEDED_LEAVE_REQUESTS.filter((r) => r.status === "APPROVED").slice(0, 4);
+    return source.map((r) => ({
+      id: String(r.id),
+      employeeName: `${r.firstName} ${r.lastName}`,
+      department: r.department,
+      leaveType: r.leaveType,
+      startDate: r.startDate,
+      endDate: r.endDate,
+      days: r.requestedDays,
+      reliefManager: r.reliefOfficerName || "Unassigned",
+      status: r.status,
+    }));
+  }, []);
 
   const [liveOnLeave, setLiveOnLeave] = useState<OnLeaveDetail[] | null>(null);
   const [showOnLeaveModal, setShowOnLeaveModal] = useState(false);
@@ -168,7 +171,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   }, [employees]);
 
   const allocatedAssetsCount = assets.filter((a) => a.employee_id).length;
-  const coveragePct = Math.round((allocatedAssetsCount / (employees.length || 1)) * 100);
+  const coveragePct = Math.min(100, Math.round((allocatedAssetsCount / (stats.totalAssets || assets.length || 1)) * 100));
 
   const [centerTab, setCenterTab] = useState<"command" | "dashboard">("command");
   const [viewMode, setViewMode] = useState<"donut" | "bars">("donut");

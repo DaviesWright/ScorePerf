@@ -33,6 +33,7 @@ import { GovernanceView } from "../modules/GovernanceView";
 import { EmployeeSelfServiceView } from "../modules/EmployeeSelfServiceView";
 import { ReportsAnalyticsView } from "../modules/ReportsAnalyticsView";
 import { EmployeeSettingsView } from "../modules/EmployeeSettingsView";
+import { CelebrationsView } from "../modules/CelebrationsView";
 import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
@@ -460,6 +461,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Organogram";
       case "my_leave":
         return "My Leave Portal";
+      case "celebrations":
+        return "Celebrations & Milestones";
+      case "team_celebrations":
+        return "Team Celebrations";
       default:
         return "Workforce Intelligence";
     }
@@ -745,6 +750,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       {currentView === "my_leave" && (
         <MyLeaveScreen user={currentUser} realSession={!!initialUser} initialSubTab={leaveSubTab} />
       )}
+      {currentView === "celebrations" && <CelebrationsView mode="ess" />}
+      {currentView === "team_celebrations" && <CelebrationsView mode="mss" />}
 
       {currentView === "objectives" && (
         persona === "employee" ? (

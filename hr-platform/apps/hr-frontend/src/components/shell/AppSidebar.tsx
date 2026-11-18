@@ -32,7 +32,9 @@ export type ModuleViewKey =
   | "approval_workflows"
   | "disciplinary"
   | "policies_handbook"
-  | "organogram";
+  | "organogram"
+  | "celebrations"
+  | "team_celebrations";
 
 export type UserPersona = "hr_director" | "hr_admin" | "line_manager" | "employee";
 
@@ -148,6 +150,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               badgeType: "emerald" as const,
             },
             {
+              key: "celebrations" as ModuleViewKey,
+              label: "Celebrations",
+              icon: Icons.Cake,
+              badge: "Milestones",
+              badgeType: "emerald" as const,
+            },
+            {
               key: "my_performance" as ModuleViewKey,
               label: "My Performance",
               icon: Icons.Target,
@@ -196,6 +205,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               label: "Team Roster",
               icon: Icons.Users,
               badge: "Subtree",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "team_celebrations" as ModuleViewKey,
+              label: "Team Celebrations",
+              icon: Icons.Cake,
+              badge: "Milestones",
               badgeType: "emerald" as const,
             },
             {

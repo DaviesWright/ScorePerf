@@ -61,7 +61,7 @@ export const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
         id: "emp_4",
         stepNumber: 4,
         title: "Review T-Shaped Skill Recommendations & Internal Gigs",
-        promptText: "Explore internal project gigs and LMS learning modules automatically recommended from your appraisal skill gaps.",
+        promptText: "Explore internal project gigs and LMS learning modules automatically recommended from your appraisal competency gaps.",
         actionLabel: "Open Skills & Projects",
         targetView: "skills_marketplace",
         estimatedTime: "1 min",
@@ -341,7 +341,7 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedLabel: "Check Data Governance →",
   },
   skills_marketplace: {
-    whatToDoHere: "Match employee T-shaped skill profiles to open internal gigs and upskilling courses.",
+    whatToDoHere: "Match employee T-shaped competency profiles to open internal gigs and upskilling courses.",
     nextSuggestedView: "projects",
     nextSuggestedLabel: "Explore Active Projects →",
   },
@@ -390,6 +390,16 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "workforce_directory",
     nextSuggestedLabel: "Go to Workforce Directory →",
   },
+  celebrations: {
+    whatToDoHere: "View upcoming birthdays and work anniversaries this week and month, and manage your privacy opt-in settings.",
+    nextSuggestedView: "my_leave",
+    nextSuggestedLabel: "Open My Leave →",
+  },
+  team_celebrations: {
+    whatToDoHere: "Track your direct reports' birthdays and work anniversaries and send PRAISE recognition to Continuous Feedback.",
+    nextSuggestedView: "performance_pms",
+    nextSuggestedLabel: "Open Team Performance →",
+  },
 };
 
 interface FollowThePromptBarProps {
@@ -420,7 +430,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       try {
         const saved = localStorage.getItem("scoreview_follow_prompt_completed");
         if (saved) return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return [];
   });
@@ -439,7 +449,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("scoreview_follow_prompt_completed", JSON.stringify(next));
-        } catch {}
+        } catch { }
       }
       return next;
     });
@@ -452,7 +462,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("scoreview_follow_prompt_completed", JSON.stringify(next));
-        } catch {}
+        } catch { }
       }
       return next;
     });
@@ -547,8 +557,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                         backgroundColor: isDone
                           ? "#10b981"
                           : isCurrent
-                          ? "#6366f1"
-                          : "rgba(255, 255, 255, 0.1)",
+                            ? "#6366f1"
+                            : "rgba(255, 255, 255, 0.1)",
                         color: "#ffffff",
                         fontSize: "10px",
                         fontWeight: 700,
@@ -618,9 +628,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                   backgroundColor: completedIds.includes(currentStep.id)
                     ? "rgba(16, 185, 129, 0.25)"
                     : "rgba(255, 255, 255, 0.12)",
-                  border: `1px solid ${
-                    completedIds.includes(currentStep.id) ? "#10b981" : "rgba(255, 255, 255, 0.25)"
-                  }`,
+                  border: `1px solid ${completedIds.includes(currentStep.id) ? "#10b981" : "rgba(255, 255, 255, 0.25)"
+                    }`,
                   color: "#ffffff",
                   borderRadius: radii.md,
                   padding: "0.35rem 0.65rem",
@@ -805,8 +814,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                       backgroundColor: isDone
                         ? "rgba(16, 185, 129, 0.04)"
                         : isCurrent
-                        ? "rgba(99, 102, 241, 0.04)"
-                        : colors.surface,
+                          ? "rgba(99, 102, 241, 0.04)"
+                          : colors.surface,
                       borderRadius: radii.md,
                       padding: "1rem 1.15rem",
                       display: "flex",

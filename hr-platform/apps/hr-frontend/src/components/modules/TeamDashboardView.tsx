@@ -118,6 +118,9 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           <Button variant="primary" size="sm" onClick={() => onNavigate("organogram")}>
             Team Hierarchy
           </Button>
+          <Button variant="outline" size="sm" onClick={() => onNavigate("team_celebrations")}>
+            Team Milestones
+          </Button>
         </div>
       </div>
 

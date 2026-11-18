@@ -39,6 +39,8 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "governance_import",
   "disciplinary",
   "policies_handbook",
+  "celebrations",
+  "team_celebrations",
 ];
 
 export type FeatureKey = "ai_assistant" | "payslip";
@@ -58,6 +60,8 @@ export const DEFAULT_VIEWS: readonly ModuleViewKey[] = [
   "payslips",
   "document_centre",
   "assets",
+  "celebrations",
+  "team_celebrations",
 ];
 
 const VIEW_ALIASES: Record<string, ModuleViewKey> = {
