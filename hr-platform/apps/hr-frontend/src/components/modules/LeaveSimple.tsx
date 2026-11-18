@@ -279,6 +279,7 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
   const [half, setHalf] = useState(false);
   const [halfPeriod, setHalfPeriod] = useState<"morning" | "afternoon">("morning");
   const [reason, setReason] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -301,6 +302,18 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
       reason: reason.trim(),
       ...(half ? { halfDay: halfPeriod } : {}),
     });
+    if (r.ok && attachmentFile && r.id) {
+      const up = await fetch(`/api/leave/requests/${r.id}/evidence`, {
+        method: "POST",
+        headers: { "Content-Type": attachmentFile.type },
+        body: attachmentFile,
+      });
+      if (!up.ok) {
+        setSubmitting(false);
+        setFormError("Leave request created, but attachment upload failed. You can retry from My leave.");
+        return;
+      }
+    }
     setSubmitting(false);
     if (r.ok) onDone();
     else setFormError(r.error);
@@ -356,6 +369,20 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
           <label style={S.field}>
             Reason (optional)
             <textarea value={reason} maxLength={500} rows={3} onChange={(e) => setReason(e.target.value)} style={{ ...S.input, minHeight: "80px" }} />
+          </label>
+          <label style={S.field}>
+            Supporting document — doctor&apos;s note or handover document (JPEG, PNG or PDF, up to 5 MB)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={(e) => setAttachmentFile(e.target.files?.[0] ?? null)}
+              style={{ fontSize: "14px" }}
+            />
+            {attachmentFile && (
+              <span style={{ fontSize: "13px", color: C.ok }}>
+                Attached: {attachmentFile.name} ({Math.max(1, Math.round(attachmentFile.size / 1024))} KB)
+              </span>
+            )}
           </label>
           {formError && <p role="alert" style={{ color: C.danger, fontWeight: 600 }}>{formError}</p>}
           <button type="submit" style={S.primary} disabled={submitting}>{submitting ? "Submitting…" : "Submit request"}</button>

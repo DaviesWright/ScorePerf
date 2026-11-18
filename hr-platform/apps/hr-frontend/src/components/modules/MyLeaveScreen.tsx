@@ -34,6 +34,7 @@ export interface MyLeaveItem {
   resumptionStatus?: "NOT_DUE" | "AWAITING_CONFIRMATION" | "CONFIRMED_RETURNED";
   actualResumptionDate?: string;
   resumptionNotes?: string;
+  attachmentName?: string;
   linkedExtensions?: { id: string; additionalEndDate: string; additionalDays: number; status: string }[];
 }
 
@@ -166,6 +167,7 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
   const [partialDay, setPartialDay] = useState<PartialDayMode>("FULL");
   const [reason, setReason] = useState("");
   const [handoverColleague, setHandoverColleague] = useState("Sarah Jenkins (Senior Consultant)");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [saveAsDraftMode, setSaveAsDraftMode] = useState(false);
 
   // Linked Extension Modal state
@@ -245,15 +247,18 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
       submittedAt: new Date().toISOString().split("T")[0],
       policyVersionId: calc.policyVersion,
       resumptionStatus: "NOT_DUE",
+      attachmentName: attachmentFile?.name,
     };
 
     setLeaves([newLeave, ...leaves]);
     setShowApplyModal(false);
     setReason("");
+    const attachedMsg = attachmentFile ? ` · Attached: ${attachmentFile.name}` : "";
+    setAttachmentFile(null);
     showToast(
       saveAsDraftMode
-        ? `Saved ${appNum} as Draft (${calc.chargedDays} working days; invisible to approvers, no reservation hold).`
-        : `Submitted ${appNum} (${calc.chargedDays} working days charged, ${calc.excludedDays} weekend/holiday days excluded; Resumption: ${formatDate(calc.resumptionDate)}).`
+        ? `Saved ${appNum} as Draft (${calc.chargedDays} working days; invisible to approvers, no reservation hold)${attachedMsg}.`
+        : `Submitted ${appNum} (${calc.chargedDays} working days charged, ${calc.excludedDays} weekend/holiday days excluded; Resumption: ${formatDate(calc.resumptionDate)})${attachedMsg}.`
     );
   };
 
@@ -1147,6 +1152,25 @@ export const MyLeaveScreen: React.FC<MyLeaveScreenProps> = () => {
                   placeholder="Provide context for your leave and handover preparations..."
                   style={{ width: "100%", padding: space[2], borderRadius: radii.sm, border: `1px solid ${colors.border}` }}
                 />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: text.small.fontSize, fontWeight: 600, marginBottom: space[1] }}>
+                  Supporting Document — Doctor&apos;s Note or Handover Doc (PDF, PNG, JPG)
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: space[2], flexWrap: "wrap" }}>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/png,image/jpeg"
+                    onChange={(e) => setAttachmentFile(e.target.files?.[0] ?? null)}
+                    style={{ fontSize: text.small.fontSize }}
+                  />
+                  {attachmentFile && (
+                    <Badge variant="success" size="sm">
+                      {attachmentFile.name} ({Math.max(1, Math.round(attachmentFile.size / 1024))} KB)
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: space[1] }}>
