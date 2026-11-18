@@ -7,6 +7,7 @@ import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { formatCellIfDate, formatDate } from "../../utils/date";
+import { ReportingCataloguePanel } from "./ReportingCataloguePanel";
 
 export interface ReportItem {
   id: number;
@@ -1454,7 +1455,8 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
 
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1400px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      
+      <ReportingCataloguePanel />
+
       {/* Page Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>

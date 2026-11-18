@@ -39,6 +39,7 @@ import { createOrgRoutes } from "./org-routes";
 import { createPerformanceRoutes } from "./performance-routes";
 import { createLeaveConsoleRoutes } from "./leave-console-routes";
 import { createLeaveMiniDashboardRoutes } from "./leave-mini-dashboard-routes";
+import { createReportRoutes } from "./report-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2981,6 +2982,8 @@ app.route("/", createPerformanceRoutes(getSql));
 app.route("/", createLeaveConsoleRoutes(getSql));
 // Leave Mini-Dashboard Addendum v1.2: server-driven role/scope-aware mini-dashboard & refresh.
 app.route("/", createLeaveMiniDashboardRoutes(getSql));
+// HRIS Reporting Catalogue v1.0: unified /api/v1/reports/{module}/{reportKey} with RBAC, suppression & audit.
+app.route("/", createReportRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {
