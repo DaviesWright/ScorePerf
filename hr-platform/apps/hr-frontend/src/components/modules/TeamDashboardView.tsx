@@ -13,6 +13,7 @@ import {
 } from "../../data/enterpriseSeedData";
 import { resolveScope, type UserContextTuple } from "../../domain/orgCore";
 import type { ModuleViewKey } from "../shell/AppSidebar";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 
 interface TeamDashboardViewProps {
   activeContext: UserContextTuple;
@@ -119,6 +120,8 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({
           </Button>
         </div>
       </div>
+
+      <LeaveMiniDashboard mode="manager" scope="team" onNavigate={onNavigate} />
 
       {/* Team KPI Strip */}
       <div

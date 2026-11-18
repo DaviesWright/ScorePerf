@@ -989,6 +989,9 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       {activeTab === "dashboard" && (
         <div>
           <LeaveMiniDashboard
+            mode="hr"
+            scope={scopeDept === "COMPANY" ? "company" : "department"}
+            dept={scopeDept}
             onFilterPending={() => {
               setRequestFilter("PENDING");
               setActiveTab("requests");

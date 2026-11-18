@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { ModuleViewKey } from "../shell/AppSidebar";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 import { C, card, cell, useLoad } from "./selfServiceUi";
 
 // Employee home: the landing page for an employee after sign-in. Reads only what the employee may see, from the
@@ -48,6 +49,8 @@ export const EmployeeHomeScreen: React.FC<{ onNavigate: (view: ModuleViewKey) =>
       <p style={{ color: C.muted, margin: "0 0 1rem" }}>
         {me.data ? [me.data.jobTitle, me.data.department].filter(Boolean).join(" · ") : me.error}
       </p>
+
+      <LeaveMiniDashboard mode="ess" scope="self" onNavigate={onNavigate} />
 
       <Panel title="Your leave">
         {leave.error && <p role="alert" style={{ color: C.danger }}>{leave.error}</p>}

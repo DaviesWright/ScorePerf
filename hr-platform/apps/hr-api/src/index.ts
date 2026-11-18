@@ -38,6 +38,7 @@ import { createAssetRoutes, openRecoveryTask, overdueAssets } from "./assets-rou
 import { createOrgRoutes } from "./org-routes";
 import { createPerformanceRoutes } from "./performance-routes";
 import { createLeaveConsoleRoutes } from "./leave-console-routes";
+import { createLeaveMiniDashboardRoutes } from "./leave-mini-dashboard-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2978,6 +2979,8 @@ app.route("/", createPerformanceRoutes(getSql));
 
 // Leave Console Addendum v1.1: role-aware dashboard context, mode audit, on-leave list & ESS self-scope.
 app.route("/", createLeaveConsoleRoutes(getSql));
+// Leave Mini-Dashboard Addendum v1.2: server-driven role/scope-aware mini-dashboard & refresh.
+app.route("/", createLeaveMiniDashboardRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {
