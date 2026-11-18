@@ -5,6 +5,7 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
 import { DEMO_STAFF, PROFILE_FIELDS, PROFILE_MISSING, SITES, siteOf, type DemoStaff } from "../../data/demoData";
+import { SEEDED_EMPLOYEES } from "../../data/enterpriseSeedData";
 
 type Tab = "policies" | "handbooks" | "completeness";
 
@@ -138,7 +139,15 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
     },
   ];
 
-  const average = Math.round(DEMO_STAFF.reduce((sum, s) => sum + score(s.id), 0) / DEMO_STAFF.length);
+  const allCompletenessStaff: DemoStaff[] = SEEDED_EMPLOYEES.map((e) => ({
+    id: e.staffId,
+    name: e.name,
+    jobTitle: e.jobTitle,
+    department: e.departmentName,
+    site: e.office === "London" ? "LON" : e.office === "Windhoek" ? "WDH" : "ACC",
+    email: e.email,
+  }));
+  const average = Math.round(allCompletenessStaff.reduce((sum, s) => sum + score(s.id), 0) / allCompletenessStaff.length);
   const tabs: { key: Tab; label: string }[] = [
     { key: "policies", label: `Policies (${policies.length})` },
     { key: "handbooks", label: `Handbooks (${handbooks.length})` },
@@ -186,9 +195,9 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
       {tab === "completeness" && (
         <>
           <p style={{ margin: "0 0 0.75rem", fontSize: typography.sizes.sm, color: colors.textSecondary }}>
-            Average completeness <strong>{average}%</strong> across {DEMO_STAFF.length} staff in {SITES.length} sites. Each of the {PROFILE_FIELDS.length} checklist items carries equal weight.
+            Average completeness <strong>{average}%</strong> across {allCompletenessStaff.length} staff in {SITES.length} sites. Each of the {PROFILE_FIELDS.length} checklist items carries equal weight.
           </p>
-          <DataTable columns={completenessColumns} data={DEMO_STAFF} keyExtractor={(s) => s.id} emptyMessage="No staff." />
+          <DataTable columns={completenessColumns} data={allCompletenessStaff} keyExtractor={(s) => s.id} emptyMessage="No staff." />
         </>
       )}
 

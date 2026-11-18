@@ -75,23 +75,34 @@ export const DEMO_PROJECTS: ProjectRecord[] = [
 export const ASSET_CATEGORIES = ["Vehicles", "Laptops", "Mobile Phones"] as const;
 export type AssetCategory = (typeof ASSET_CATEGORIES)[number];
 
-// Asset codes follow SEN-<VEH|LAP|MOB>-<nnn>. Shown only when the API returns no assets.
+// Asset codes follow SEN-<VEH|LAP|MOB>-<nnn>. Consistent 1:1 laptop allocation for all 54 seeded employees + pool/vehicles/phones.
+const LAPTOP_MODELS = [
+  'MacBook Pro 16" M4 Pro',
+  'MacBook Pro 14" M4',
+  "Dell Latitude 7450",
+  "Lenovo ThinkPad X1 Carbon Gen 12",
+  "HP EliteBook 840 G11",
+];
+
+const EMPLOYEE_LAPTOPS: AssetRecord[] = SEEDED_EMPLOYEES.map((emp, idx) => ({
+  id: 100 + emp.id,
+  name: LAPTOP_MODELS[idx % LAPTOP_MODELS.length],
+  asset_code: `SEN-LAP-${String(emp.id).padStart(3, "0")}`,
+  category_name: "Laptops",
+  status: "allocated",
+  employee_id: emp.id,
+  first_name: emp.firstName,
+  last_name: emp.lastName,
+}));
+
 export const DEMO_ASSETS: AssetRecord[] = [
-  { id: 1, name: "Toyota Hilux 2.8 GD-6 (GR 4821-24)", asset_code: "SEN-VEH-001", category_name: "Vehicles", status: "allocated", first_name: "Jemima", last_name: "Richards" },
-  { id: 2, name: "Toyota Land Cruiser Prado (N 21874 W)", asset_code: "SEN-VEH-002", category_name: "Vehicles", status: "allocated", first_name: "Tangeni", last_name: "Haufiku" },
+  ...EMPLOYEE_LAPTOPS,
+  { id: 1, name: "Toyota Hilux 2.8 GD-6 (GR 4821-24)", asset_code: "SEN-VEH-001", category_name: "Vehicles", status: "allocated", employee_id: 3, first_name: "Jemima", last_name: "Richards" },
+  { id: 2, name: "Toyota Land Cruiser Prado (N 21874 W)", asset_code: "SEN-VEH-002", category_name: "Vehicles", status: "allocated", employee_id: 7, first_name: "Tangeni", last_name: "Haufiku" },
   { id: 3, name: "Ford Ranger XLT (GT 1190-25)", asset_code: "SEN-VEH-003", category_name: "Vehicles", status: "available" },
-  { id: 4, name: "Toyota Corolla Cross (LK25 TRW)", asset_code: "SEN-VEH-004", category_name: "Vehicles", status: "allocated", first_name: "James", last_name: "Whitfield" },
-  { id: 5, name: 'MacBook Pro 16" M4 Pro', asset_code: "SEN-LAP-001", category_name: "Laptops", status: "allocated", first_name: "Benedicta", last_name: "Agbesi" },
-  { id: 6, name: 'MacBook Pro 14" M4', asset_code: "SEN-LAP-002", category_name: "Laptops", status: "allocated", first_name: "Philip", last_name: "Aryee" },
-  { id: 7, name: "Dell Latitude 7450", asset_code: "SEN-LAP-003", category_name: "Laptops", status: "allocated", first_name: "Paa Kwesi", last_name: "Barnes" },
-  { id: 8, name: "Lenovo ThinkPad X1 Carbon Gen 12", asset_code: "SEN-LAP-004", category_name: "Laptops", status: "allocated", first_name: "Ndapewa", last_name: "Shikongo" },
-  { id: 9, name: "HP EliteBook 840 G11", asset_code: "SEN-LAP-005", category_name: "Laptops", status: "allocated", first_name: "Kojo", last_name: "Antwi" },
-  { id: 10, name: "Dell Latitude 7450", asset_code: "SEN-LAP-006", category_name: "Laptops", status: "available" },
-  { id: 11, name: "iPhone 16 Pro 256GB", asset_code: "SEN-MOB-001", category_name: "Mobile Phones", status: "allocated", first_name: "Paa Kwesi", last_name: "Barnes" },
-  { id: 12, name: "iPhone 15 128GB", asset_code: "SEN-MOB-002", category_name: "Mobile Phones", status: "allocated", first_name: "Benedicta", last_name: "Agbesi" },
-  { id: 13, name: "Samsung Galaxy S24", asset_code: "SEN-MOB-003", category_name: "Mobile Phones", status: "allocated", first_name: "Philip", last_name: "Aryee" },
-  { id: 14, name: "Samsung Galaxy A55", asset_code: "SEN-MOB-004", category_name: "Mobile Phones", status: "allocated", first_name: "Hilma", last_name: "Nangolo" },
-  { id: 15, name: "Google Pixel 9", asset_code: "SEN-MOB-005", category_name: "Mobile Phones", status: "available" },
+  { id: 4, name: "Toyota Corolla Cross (LK25 TRW)", asset_code: "SEN-VEH-004", category_name: "Vehicles", status: "allocated", employee_id: 10, first_name: "James", last_name: "Whitfield" },
+  { id: 10, name: "Dell Latitude 7450 (Pool Spare)", asset_code: "SEN-LAP-055", category_name: "Laptops", status: "available" },
+  { id: 15, name: "Google Pixel 9 (Pool Spare)", asset_code: "SEN-MOB-005", category_name: "Mobile Phones", status: "available" },
 ];
 
 export const PROFILE_FIELDS = [

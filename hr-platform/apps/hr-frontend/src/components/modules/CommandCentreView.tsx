@@ -238,7 +238,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                 <strong>Benedicta&apos;s Q4 OKR self-review</strong> is in calibration.
               </li>
               <li>
-                Your 45-member team&apos;s average sentiment is <strong>94% positive</strong> this week across Accra and London hubs.
+                Your {stats.totalEmployees}-member team&apos;s average sentiment is <strong>94% positive</strong> this week across Accra, London, and Windhoek hubs.
               </li>
             </ul>
           </div>

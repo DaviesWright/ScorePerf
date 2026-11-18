@@ -36,12 +36,12 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Core HR & Headcount",
     pack: "Admin/Compliance Pack",
     type: "Operational Export",
-    description: "Complete registry of all 45 active workforce members with roles, emails, manager hierarchies, and work locations.",
-    kpis: ["Total Headcount: 45", "Departments: 7", "Data Completeness: 99.4%", "Active Ratio: 100%"],
-    sampleAiInsight: "Workforce directory integrity is at 99.4% with all 45 records fully verified. Zero missing emergency contacts or duplicate tax identifiers detected across London and West Africa hubs.",
+    description: "Complete registry of all 54 active workforce members across 8 departments with roles, emails, manager hierarchies, and work locations.",
+    kpis: ["Total Headcount: 54", "Departments: 8", "Data Completeness: 99.4%", "Active Ratio: 100%"],
+    sampleAiInsight: "Workforce directory integrity is at 99.4% with all 54 records fully verified across Accra, London, and Windhoek hubs.",
     metrics: [
-      { label: "Active Employees", value: "45", delta: "+2 this mo", trend: "up" },
-      { label: "Practice Locations", value: "2 (UK/GH)", trend: "neutral" },
+      { label: "Active Employees", value: "54", delta: "+2 this mo", trend: "up" },
+      { label: "Practice Locations", value: "3 (ACC/LON/WDH)", trend: "neutral" },
       { label: "Verified National IDs", value: "100%", trend: "up" },
     ],
     sampleRows: [
@@ -59,7 +59,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Executive Pack",
     type: "Strategic Dashboard",
     description: "Total headcount vs Full-Time Equivalents (FTE), broken down by department, practice location, and contract model.",
-    kpis: ["Total Headcount: 45", "Full-Time FTE: 43.5", "Contractors: 3", "Span of Control: 1:5.8"],
+    kpis: ["Total Headcount: 54", "Full-Time FTE: 52.5", "Contractors: 3", "Span of Control: 1:5.8"],
     sampleAiInsight: "FTE utilization stands at 96.6% with engineering leading headcount expansion (+18% YoY). Span of control remains healthy at 1:5.8 across core consulting practices.",
     metrics: [
       { label: "Total FTE", value: "43.5", delta: "+4.5 YoY", trend: "up" },
@@ -234,7 +234,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Manager Pack",
     type: "Strategic Dashboard",
     description: "Live real-time telemetry of staff clocked in, late, on approved PTO, or active on remote sprints today.",
-    kpis: ["Present Today: 42/45", "On Leave: 3", "Remote Active: 26", "Tardiness Rate: 0.8%"],
+    kpis: ["Present Today: 50/54", "On Leave: 4", "Remote Active: 28", "Tardiness Rate: 0.8%"],
     sampleAiInsight: "93.3% workforce presence confirmed today with 26 engineers active on remote client VPCs. 3 staff are on pre-approved annual leave with full coverage arranged.",
     metrics: [
       { label: "Present Today", value: "93.3%", trend: "up" },
