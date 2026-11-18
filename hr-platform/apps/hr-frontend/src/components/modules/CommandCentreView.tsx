@@ -180,7 +180,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             >
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <Icons.CommandCentre size={14} />
-                <span>Command Pulse</span>
+                <span>Operational Pulse (Inbox &amp; Actions)</span>
               </span>
             </Button>
             <Button
@@ -190,7 +190,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             >
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <Icons.Activity size={14} />
-                <span>ScoReview Console &amp; Heatmaps</span>
+                <span>Analytics &amp; Heatmaps (Charts &amp; Trends)</span>
               </span>
             </Button>
           </div>
@@ -900,82 +900,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           </div>
         </div>
       ) : (
-        /* Dashboard Tab: Live Charts, Progress Heatmaps & Absence Analytics */
+        /* Analytics & Heatmaps Tab: Live Charts, Progress Heatmaps & Absence Analytics (no duplicate KPIs) */
         <div style={{ display: "flex", flexDirection: "column", gap: "1.75rem" }}>
-          {/* At-a-Glance Key Indicators Bar */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "1rem",
-              backgroundColor: colors.surface,
-              border: `1px solid ${colors.border}`,
-              borderRadius: radii.md,
-              padding: "1rem 1.25rem",
-              boxShadow: shadows.sm,
-            }}
-          >
-            <div
-              onClick={() => onNavigate("time_and_leave")}
-              style={{ cursor: "pointer", borderRight: `1px solid ${colors.borderSubtle}`, paddingRight: "1rem" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                <Icons.Calendar size={14} color="#10b981" />
-                <span>Away Today</span>
-              </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10b981", margin: "0.2rem 0" }}>2</div>
-              <div style={{ fontSize: "11px", color: colors.textMuted }}>On approved leave</div>
-            </div>
-
-            <div
-              onClick={() => onNavigate("time_and_leave")}
-              style={{ cursor: "pointer", borderRight: `1px solid ${colors.borderSubtle}`, paddingRight: "1rem" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                <Icons.Clock size={14} color="#f59e0b" />
-                <span>Pending Leaves</span>
-              </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#f59e0b", margin: "0.2rem 0" }}>{stats.pendingLeaves}</div>
-              <div style={{ fontSize: "11px", color: colors.textMuted }}>Awaiting decision</div>
-            </div>
-
-            <div
-              onClick={() => onNavigate("performance_pms")}
-              style={{ cursor: "pointer", borderRight: `1px solid ${colors.borderSubtle}`, paddingRight: "1rem" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                <Icons.Target size={14} color={colors.indigoAction} />
-                <span>Objectives Approved</span>
-              </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: colors.indigoAction, margin: "0.2rem 0" }}>82%</div>
-              <div style={{ fontSize: "11px", color: colors.textMuted }}>18 of 22 active goals</div>
-            </div>
-
-            <div
-              onClick={() => onNavigate("performance_setup")}
-              style={{ cursor: "pointer", borderRight: `1px solid ${colors.borderSubtle}`, paddingRight: "1rem" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                <Icons.Sliders size={14} color="#6366f1" />
-                <span>Active Cycle</span>
-              </div>
-              <div style={{ fontSize: "1.35rem", fontWeight: 700, color: colors.textPrimary, margin: "0.25rem 0" }}>2026 Annual</div>
-              <div style={{ fontSize: "11px", color: colors.emeraldDark, fontWeight: 600 }}>Open for Appraisals</div>
-            </div>
-
-            <div
-              onClick={() => onNavigate("asset_management")}
-              style={{ cursor: "pointer" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: colors.textMuted, fontSize: typography.sizes.xs }}>
-                <Icons.Laptop size={14} color="#06b6d4" />
-                <span>Fleet Assigned</span>
-              </div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#06b6d4", margin: "0.2rem 0" }}>{coveragePct}%</div>
-              <div style={{ fontSize: "11px", color: colors.textMuted }}>{allocatedAssetsCount} of {stats.totalAssets} devices</div>
-            </div>
-          </div>
-
           {/* Analytics & Heatmaps 2-Column Split */}
           <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "1.75rem" }}>
             {/* Left Column: Leave Trend & Objective Heatmap */}
