@@ -5,6 +5,7 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
 import { DEMO_STAFF, PROFILE_FIELDS, PROFILE_MISSING, SITES, siteOf, type DemoStaff } from "../../data/demoData";
+import { SEEDED_EMPLOYEES } from "../../data/enterpriseSeedData";
 
 type Tab = "policies" | "handbooks" | "completeness";
 
@@ -31,8 +32,8 @@ const POLICY_CATEGORIES = ["Conduct", "Leave & Attendance", "Information Securit
 
 // Synthetic demo documents.
 const INITIAL_POLICIES: PolicyDoc[] = [
-  { id: 1, title: "Code of Conduct", category: "Conduct", version: "3.1", owner: "Richard Mamphey", effective: "2026-01-01", status: "Published" },
-  { id: 2, title: "Remote & Hybrid Working", category: "Leave & Attendance", version: "2.0", owner: "Richard Mamphey", effective: "2026-03-01", status: "Published" },
+  { id: 1, title: "Code of Conduct", category: "Conduct", version: "3.1", owner: "Jemima Richards", effective: "2026-01-01", status: "Published" },
+  { id: 2, title: "Remote & Hybrid Working", category: "Leave & Attendance", version: "2.0", owner: "Jemima Richards", effective: "2026-03-01", status: "Published" },
   { id: 3, title: "Acceptable Use of Company Devices", category: "Information Security", version: "1.4", owner: "Philip Aryee", effective: "2026-05-15", status: "Published" },
   { id: 4, title: "Company Vehicle Use", category: "Health & Safety", version: "1.0", owner: "Tangeni Haufiku", effective: "2026-09-01", status: "Published" },
   { id: 5, title: "Travel & Expenses", category: "Travel & Expenses", version: "0.9", owner: "Kojo Antwi", effective: "2026-12-01", status: "Draft" },
@@ -52,7 +53,7 @@ const field: React.CSSProperties = { padding: "0.5rem", borderRadius: radii.md, 
 const label: React.CSSProperties = { display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: typography.sizes.sm, color: colors.textSecondary };
 const score = (id: string) => Math.round(((PROFILE_FIELDS.length - (MISSING[id]?.length ?? 0)) / PROFILE_FIELDS.length) * 100);
 
-export const PoliciesHandbookView: React.FC = () => {
+export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = false }) => {
   const [tab, setTab] = useState<Tab>("policies");
   const [policies, setPolicies] = useState(INITIAL_POLICIES);
   const [handbooks, setHandbooks] = useState(INITIAL_HANDBOOKS);
@@ -138,11 +139,19 @@ export const PoliciesHandbookView: React.FC = () => {
     },
   ];
 
-  const average = Math.round(DEMO_STAFF.reduce((sum, s) => sum + score(s.id), 0) / DEMO_STAFF.length);
+  const allCompletenessStaff: DemoStaff[] = SEEDED_EMPLOYEES.map((e) => ({
+    id: e.staffId,
+    name: e.name,
+    jobTitle: e.jobTitle,
+    department: e.departmentName,
+    site: e.office === "London" ? "LON" : e.office === "Windhoek" ? "WDH" : "ACC",
+    email: e.email,
+  }));
+  const average = Math.round(allCompletenessStaff.reduce((sum, s) => sum + score(s.id), 0) / allCompletenessStaff.length);
   const tabs: { key: Tab; label: string }[] = [
     { key: "policies", label: `Policies (${policies.length})` },
     { key: "handbooks", label: `Handbooks (${handbooks.length})` },
-    { key: "completeness", label: "Profile Completeness" },
+    ...(isHr ? [{ key: "completeness" as Tab, label: "Profile Completeness" }] : []),
   ];
 
   return (
@@ -186,9 +195,9 @@ export const PoliciesHandbookView: React.FC = () => {
       {tab === "completeness" && (
         <>
           <p style={{ margin: "0 0 0.75rem", fontSize: typography.sizes.sm, color: colors.textSecondary }}>
-            Average completeness <strong>{average}%</strong> across {DEMO_STAFF.length} staff in {SITES.length} sites. Each of the {PROFILE_FIELDS.length} checklist items carries equal weight.
+            Average completeness <strong>{average}%</strong> across {allCompletenessStaff.length} staff in {SITES.length} sites. Each of the {PROFILE_FIELDS.length} checklist items carries equal weight.
           </p>
-          <DataTable columns={completenessColumns} data={DEMO_STAFF} keyExtractor={(s) => s.id} emptyMessage="No staff." />
+          <DataTable columns={completenessColumns} data={allCompletenessStaff} keyExtractor={(s) => s.id} emptyMessage="No staff." />
         </>
       )}
 

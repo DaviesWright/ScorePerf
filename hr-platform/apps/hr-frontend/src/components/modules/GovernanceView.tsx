@@ -70,7 +70,7 @@ export const GovernanceView: React.FC = () => {
       actorRole: "HR Director",
       action: "TENANT_SECURITY_POLICY_LOCK",
       resource: "tenant:1:security_policy",
-      details: "Enforced SOC2 Type II and ISO 27001 strict single-framework governance.",
+      details: "Enforced SOC2 Type II and ISO 27001 compliance and governance controls.",
       ipAddress: "51.148.132.44",
       immutableHash: "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
       complianceTag: "SOC2-CC6.1",
@@ -79,13 +79,13 @@ export const GovernanceView: React.FC = () => {
       id: "AUD-202611-002",
       timestamp: "2026-11-03 11:22:15 UTC",
       actorType: "AI_AGENT",
-      actorName: "Omni-Agent Copilot",
-      actorEmail: "omni-agent@system.internal",
+      actorName: "Dede AI Copilot",
+      actorEmail: "dede@bscscoreview.com",
       actorRole: "AI Copilot",
       action: "LEAVE_REQUEST_AUTO_DRAFTED",
       resource: "leave:draft:accra_travel",
       details: "AI auto-drafted travel leave to Accra after balance and calendar conflict checks.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      ipAddress: "",
       immutableHash: "a149c9586fe54716b5394a81cfb5fa350e93a7d4a29a6744047a0640f09a63c7",
       complianceTag: "ISO27001-A.12.4.1",
     },
@@ -107,13 +107,13 @@ export const GovernanceView: React.FC = () => {
       id: "AUD-202611-004",
       timestamp: "2026-11-03 16:05:49 UTC",
       actorType: "AI_AGENT",
-      actorName: "Omni-Agent Ingestion",
-      actorEmail: "omni-agent@system.internal",
+      actorName: "Dede AI Ingestion",
+      actorEmail: "dede@bscscoreview.com",
       actorRole: "AI Ingestion Engine",
       action: "DOCUMENT_E2EE_ENCRYPTED",
       resource: "document:passport_kwesi_osei.pdf",
-      details: "Client-side encrypted candidate identity document with AES-GCM-256 before Cloudflare R2 persistence.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      details: "Client-side encrypted candidate identity document with AES-GCM-256 before storage.",
+      ipAddress: "",
       immutableHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       complianceTag: "ISO27001-A.10.1.1",
     },
@@ -135,13 +135,13 @@ export const GovernanceView: React.FC = () => {
       id: "AUD-202611-006",
       timestamp: "2026-11-03 18:15:30 UTC",
       actorType: "AI_AGENT",
-      actorName: "Omni-Agent OCR",
-      actorEmail: "omni-agent@system.internal",
+      actorName: "Dede AI OCR",
+      actorEmail: "dede@bscscoreview.com",
       actorRole: "AI OCR Pipeline",
       action: "SICK_NOTE_INGESTION_PARSED",
       resource: "claim:medical:DrKofiMensah",
       details: "Extracted diagnostic code, verified 3-day recovery period, and filed confidential health claim.",
-      ipAddress: "127.0.0.1 (Worker Edge)",
+      ipAddress: "",
       immutableHash: "c5d24b6113824f995874de388b17b2b73b22cfc857731737e58fc20fb14dfa49",
       complianceTag: "HIPAA-Sec.164.312",
     },
@@ -188,7 +188,7 @@ export const GovernanceView: React.FC = () => {
     {
       id: "DOC-E2EE-903",
       name: "HMRC_P60_End_Of_Year_2025_2026.pdf.enc",
-      employee: "All 45 Active Personnel",
+      employee: "All 54 Active Personnel",
       category: "Statutory Tax Filings",
       cipher: "AES-GCM-256 (Envelope)",
       kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",
@@ -458,7 +458,7 @@ export const GovernanceView: React.FC = () => {
                 fontWeight: isActive ? 700 : 500,
                 fontSize: typography.sizes.sm,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
             >
               <TabIcon size={15} color={isActive ? colors.indigoAccent : colors.textMuted} />
@@ -514,7 +514,7 @@ export const GovernanceView: React.FC = () => {
 
             <div style={{ fontSize: "11px", color: colors.textMuted, display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <Icons.Check size={14} color={colors.emeraldDark} />
-              <span>Cryptographic hash chain validated against Cloudflare D1 tamper ledger</span>
+              <span>Cryptographic hash chain validated</span>
             </div>
           </div>
 
@@ -586,7 +586,7 @@ export const GovernanceView: React.FC = () => {
 
                     <td style={{ padding: "0.85rem 1rem", fontFamily: typography.fontMono, color: colors.textSecondary }}>
                       <div>{log.resource}</div>
-                      <div style={{ fontSize: "10px", color: colors.textMuted }}>IP: {log.ipAddress}</div>
+                      {log.ipAddress && <div style={{ fontSize: "10px", color: colors.textMuted }}>IP: {log.ipAddress}</div>}
                     </td>
 
                     <td style={{ padding: "0.85rem 1rem" }}>
@@ -718,7 +718,7 @@ export const GovernanceView: React.FC = () => {
               End-to-End Encrypted Documents Registry (AES-GCM-256)
             </h3>
             <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-              Passports, confidential contracts, doctor notes, and P60s are encrypted client-side before transport and stored as zero-knowledge blobs in Cloudflare R2.
+              Passports, confidential contracts, doctor notes, and P60s are encrypted client-side before transport and stored as zero-knowledge encrypted files.
             </p>
 
             <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, overflow: "hidden" }}>
@@ -912,7 +912,7 @@ export const GovernanceView: React.FC = () => {
                   Master Workforce CSV Ingestion
                 </h3>
                 <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                  Bulk import workforce rosters directly into PostgreSQL via Neon / Hyperdrive edge connection.
+                  Bulk import workforce rosters directly into the platform.
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>

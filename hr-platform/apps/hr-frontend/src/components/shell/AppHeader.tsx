@@ -1,14 +1,25 @@
 import React, { useState } from "react";
-import { colors, typography, radii, shadows } from "../../design-system/tokens";
+import { colors, typography, radii, shadows, surfaceAccent, SurfaceKind } from "../../design-system/tokens";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
+import { ContextSwitcher } from "../common/ContextSwitcher";
 import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
-import type { ModuleViewKey } from "./AppSidebar";
+import type { ModuleViewKey, UserPersona } from "./AppSidebar";
+import {
+  EXPERIENCE_META,
+  ExperienceContext,
+  UserContextTuple,
+} from "../../domain/orgCore";
 
 interface AppHeaderProps {
   breadcrumb: string;
   apiOnline: boolean;
+  persona?: UserPersona;
+  onSelectPersona?: (persona: UserPersona) => void;
+  availableContexts?: UserContextTuple[];
+  activeContext?: UserContextTuple;
+  onSelectContext?: (contextId: string) => void;
   onOpenCommandPalette: () => void;
   onOpenOmniAgent: () => void;
   onQuickAction?: (action: string) => void;
@@ -31,6 +42,11 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   breadcrumb,
   apiOnline,
+  persona,
+  onSelectPersona,
+  availableContexts = [],
+  activeContext,
+  onSelectContext,
   onOpenCommandPalette,
   onOpenOmniAgent,
   onQuickAction,
@@ -50,6 +66,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenFollowPromptDrawer,
 }) => {
   const [showQuickMenu, setShowQuickMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [internalSandbox, setInternalSandbox] = useState(false);
   const [internalLocale, setInternalLocale] = useState<"en" | "fr">("en");
 
@@ -72,11 +89,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
+  const surfaceKind: SurfaceKind =
+    persona === "employee" ? "ess" : persona === "line_manager" ? "manager" : "hr";
+
+  const activeExperience: ExperienceContext =
+    activeContext?.experience ?? (persona === "employee" ? "ESS" : persona === "line_manager" ? "MSS" : "HRMS");
+  const expMeta = EXPERIENCE_META[activeExperience];
+  const headerAccentBorder =
+    activeExperience === "ESS"
+      ? "none"
+      : activeExperience === "MSS"
+      ? `4px solid ${colors.indigoAction}`
+      : `4px solid ${colors.textPrimary}`;
+
   return (
     <header
+      data-surface={surfaceKind}
       style={{
         backgroundColor: colors.surface,
         borderBottom: `1px solid ${colors.border}`,
+        borderLeft: headerAccentBorder === "none" ? surfaceAccent[surfaceKind] : headerAccentBorder,
         padding: "0.65rem 1.5rem",
         display: "flex",
         alignItems: "center",
@@ -86,10 +118,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         zIndex: 20,
       }}
     >
-      {/* Left: Breadcrumbs & Section Title */}
+      {/* Left: Experience Context & Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ fontSize: typography.sizes.sm, color: colors.textMuted, fontWeight: 500 }}>
-          Workspace
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            padding: "0.15rem 0.45rem",
+            borderRadius: radii.sm,
+            backgroundColor: colors.indigoSubtle,
+            color: colors.indigoPrimary,
+            border: `1px solid ${colors.indigoBorder}`,
+          }}
+        >
+          {expMeta.shortLabel}
         </span>
         <span style={{ fontSize: typography.sizes.xs, color: colors.borderStrong }}>/</span>
         <span style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary, fontWeight: 700 }}>
@@ -97,11 +139,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Middle: Omni-Search Bar (Linear / Notion Speed Trigger) */}
+      {/* Middle: Scoped Omni-Search Bar */}
       <div
         onClick={onOpenCommandPalette}
         style={{
-          width: "380px",
+          width: "360px",
           display: "flex",
           alignItems: "center",
           gap: "0.65rem",
@@ -110,14 +152,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           borderRadius: radii.md,
           padding: "0.45rem 0.85rem",
           cursor: "pointer",
-          transition: "all 0.15s ease",
+          transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.borderColor = colors.indigoBorder)}
         onMouseLeave={(e) => (e.currentTarget.style.borderColor = colors.border)}
       >
         <Icons.Search size={15} color={colors.indigoAction} />
         <span style={{ flex: 1, fontSize: typography.sizes.xs, color: colors.textMuted }}>
-          Search workforce, or type &quot;Payslip&quot;...
+          {activeExperience === "ESS"
+            ? "Search my records (Leave, Goals, Skills)..."
+            : activeExperience === "MSS"
+            ? "Search my team..."
+            : "Search employees, policies, cycles..."}
         </span>
         <span
           style={{
@@ -135,14 +181,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Right: Actions, Omni-Agent & Notifications */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        {/* Unified Dede AI & Follow the Prompt Floating Sidebar Trigger */}
+      {/* Right: Experience Context Switcher & Actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", position: "relative" }}>
+        {activeContext && onSelectContext ? (
+          <ContextSwitcher
+            contexts={availableContexts}
+            activeContext={activeContext}
+            onSelectContext={onSelectContext}
+          />
+        ) : null}
+        {/* Unified Dede AI & Assistant Trigger */}
         <Button
           variant="outline"
           size="sm"
-          onClick={onOpenOmniAgent}
-          title="Open Dede AI & Follow the Prompt Guided Sidebar (⌘J)"
+          onClick={() => window.dispatchEvent(new Event("dede:open"))}
+          title="Open Dede, the ScoReview AI assistant"
           style={{
             borderColor: colors.indigoBorder,
             backgroundColor: colors.indigoSubtle,
@@ -151,21 +204,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
             <Icons.Sparkles size={14} color={colors.indigoAction} />
-            <span style={{ fontWeight: 600 }}>Dede AI • Guide</span>
-            <span
-              style={{
-                fontSize: "10px",
-                color: colors.indigoPrimary,
-                fontFamily: typography.fontMono,
-                marginLeft: "2px",
-                backgroundColor: "#ffffff",
-                padding: "0.1rem 0.35rem",
-                borderRadius: radii.sm,
-                border: `1px solid ${colors.indigoBorder}`,
-              }}
-            >
-              ⌘J
-            </span>
+            <span style={{ fontWeight: 600 }}>Ask Dede</span>
           </span>
         </Button>
 
@@ -185,7 +224,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             fontWeight: 700,
             cursor: "pointer",
             color: colors.indigoPrimary,
-            transition: "all 0.12s ease",
+            transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.borderColor = colors.indigoBorder)}
           onMouseLeave={(e) => (e.currentTarget.style.borderColor = colors.border)}
@@ -197,7 +236,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Sandbox Environment Toggle */}
         <button
           onClick={handleSandboxClick}
-          title={currentSandbox ? "Active in Sandbox Mode (Safe testing)" : "Active in Live Production"}
+          title={currentSandbox ? "Sandbox mode: safe for testing" : "Live mode"}
           style={{
             display: "flex",
             alignItems: "center",
@@ -210,7 +249,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             fontWeight: 700,
             cursor: "pointer",
             color: currentSandbox ? "#92400e" : "#166534",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
           }}
         >
           <span
@@ -221,40 +260,92 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               backgroundColor: currentSandbox ? "#d97706" : "#16a34a",
             }}
           />
-          <span>{currentSandbox ? "SANDBOX 🟡" : "LIVE PROD 🟢"}</span>
+          <span>{currentSandbox ? "Sandbox" : "Live"}</span>
         </button>
-        {/* Notifications Icon Button */}
-        <button
-          title="Notifications"
-          style={{
-            position: "relative",
-            background: "transparent",
-            border: `1px solid ${colors.border}`,
-            borderRadius: radii.md,
-            width: "32px",
-            height: "32px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: colors.textSecondary,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceSubtle)}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-        >
-          <Icons.Bell size={15} />
-          <span
+        {/* Notifications Icon Button & Dropdown */}
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            title="Notifications"
+            aria-expanded={showNotifications}
+            onClick={() => setShowNotifications((v) => !v)}
             style={{
-              position: "absolute",
-              top: "6px",
-              right: "6px",
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              backgroundColor: colors.peachAction,
+              position: "relative",
+              background: "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: colors.textSecondary,
             }}
-          />
-        </button>
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceSubtle)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <Icons.Bell size={15} />
+            <span
+              style={{
+                position: "absolute",
+                top: "6px",
+                right: "6px",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: colors.peachAction,
+              }}
+            />
+          </button>
+          {showNotifications && (
+            <div
+              role="menu"
+              style={{
+                position: "absolute",
+                top: "120%",
+                right: 0,
+                width: "290px",
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                boxShadow: shadows.md,
+                zIndex: 40,
+                padding: "0.5rem 0",
+              }}
+            >
+              <div style={{ padding: "0.4rem 0.85rem", fontSize: "11px", fontWeight: 700, color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>
+                Notifications (3)
+              </div>
+              {[
+                { label: "4 leave requests awaiting review", view: (persona === "employee" ? "my_leave" : "time_and_leave") as ModuleViewKey },
+                { label: "2026 Performance cycle check-in open", view: (persona === "employee" ? "my_performance" : "performance_pms") as ModuleViewKey },
+                { label: "Updated HR handbook ready for sign-off", view: "document_centre" as ModuleViewKey },
+              ].map((n) => (
+                <button
+                  key={n.label}
+                  type="button"
+                  onClick={() => {
+                    setShowNotifications(false);
+                    onNavigate?.(n.view);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "0.55rem 0.85rem",
+                    border: "none",
+                    background: "transparent",
+                    fontSize: typography.sizes.xs,
+                    color: colors.textPrimary,
+                    cursor: "pointer",
+                  }}
+                >
+                  {n.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Quick Action Button with dropdown */}
         <div style={{ position: "relative" }}>
@@ -342,6 +433,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {user && onUploadPhoto && onRemovePhoto && onNavigate && onSignOut && (
           <ProfileMenu
             user={user}
+            persona={persona}
             photoUrl={photoUrl}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}

@@ -8,6 +8,7 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { LeaveRecord } from "./TimeAndLeaveView";
 import { AssetRecord } from "./WorkforceDirectoryView";
 import { formatDateRange, formatDate } from "../../utils/date";
+import { downloadAppraisalReport } from "../../utils/pdfGenerator";
 import { ModuleViewKey } from "../shell/AppSidebar";
 import { EssShortcutsHub } from "./ess/EssShortcutsHub";
 
@@ -50,7 +51,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
   const [goals, setGoals] = useState<PersonalGoal[]>([
     {
       id: 1,
-      title: "Deliver Cloudflare SaaS Hyperdrive architecture with sub-15ms p99 latency",
+      title: "Deliver SaaS data architecture with sub-15ms p99 latency",
       target: "Production verification & benchmarks",
       progress: 90,
       category: "Engineering Excellence",
@@ -64,7 +65,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
     },
     {
       id: 3,
-      title: "Complete H1 Performance Appraisals under pure OKR governance",
+      title: "Complete H1 Performance Appraisals under OKR governance",
       target: "100% self-assessment submission rate",
       progress: 70,
       category: "Strategic Leadership",
@@ -75,6 +76,35 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
   const [ptoDraftSubmitted, setPtoDraftSubmitted] = useState(false);
   const [gigSubmitted, setGigSubmitted] = useState(false);
   const [synthesisViewed, setSynthesisViewed] = useState(false);
+
+  // User Profile & HR Admin Approval Workflow
+  const [profileData, setProfileData] = useState({
+    phone: "+233 24 419 8820",
+    personalEmail: "paa.barnes@senrab.com",
+    residentialAddress: "Plot 14, East Legon Hills, Accra, Ghana",
+    emergencyContactName: "Akosua Barnes",
+    emergencyContactPhone: "+233 50 123 4567",
+    emergencyRelationship: "Spouse",
+    bio: "Senior Strategy & Systems Consultant leading enterprise digital transformation and cloud edge infrastructure across EMEA and West Africa.",
+    skills: ["Cloud Architecture", "PostgreSQL", "Balanced Scorecard", "Change Management", "TypeScript"],
+  });
+
+  const [pendingProfileUpdate, setPendingProfileUpdate] = useState<{
+    submittedAt: string;
+    phone: string;
+    personalEmail: string;
+    residentialAddress: string;
+    emergencyContactName: string;
+    emergencyContactPhone: string;
+    emergencyRelationship: string;
+    bio: string;
+    skills: string[];
+    status: "PENDING_HR_APPROVAL" | "APPROVED" | "REJECTED";
+  } | null>(null);
+
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editForm, setEditForm] = useState(profileData);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
 
   // Performance Portfolio Tabs
   const [performanceTab, setPerformanceTab] = useState<
@@ -128,8 +158,8 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
             l.status === "APPROVED"
               ? "success"
               : l.status === "PENDING"
-              ? "warning"
-              : "error"
+                ? "warning"
+                : "error"
           }
           size="sm"
         >
@@ -192,6 +222,12 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Button variant="outline" size="sm" onClick={() => { setEditForm(profileData); setShowEditProfileModal(true); }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+              <Icons.Settings size={14} />
+              <span>Update Profile</span>
+            </span>
+          </Button>
           <Button variant="outline" size="sm" onClick={onReportIssue}>
             <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <Icons.LifeBuoy size={14} />
@@ -209,6 +245,120 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
               <span>Request Leave</span>
             </span>
           </Button>
+        </div>
+      </div>
+
+      {profileMessage && (
+        <div style={{ padding: "0.75rem 1rem", borderRadius: radii.md, backgroundColor: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontSize: typography.sizes.xs, fontWeight: 600, marginBottom: "1rem" }}>
+          ✓ {profileMessage}
+        </div>
+      )}
+
+      {/* Profile Details & HR Approval Status Box */}
+      <div
+        style={{
+          backgroundColor: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radii.lg,
+          padding: "1.25rem 1.5rem",
+          marginBottom: "1.5rem",
+          boxShadow: shadows.xs,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Icons.Users size={18} color={colors.indigoAction} />
+              <h2 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
+                My Employee Profile &amp; Contact Records
+              </h2>
+              {pendingProfileUpdate ? (
+                <Badge variant="warning" size="sm">Pending HR Admin Approval</Badge>
+              ) : (
+                <Badge variant="success" size="sm">LIVE Published ✓</Badge>
+              )}
+            </div>
+            <p style={{ fontSize: "11px", color: colors.textMuted, margin: "0.25rem 0 0 0" }}>
+              Personal contact details, verified address, and emergency notifications. Changes require HR Admin sign-off before being published LIVE.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setEditForm(profileData); setShowEditProfileModal(true); }}>
+            Edit Profile
+          </Button>
+        </div>
+
+        {pendingProfileUpdate && (
+          <div
+            style={{
+              padding: "0.75rem 1rem",
+              borderRadius: radii.md,
+              backgroundColor: "#fffbeb",
+              border: "1px solid #fde68a",
+              marginBottom: "1rem",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+            }}
+          >
+            <div style={{ fontSize: typography.sizes.xs, color: "#92400e" }}>
+              ⏳ <strong>Profile Update Submitted:</strong> Changes submitted on {pendingProfileUpdate.submittedAt} are queued for HR Admin approval.
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setProfileData({ ...profileData, ...pendingProfileUpdate });
+                  setPendingProfileUpdate(null);
+                  setProfileMessage("HR Admin approved! Profile changes are now LIVE published.");
+                  setTimeout(() => setProfileMessage(null), 4000);
+                }}
+              >
+                HR Admin: Approve &amp; Publish LIVE
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPendingProfileUpdate(null);
+                  setProfileMessage("Profile update rejected by HR Admin.");
+                  setTimeout(() => setProfileMessage(null), 4000);
+                }}
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", fontSize: typography.sizes.xs }}>
+          <div>
+            <span style={{ color: colors.textMuted, fontSize: "11px" }}>Contact Phone</span>
+            <div style={{ fontWeight: 600, color: colors.textPrimary }}>{profileData.phone}</div>
+          </div>
+          <div>
+            <span style={{ color: colors.textMuted, fontSize: "11px" }}>Personal Email</span>
+            <div style={{ fontWeight: 600, color: colors.textPrimary }}>{profileData.personalEmail}</div>
+          </div>
+          <div>
+            <span style={{ color: colors.textMuted, fontSize: "11px" }}>Residential Address</span>
+            <div style={{ fontWeight: 600, color: colors.textPrimary }}>{profileData.residentialAddress}</div>
+          </div>
+          <div>
+            <span style={{ color: colors.textMuted, fontSize: "11px" }}>Emergency Contact</span>
+            <div style={{ fontWeight: 600, color: colors.textPrimary }}>
+              {profileData.emergencyContactName} ({profileData.emergencyRelationship}) • {profileData.emergencyContactPhone}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: "1rem", paddingTop: "0.75rem", borderTop: `1px solid ${colors.borderSubtle}` }}>
+          <span style={{ color: colors.textMuted, fontSize: "11px" }}>Professional Bio</span>
+          <p style={{ margin: "0.2rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
+            {profileData.bio}
+          </p>
         </div>
       </div>
 
@@ -235,7 +385,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
         }}
       >
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "3px", background: `linear-gradient(90deg, ${colors.indigoAction} 0%, #a855f7 50%, ${colors.emeraldAction} 100%)` }} />
-        
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <div
@@ -284,7 +434,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
 
         {/* 3 Push Cards Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1rem" }}>
-          
+
           {/* Push Nudge 1: PTO & Long Weekend Rest */}
           <div
             style={{
@@ -312,7 +462,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px dashed ${colors.border}`, paddingTop: "0.6rem" }}>
               <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                {ptoDraftSubmitted ? "✓ Submitted to manager" : "Zero calendar conflict"}
+                {ptoDraftSubmitted ? "✓ Submitted to manager" : ""}
               </span>
               <Button
                 variant={ptoDraftSubmitted ? "secondary" : "primary"}
@@ -347,12 +497,12 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
                 <span style={{ fontSize: "11px", fontWeight: 700, color: colors.emeraldDark, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                   <Icons.Compass size={13} color={colors.emeraldDark} />
-                  Skills-First Gig Match (96%)
+                  Skills-First Gig Match
                 </span>
                 <span style={{ fontSize: "10px", color: colors.emeraldDark, fontWeight: 700 }}>Top Candidate</span>
               </div>
               <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                New stretch engagement <strong>Cross-Border Wasm Payment Engine</strong> matches your verified skills in <em>Cloudflare Workers (95%)</em> and <em>Rust (90%)</em>. 10 hrs/wk remote allocation.
+                New stretch engagement <strong>Cross-Border Wasm Payment Engine</strong> matches your verified skills in <em>Cloud Engineering (95%)</em> and <em>Rust (90%)</em>. 10 hrs/wk remote allocation.
               </p>
             </div>
 
@@ -394,9 +544,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAccent, textTransform: "uppercase", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                   <Icons.Target size={13} color={colors.indigoAccent} />
                   Continuous Performance Auto-Synthesis
-                </span>
-                <span style={{ fontSize: "10px", color: colors.indigoAccent, fontWeight: 700 }}>Bias-Free</span>
-              </div>
+                </span>              </div>
               <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
                 3 weekly wins were auto-aggregated from your sprint closures. The AI has pre-populated your Q4 OKR scorecard, eliminating annual review dread and recency bias.
               </p>
@@ -427,40 +575,47 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
 
       {/* Quick Summary Cards (Employee Self-Service) */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "1.75rem" }}>
-        {/* Latest Payslip Quick Access Card */}
+        {/* Profile Verification & Status Card */}
         <div style={{ background: "linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)", border: `1px solid rgba(99, 102, 241, 0.3)`, borderTop: `3px solid ${colors.indigoAction}`, borderRadius: radii.md, padding: "1.25rem", position: "relative", overflow: "hidden", boxShadow: shadows.xs }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              Latest Payslip · Nov 2026
+              Profile Governance &amp; Status
             </span>
-            <Badge variant="success" size="sm">Paid (GHS)</Badge>
+            <Badge variant={pendingProfileUpdate ? "warning" : "success"} size="sm">
+              {pendingProfileUpdate ? "Pending HR Approval" : "LIVE Published ✓"}
+            </Badge>
           </div>
-          <div style={{ fontSize: "1.75rem", fontWeight: 800, color: colors.indigoPrimary, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-            GH₵28,450.00 <span style={{ fontSize: "12px", fontWeight: 500, color: colors.textMuted }}>Net Take-Home</span>
+          <div style={{ fontSize: "1.25rem", fontWeight: 700, color: colors.indigoPrimary, letterSpacing: "-0.01em" }}>
+            {currentEmployee.name}
+          </div>
+          <div style={{ fontSize: "12px", color: colors.textSecondary, marginTop: "0.15rem" }}>
+            {profileData.phone} · {currentEmployee.department}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem" }}>
-            <span style={{ fontSize: "11px", color: colors.textMuted }}>Ecobank Ghana ••••4892</span>
-            {onOpenPayslip && (
-              <button
-                onClick={onOpenPayslip}
-                style={{
-                  background: colors.indigoSubtle,
-                  border: `1px solid ${colors.indigoBorder}`,
-                  borderRadius: radii.sm,
-                  color: colors.indigoAccent,
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  padding: "0.2rem 0.55rem",
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                }}
-              >
-                <span>View Payslip</span>
-                <Icons.ArrowRight size={12} />
-              </button>
-            )}
+            <span style={{ fontSize: "11px", color: colors.textMuted }}>Staff ID: SEN-EMP-001</span>
+            <button
+              type="button"
+              onClick={() => {
+                setEditForm(profileData);
+                setShowEditProfileModal(true);
+              }}
+              style={{
+                background: colors.indigoSubtle,
+                border: `1px solid ${colors.indigoBorder}`,
+                borderRadius: radii.sm,
+                color: colors.indigoAccent,
+                fontSize: "11px",
+                fontWeight: 600,
+                padding: "0.2rem 0.55rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.3rem",
+              }}
+            >
+              <span>Edit Profile</span>
+              <Icons.ArrowRight size={12} />
+            </button>
           </div>
         </div>
 
@@ -561,7 +716,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   position: "relative",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 {tab.label}
@@ -685,7 +840,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                       borderRadius: radii.lg,
                       padding: "1.25rem 1.5rem",
                       backgroundColor: colors.surface,
-                      transition: "all 0.15s ease",
+                      transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
                     }}
                   >
@@ -703,7 +858,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                           {card.title}
                         </h3>
                         <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                          Single-Framework Purity • Rating: <strong>{card.score}</strong>
+                          Appraisal Rating: <strong>{card.score}</strong>
                         </div>
                       </div>
 
@@ -837,7 +992,19 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  alert(`Downloading official evaluation report for ${card.title} in PDF format.`);
+                                  downloadAppraisalReport({
+                                    cycleTitle: card.title,
+                                    period: card.period || "FY2026",
+                                    framework: "BSC",
+                                    selfRating: "4.5",
+                                    supervisorComments: card.endedNote || "Outstanding delivery and high-impact cross-functional execution.",
+                                    calibratedScore: card.score || "92%",
+                                    employeeName: currentEmployee.name,
+                                    employeeId: `GH/EMP-00${currentEmployee.id}`,
+                                    department: currentEmployee.department,
+                                    role: currentEmployee.role,
+                                    supervisorName: currentEmployee.manager,
+                                  });
                                   setActiveActionMenuId(null);
                                 }}
                                 style={{
@@ -898,7 +1065,6 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                     Calibrated ratings comparing employee self-evaluation with line supervisor and committee scorecards.
                   </p>
                 </div>
-                <Badge variant="bsc" size="sm">Calibrated Framework</Badge>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -936,7 +1102,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                       🏆 Innovation Excellence Award · Q1 2026
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
-                      Awarded for delivering sub-second Hyperdrive query latency across multi-region Neon pools.
+                      Awarded for delivering sub-second database query latency across multiple regions.
                     </div>
                   </div>
                   <Badge variant="success" size="sm">+GH₵10,000 Bonus Paid</Badge>
@@ -944,7 +1110,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary }}>
-                      ⭐ Peer Kudos from Adjoa Asare
+                      ⭐ Peer Kudos from Adjoa Bediako
                     </div>
                     <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "2px" }}>
                       &ldquo;Mentored the data engineering squad through mathematical rating calibration standards.&rdquo;
@@ -973,7 +1139,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
         </div>
       </div>
 
-            {/* Main Content Split: My Goals vs My Leave History */}
+      {/* Main Content Split: My Goals vs My Leave History */}
       <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "1.75rem" }}>
         {/* Left: Active Appraisal Scorecard & Self-Review */}
         <div>
@@ -983,7 +1149,7 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
                 My Q4 Appraisal Scorecard (OKR Framework)
               </h2>
               <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                Cycle: FY26 Q4 Strategic Leadership Review • Single-Framework Pure
+                Cycle: FY26 Q4 Strategic Leadership Review • Calibrated
               </span>
             </div>
             <Badge variant="okr" size="sm">Self-Review Active</Badge>
@@ -1088,6 +1254,178 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
           />
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.5)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              border: `1px solid ${colors.border}`,
+              maxWidth: "540px",
+              width: "100%",
+              boxShadow: shadows.lg,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "1rem 1.25rem",
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: colors.surfaceSubtle,
+              }}
+            >
+              <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
+                Update Personal Profile Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowEditProfileModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: colors.textMuted }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPendingProfileUpdate({
+                  ...editForm,
+                  submittedAt: new Date().toISOString().split("T")[0],
+                  status: "PENDING_HR_APPROVAL",
+                });
+                setShowEditProfileModal(false);
+                setProfileMessage("Profile updates submitted! Awaiting final approval from HR Admin before being published LIVE.");
+              }}
+              style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                    Contact Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                    Personal Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.personalEmail}
+                    onChange={(e) => setEditForm({ ...editForm, personalEmail: e.target.value })}
+                    style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                  Residential Address
+                </label>
+                <input
+                  type="text"
+                  value={editForm.residentialAddress}
+                  onChange={(e) => setEditForm({ ...editForm, residentialAddress: e.target.value })}
+                  style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                    Emergency Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.emergencyContactName}
+                    onChange={(e) => setEditForm({ ...editForm, emergencyContactName: e.target.value })}
+                    style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                    Relationship
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.emergencyRelationship}
+                    onChange={(e) => setEditForm({ ...editForm, emergencyRelationship: e.target.value })}
+                    style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                    Emergency Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.emergencyContactPhone}
+                    onChange={(e) => setEditForm({ ...editForm, emergencyContactPhone: e.target.value })}
+                    style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.25rem" }}>
+                  Professional Bio
+                </label>
+                <textarea
+                  rows={2}
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                  style={{ width: "100%", padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                />
+              </div>
+
+              <div style={{ padding: "0.6rem 0.75rem", borderRadius: radii.md, backgroundColor: colors.indigoSubtle, border: `1px solid ${colors.indigoBorder}`, fontSize: "11px", color: colors.indigoPrimary }}>
+                🛡️ <strong>Maker-Checker Governance:</strong> Any changes submitted here are queued for HR Administrator review. Once approved, they will be published LIVE across the organization.
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "0.5rem" }}>
+                <Button variant="outline" size="sm" type="button" onClick={() => setShowEditProfileModal(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" type="submit">
+                  Submit Changes for HR Approval
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

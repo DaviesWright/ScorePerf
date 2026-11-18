@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { canEditObjective, checkWeights, isDecider, isHr, totalWeight, type AccessRole } from "@hr-platform/shared";
+import { formatDateTime } from "../../utils/date";
+import { ProgressHeatmap } from "./ProgressHeatmap";
 import {
   createMemoryObjectivesApi,
   httpObjectivesApi,
@@ -16,7 +18,7 @@ import {
 // Amendments (HR). Approved objectives are locked: they show no edit or delete control, and the only way to
 // change one is an HR amendment with a reason. Visual language matches PlainShell.
 
-type Tab = "mine" | "approvals" | "amend";
+type Tab = "mine" | "approvals" | "amend" | "progress";
 
 const C = { text: "#1f2937", muted: "#4b5563", border: "#d1d5db", surface: "#ffffff", page: "#f9fafb", accent: "#1d4ed8", danger: "#b91c1c", ok: "#166534", warn: "#92400e" };
 
@@ -96,6 +98,7 @@ export const ObjectivesSimple: React.FC<{ api: ObjectivesApi; user: { userId: nu
     { key: "mine", label: "My objectives" },
     ...(isDecider(user.role) ? [{ key: "approvals" as Tab, label: "Approvals" }] : []),
     ...(isHr(user.role) ? [{ key: "amend" as Tab, label: "Amendments" }] : []),
+    ...(isHr(user.role) ? [{ key: "progress" as Tab, label: "Progress" }] : []),
   ];
 
   return (
@@ -122,6 +125,7 @@ export const ObjectivesSimple: React.FC<{ api: ObjectivesApi; user: { userId: nu
       {tab === "mine" && <MyObjectives api={api} user={user} onMessage={setMessage} />}
       {tab === "approvals" && isDecider(user.role) && <Approvals api={api} onMessage={setMessage} />}
       {tab === "amend" && isHr(user.role) && <Amendments api={api} onMessage={setMessage} />}
+      {tab === "progress" && isHr(user.role) && <ProgressHeatmap />}
     </div>
   );
 };
@@ -489,7 +493,7 @@ function Amendments({ api, onMessage }: { api: ObjectivesApi; onMessage: (m: str
           <tbody>
             {log.data.map((a: AmendmentView) => (
               <tr key={a.id}>
-                <td style={S.td}>{new Date(a.createdAt).toLocaleString("en-GB")}</td>
+                <td style={S.td}>{formatDateTime(a.createdAt)}</td>
                 <td style={S.td}>{a.owner ?? "-"}</td>
                 <td style={S.td}>{a.objectiveTitle ?? "(removed)"}</td>
                 <td style={S.td}>{describeChange(a)}</td>

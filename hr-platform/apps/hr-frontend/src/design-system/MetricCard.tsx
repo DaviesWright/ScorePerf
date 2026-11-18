@@ -132,7 +132,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         borderRadius: radii.md,
         padding: "1.1rem 1.25rem",
         cursor: onClick ? "pointer" : "default",
-        transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+        transition: "background-color 180ms cubic-bezier(0.2, 0, 0, 1), border-color 180ms cubic-bezier(0.2, 0, 0, 1), box-shadow 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",

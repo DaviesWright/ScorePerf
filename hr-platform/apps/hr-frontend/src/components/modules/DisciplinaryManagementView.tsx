@@ -31,7 +31,7 @@ interface DisciplinaryCase {
   reviews: Review[];
 }
 
-const REVIEWER = "Richard Mamphey";
+const REVIEWER = "Jemima Richards";
 const today = () => new Date().toISOString().slice(0, 10);
 const staffName = (id: string) => DEMO_STAFF.find((s) => s.id === id)?.name ?? id;
 

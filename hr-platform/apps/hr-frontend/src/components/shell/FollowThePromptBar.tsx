@@ -30,12 +30,12 @@ export const PERSONA_PROMPT_JOURNEYS: Record<UserPersona, {
       {
         id: "emp_1",
         stepNumber: 1,
-        title: "Explore Your 8-Pillar Self-Service Hub & Rewards Wallet",
-        promptText: "Start in Employee Self-Service (ESS) to inspect your Total Rewards Wallet (GH₵580,100/yr), download payslips, or generate an instant AI visa/bank letter.",
+        title: "Explore Your Self-Service Hub & Verified Profile",
+        promptText: "Start in Employee Self-Service (ESS) to review your personal profile, update contact information with HR approval, or generate an instant AI visa/bank letter.",
         actionLabel: "Go to Self-Service (ESS)",
         targetView: "self_service",
         estimatedTime: "1 min",
-        outcome: "Verified personal compensation, payslips & official letters",
+        outcome: "Verified personal profile, compliance status & official letters",
       },
       {
         id: "emp_2",
@@ -256,9 +256,44 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedLabel: "Update Performance Goals →",
   },
   command_centre: {
-    whatToDoHere: "Inspect real-time executive KPIs, click any alert card to drill down, or switch personas in the left sidebar to test role-based views.",
+    whatToDoHere: "Inspect real-time executive KPIs, click any alert card to drill down, or switch personas in the left sidebar to access role-based views.",
     nextSuggestedView: "performance_pms",
     nextSuggestedLabel: "Calibrate Cascading BSC →",
+  },
+  my_performance: {
+    whatToDoHere: "Read your objectives, their weighted progress and where your review stands. This page is read only.",
+    nextSuggestedView: "objectives",
+    nextSuggestedLabel: "Go to Objectives →",
+  },
+  my_profile: {
+    whatToDoHere: "Review and update your profile details here. All updates require HR Admin approval before publishing live.",
+    nextSuggestedView: "document_centre",
+    nextSuggestedLabel: "Go to Document Centre →",
+  },
+  my_leave: {
+    whatToDoHere: "Apply for annual, sick, or compassionate leave, view pending decisions, and review your historical absences.",
+    nextSuggestedView: "my_performance",
+    nextSuggestedLabel: "Go to My Performance →",
+  },
+  payslips: {
+    whatToDoHere: "Official documents and records repository.",
+    nextSuggestedView: "document_centre",
+    nextSuggestedLabel: "Go to Document Centre →",
+  },
+  document_centre: {
+    whatToDoHere: "Open each HR document and acknowledge that you have read it. HR sees how many copies are still outstanding.",
+    nextSuggestedView: "my_performance",
+    nextSuggestedLabel: "Go to My Performance →",
+  },
+  performance_setup: {
+    whatToDoHere: "Load the corporate strategy goals and the reporting lines from CSV. Each load replaces the whole set, so check the file first.",
+    nextSuggestedView: "performance_pms",
+    nextSuggestedLabel: "Go to Appraisal Oversight →",
+  },
+  company_setup: {
+    whatToDoHere: "Add offices and link each department to one. Set who approves leave and objectives, one level at a time. Test each integration before you rely on it.",
+    nextSuggestedView: "performance_setup",
+    nextSuggestedLabel: "Go to Performance Setup →",
   },
   performance_pms: {
     whatToDoHere: "Click any Dashboard counter (e.g., No Objectives, Active Objectives) to drill down, or switch tabs to 'Cascading BSC' to adjust strategic weights.",
@@ -350,6 +385,21 @@ export const VIEW_CONTEXT_HINTS: Record<ModuleViewKey, { whatToDoHere: string; n
     nextSuggestedView: "self_service",
     nextSuggestedLabel: "Go to Employee Self-Service →",
   },
+  organogram: {
+    whatToDoHere: "View the company tree generated from reporting lines, and fill in each person's job title.",
+    nextSuggestedView: "workforce_directory",
+    nextSuggestedLabel: "Go to Workforce Directory →",
+  },
+  celebrations: {
+    whatToDoHere: "View upcoming birthdays and work anniversaries this week and month, and manage your privacy opt-in settings.",
+    nextSuggestedView: "my_leave",
+    nextSuggestedLabel: "Open My Leave →",
+  },
+  team_celebrations: {
+    whatToDoHere: "Track your direct reports' birthdays and work anniversaries and send PRAISE recognition to Continuous Feedback.",
+    nextSuggestedView: "performance_pms",
+    nextSuggestedLabel: "Open Team Performance →",
+  },
 };
 
 interface FollowThePromptBarProps {
@@ -380,7 +430,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       try {
         const saved = localStorage.getItem("scoreview_follow_prompt_completed");
         if (saved) return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return [];
   });
@@ -399,7 +449,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("scoreview_follow_prompt_completed", JSON.stringify(next));
-        } catch {}
+        } catch { }
       }
       return next;
     });
@@ -412,7 +462,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem("scoreview_follow_prompt_completed", JSON.stringify(next));
-        } catch {}
+        } catch { }
       }
       return next;
     });
@@ -507,8 +557,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                         backgroundColor: isDone
                           ? "#10b981"
                           : isCurrent
-                          ? "#6366f1"
-                          : "rgba(255, 255, 255, 0.1)",
+                            ? "#6366f1"
+                            : "rgba(255, 255, 255, 0.1)",
                         color: "#ffffff",
                         fontSize: "10px",
                         fontWeight: 700,
@@ -517,7 +567,7 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                         alignItems: "center",
                         justifyContent: "center",
                         padding: 0,
-                        transition: "all 0.15s ease",
+                        transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                       }}
                     >
                       {isDone ? "✓" : step.stepNumber}
@@ -578,9 +628,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                   backgroundColor: completedIds.includes(currentStep.id)
                     ? "rgba(16, 185, 129, 0.25)"
                     : "rgba(255, 255, 255, 0.12)",
-                  border: `1px solid ${
-                    completedIds.includes(currentStep.id) ? "#10b981" : "rgba(255, 255, 255, 0.25)"
-                  }`,
+                  border: `1px solid ${completedIds.includes(currentStep.id) ? "#10b981" : "rgba(255, 255, 255, 0.25)"
+                    }`,
                   color: "#ffffff",
                   borderRadius: radii.md,
                   padding: "0.35rem 0.65rem",
@@ -765,8 +814,8 @@ export const FollowThePromptBar: React.FC<FollowThePromptBarProps> = ({
                       backgroundColor: isDone
                         ? "rgba(16, 185, 129, 0.04)"
                         : isCurrent
-                        ? "rgba(99, 102, 241, 0.04)"
-                        : colors.surface,
+                          ? "rgba(99, 102, 241, 0.04)"
+                          : colors.surface,
                       borderRadius: radii.md,
                       padding: "1rem 1.15rem",
                       display: "flex",

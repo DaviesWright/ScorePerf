@@ -27,6 +27,10 @@ const routesConfig = {
   exclude: [
     "/_next/static/*",
     "/login-backgrounds/*",
+    "/dede/*",
+    "/favicon.ico",
+    "/favicon.png",
+    "/icon.png",
     "/BUILD_ID",
   ],
 };
@@ -44,7 +48,7 @@ workerCode = workerCode.replace(
 // Belt-and-suspenders: if a static asset request ever reaches _worker.js on Pages, serve via env.ASSETS
 workerCode = workerCode.replace(
   "async fetch(request, env, ctx) {",
-  'async fetch(request, env, ctx) { const _u = new URL(request.url); if (env && env.ASSETS && (_u.pathname.startsWith("/_next/static/") || _u.pathname.startsWith("/login-backgrounds/") || _u.pathname === "/BUILD_ID")) { return env.ASSETS.fetch(request); }'
+  'async fetch(request, env, ctx) { const _u = new URL(request.url); if (env && env.ASSETS && (_u.pathname.startsWith("/_next/static/") || _u.pathname.startsWith("/login-backgrounds/") || _u.pathname.startsWith("/dede/") || _u.pathname.startsWith("/favicon") || _u.pathname.startsWith("/icon") || _u.pathname === "/BUILD_ID")) { return env.ASSETS.fetch(request); }'
 );
 fs.writeFileSync(path.join(distDir, "_worker.js"), workerCode, "utf8");
 

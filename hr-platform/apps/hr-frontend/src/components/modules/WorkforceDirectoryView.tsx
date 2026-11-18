@@ -8,6 +8,7 @@ import { Icons } from "../../design-system/Icons";
 import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
+import { WorkforceMiniDashboard } from "./WorkforceMiniDashboard";
 
 export interface EmployeeRecord {
   id: number;
@@ -24,6 +25,7 @@ export interface EmployeeRecord {
   join_date?: string;
   age?: number;
   contract_type?: string;
+  office?: string | null;
 }
 
 export interface AssetRecord {
@@ -167,7 +169,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       id: 4,
       name: "Customer Success & Service Quality Guild",
       type: "CROSS_FUNCTIONAL",
-      leadName: "Clara Nukunu",
+      leadName: "Doreen Wesley",
       memberCount: 9,
       currentMission: "Sub-4 minute first touch ticket resolution across enterprise clients.",
       activeSprint: "NPS Growth Cycle",
@@ -189,7 +191,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
     },
     {
       id: 2,
-      employeeName: "Richard Mamphey",
+      employeeName: "Jemima Richards",
       staffId: "SHR/GH/038",
       contractType: "Permanent",
       startDate: "2021-03-01",
@@ -237,12 +239,12 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   const [profileRequests, setProfileRequests] = useState<ProfileChangeRequest[]>([
     {
       id: 101,
-      employeeName: "Clara Nukunu",
+      employeeName: "Doreen Wesley",
       staffId: "SCG153",
       department: "Customer Service",
       fieldChanged: "Emergency Contact / Next of Kin",
-      previousValue: "Grace Nukunu (Mother) - +233 24 000 0000",
-      requestedValue: "Michael Nukunu (Spouse) - +233 20 888 9999",
+      previousValue: "Grace Wesley (Mother) - +233 24 000 0000",
+      requestedValue: "Michael Wesley (Spouse) - +233 20 888 9999",
       reason: "Recent marriage statutory registration",
       status: "PENDING_HR",
       submittedDate: "2026-11-02",
@@ -471,7 +473,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                   fontSize: typography.sizes.xs,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
                 }}
               >
@@ -528,6 +530,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === "overview" && (
         <div>
+          <WorkforceMiniDashboard employees={employees} onOpenFull={() => setActiveTab("employees")} />
           {/* Welcome Hero Banner (Screenshot) */}
           <div
             style={{
@@ -581,7 +584,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                       fontSize: typography.sizes.xs,
                       fontWeight: 600,
                       cursor: "pointer",
-                      transition: "all 0.15s ease",
+                      transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                       boxShadow: shadows.xs,
                     }}
                   >
@@ -1032,7 +1035,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                   <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
                     {squad.name}
                   </h3>
-                  <Badge variant="info" size="sm">{squad.type.replace("_", " ")}</Badge>
                 </div>
                 <div style={{ fontSize: "11px", color: colors.textMuted, marginBottom: "0.75rem" }}>
                   Lead: <strong>{squad.leadName}</strong> • {squad.memberCount} Team Members
@@ -1231,7 +1233,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
               <thead>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STAFF MEMBER</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>REDEPLOYMENT NATURE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FROM PRACTICE / ROLE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>TO PRACTICE / ROLE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EFFECTIVE DATE</th>
@@ -1244,9 +1245,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <div style={{ fontWeight: 700, color: colors.textPrimary }}>{r.employeeName}</div>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{r.staffId}</div>
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem" }}>
-                      <Badge variant="info" size="sm">{r.type.replace("_", " ")}</Badge>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textMuted }}>
                       {r.currentDepartment} • {r.currentRole}
@@ -1313,8 +1311,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
             <div style={{ display: "flex", borderBottom: `1px solid ${colors.border}`, gap: "1.25rem" }}>
               {[
                 { id: "overview", label: "Overview" },
-                { id: "assets", label: "Hardware and Fleet" },
-                { id: "performance", label: "Performance" },
+                { id: "assets", label: "Hardware & Assets" },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1391,19 +1388,6 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     No hardware assets currently provisioned to this employee.
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Performance Drawer Tab */}
-            {activeDrawerTab === "performance" && (
-              <div style={{ backgroundColor: colors.surfaceSubtle, padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: "11px", color: colors.textMuted }}>Q1 Performance Rating</span>
-                <div style={{ fontSize: "1.5rem", fontWeight: 800, color: colors.emeraldDark, marginTop: "2px" }}>
-                  4.8 / 5.0 (Star Talent)
-                </div>
-                <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
-                  100% OKR and BSC alignment with zero cycle scoring distortions.
-                </p>
               </div>
             )}
           </div>

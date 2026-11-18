@@ -11,6 +11,18 @@ import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { AttendanceTimeZonesPanel } from "./AttendanceTimeZonesPanel";
 import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
+import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
+import { LeaveAnalyticsPanel } from "../analytics/AnalyticsPrimitives";
+import { MyLeaveScreen } from "./MyLeaveScreen";
+import { SEEDED_DEPARTMENTS, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
+
+export type LeavePrincipalExperience =
+  | "ess"
+  | "manager_workspace"
+  | "hr_administration"
+  | "workforce_planning"
+  | "management_intelligence";
 
 export interface LeaveRecord {
   id: number;
@@ -74,19 +86,66 @@ interface TimeAndLeaveViewProps {
   initialLeaves: LeaveRecord[];
   showNewLeaveModal?: boolean;
   onCloseNewLeaveModal?: () => void;
+  onNavigateToWorkflows?: () => void;
+  userName?: string;
+  userRole?: string;
 }
 
 export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   initialLeaves,
   showNewLeaveModal = false,
   onCloseNewLeaveModal,
+  onNavigateToWorkflows,
+  userName = "Paa Kwesi Barnes",
+  userRole = "HR Manager",
 }) => {
-  // Leave Navigation Tabs (13 Modules)
+  // Addendum v1.1 (CON-001..CON-010): Role Console vs My ESS mode, Scope Selector & "As at" timestamp
+  const [consoleMode, setConsoleMode] = useState<"role" | "ess">(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "ess") {
+      return "ess";
+    }
+    return "role";
+  });
+  const [scopeDept, setScopeDept] = useState<string>("COMPANY");
+  const [asAtTime, setAsAtTime] = useState<string>(() =>
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+    ", " +
+    new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+  );
+  const [onLeaveSearch, setOnLeaveSearch] = useState<string>("");
+
+  const greetingPrefix = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  })();
+
+  const handleModeSwitch = (nextMode: "role" | "ess") => {
+    setConsoleMode(nextMode);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("mode", nextMode);
+      window.history.replaceState(null, "", url.toString());
+    }
+    void fetch("/api/hr/leave/dashboard/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: nextMode, roleContext: userRole }),
+    }).catch(() => {});
+  };
+
+  // 5 Principal Experiences State
+  const [activeExperience, setActiveExperience] = useState<LeavePrincipalExperience>("manager_workspace");
+  const [showAllSubTabs, setShowAllSubTabs] = useState<boolean>(false);
+
+  // Leave Navigation Tabs
   const [activeTab, setActiveTab] = useState<
+    | "ess_portal"
     | "dashboard"
+    | "predictive_intelligence"
     | "department_schedules"
     | "attendance_zones"
     | "requests"
+    | "relief_coverage"
     | "resumption"
     | "plan_history"
     | "policies"
@@ -99,13 +158,53 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     | "settings"
   >("dashboard");
 
+  // Relief Officer & Coverage Matrix State (Experience 2: Manager Workspace)
+  const [reliefAssignments, setReliefAssignments] = useState([
+    {
+      id: 1,
+      absentEmployee: "Jemima Richards (Head, HR)",
+      department: "Human Resources",
+      leaveWindow: "2026-11-24 → 2026-11-28 (5d)",
+      reliefOfficer: "Benedicta Agbesi (People & Culture Specialist)",
+      handoverStatus: "Verified & Active",
+      squadCoveragePct: 88,
+    },
+    {
+      id: 2,
+      absentEmployee: "Doreen Wesley (Customer Service Exec)",
+      department: "Customer Service",
+      leaveWindow: "2026-11-06 → 2026-11-06 (1d)",
+      reliefOfficer: "Philip Arthur (Customer Service Exec)",
+      handoverStatus: "Pending Manager Sign-Off",
+      squadCoveragePct: 82,
+    },
+    {
+      id: 3,
+      absentEmployee: "Adjoa Bediako (People Partner)",
+      department: "People & Culture",
+      leaveWindow: "2026-07-01 → 2026-10-06 (70d Maternity)",
+      reliefOfficer: "Ama Boateng (Senior HR Associate)",
+      handoverStatus: "Completed & Returned",
+      squadCoveragePct: 91,
+    },
+    {
+      id: 4,
+      absentEmployee: "Kwame Mensah (Hardware Ops Lead)",
+      department: "Hardware Operations",
+      leaveWindow: "2026-11-02 → 2026-11-04 (3d Sick)",
+      reliefOfficer: "Dave Nii (IT Infrastructure Officer)",
+      handoverStatus: "Verified & Active",
+      squadCoveragePct: 79,
+    },
+  ]);
+
   // Core Leaves State
   const [leaves, setLeaves] = useState<LeaveRecord[]>([
     ...initialLeaves,
     {
       id: 901,
-      first_name: "Richard",
-      last_name: "Mamphey",
+      first_name: "Jemima",
+      last_name: "Richards",
       staff_id: "SHR/GH/038",
       department: "Human Resources",
       leave_type_name: "Annual Leave",
@@ -119,8 +218,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 902,
-      first_name: "Clara",
-      last_name: "Nukunu",
+      first_name: "Doreen",
+      last_name: "Wesley",
       staff_id: "SCG153",
       department: "Customer Service",
       leave_type_name: "Casual Leave",
@@ -129,12 +228,12 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       requested_days: "1.0",
       status: "PENDING",
       reason: "Personal urgent appointment in Accra",
-      approver: "Richard Mamphey",
+      approver: "Jemima Richards",
     },
     {
       id: 903,
       first_name: "Adjoa",
-      last_name: "Asare",
+      last_name: "Bediako",
       staff_id: "GH/2017/6/13/094",
       department: "People & Culture",
       leave_type_name: "Maternity Leave",
@@ -167,7 +266,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [resumptions, setResumptions] = useState<LeaveResumptionRecord[]>([
     {
       id: 1,
-      employeeName: "Adjoa Asare",
+      employeeName: "Adjoa Bediako",
       staffId: "GH/2017/6/13/094",
       department: "People & Culture",
       leaveType: "Maternity Leave (14 Weeks)",
@@ -230,7 +329,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 2,
-      employeeName: "Richard Mamphey",
+      employeeName: "Jemima Richards",
       staffId: "SHR/GH/038",
       department: "Human Resources",
       annualEntitlement: 22,
@@ -272,7 +371,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     },
     {
       id: 5,
-      employeeName: "Clara Nukunu",
+      employeeName: "Doreen Wesley",
       staffId: "SCG153",
       department: "Customer Service",
       annualEntitlement: 21,
@@ -341,22 +440,46 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [requestFilter, setRequestFilter] = useState<string>("ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // New Leave Form State
+  // New Leave Form State (Enhanced with Staging features)
   const [newEmployeeName, setNewEmployeeName] = useState("Paa Kwesi Barnes");
   const [leaveType, setLeaveType] = useState("Annual Leave");
   const [startDate, setStartDate] = useState("2026-05-01");
   const [endDate, setEndDate] = useState("2026-05-05");
   const [reason, setReason] = useState("");
+  const [isHalfDay, setIsHalfDay] = useState(false);
+  const [halfPeriod, setHalfPeriod] = useState<"morning" | "afternoon">("morning");
+  const [confirmingRejectId, setConfirmingRejectId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  const loadRows: LoadRow[] = useMemo(
+    () =>
+      leaves.map((l) => ({
+        employeeName: `${l.first_name} ${l.last_name}`,
+        startDate: l.start_date,
+        endDate: l.end_date,
+      })),
+    [leaves]
+  );
 
   React.useEffect(() => {
     if (showNewLeaveModal) setShowModal(true);
   }, [showNewLeaveModal]);
 
-  const handleAction = (id: number, newStatus: string) => {
+  const handleAction = (id: number, newStatus: string, actionReason?: string) => {
     setLeaves((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, status: newStatus } : l))
+      prev.map((l) =>
+        l.id === id
+          ? {
+            ...l,
+            status: newStatus,
+            reason: actionReason ? `${l.reason || ""} [Declined: ${actionReason}]`.trim() : l.reason,
+          }
+          : l
+      )
     );
-    setFeedback(`Leave request marked as ${newStatus.toLowerCase()}.`);
+    setConfirmingRejectId(null);
+    setRejectionReason("");
+    setFeedback(`Leave request marked as ${newStatus.toLowerCase()}.${actionReason ? ` Reason: ${actionReason}` : ""}`);
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -371,24 +494,25 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const handleCreateLeave = (e: React.FormEvent) => {
     e.preventDefault();
     const parts = newEmployeeName.split(" ");
+    const daysCalc = isHalfDay ? "0.5" : "5.0";
     const newRecord: LeaveRecord = {
       id: Date.now(),
       first_name: parts[0] || "Staff",
       last_name: parts.slice(1).join(" ") || "Member",
       staff_id: "SEN/022",
       department: "Technology",
-      leave_type_name: leaveType,
+      leave_type_name: isHalfDay ? `${leaveType} (${halfPeriod === "morning" ? "Morning" : "Afternoon"} Half-Day)` : leaveType,
       start_date: startDate,
-      end_date: endDate,
-      requested_days: "5.0",
+      end_date: isHalfDay ? startDate : endDate,
+      requested_days: daysCalc,
       status: "APPROVED",
-      reason: reason || "Scheduled time off",
+      reason: reason || (isHalfDay ? `Half-day (${halfPeriod}) time off` : "Scheduled time off"),
       approver: "Line Manager",
     };
     setLeaves([newRecord, ...leaves]);
     setShowModal(false);
     onCloseNewLeaveModal?.();
-    setFeedback("Leave request recorded and approved with Dede AI clash verification.");
+    setFeedback(`Leave request (${daysCalc} days) recorded and approved with automated clash verification.`);
     setTimeout(() => setFeedback(null), 3000);
   };
 
@@ -418,8 +542,183 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     return leaves.filter((l) => l.status === "PENDING").length;
   }, [leaves]);
 
+  const currentlyOnLeaveRows = useMemo(() => {
+    const approved = SEEDED_LEAVE_REQUESTS.filter((r) => r.status === "APPROVED");
+    return approved
+      .filter((r) => (scopeDept === "COMPANY" ? true : r.department === scopeDept))
+      .filter((r) => {
+        if (!onLeaveSearch.trim()) return true;
+        const q = onLeaveSearch.toLowerCase();
+        return (
+          `${r.firstName} ${r.lastName}`.toLowerCase().includes(q) ||
+          r.staffId.toLowerCase().includes(q) ||
+          r.department.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 16)
+      .map((r, idx) => ({
+        ...r,
+        reliefManager: idx % 5 === 0 ? "Unassigned" : r.reliefOfficerName,
+        resumptionDate: r.endDate,
+        liveStatus: idx % 5 === 0 ? "Relief Gap" : "On Leave",
+      }));
+  }, [scopeDept, onLeaveSearch]);
+
+  const reliefGapCount = useMemo(
+    () => currentlyOnLeaveRows.filter((r) => r.reliefManager === "Unassigned").length,
+    [currentlyOnLeaveRows],
+  );
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
+      {/* Addendum v1.1 Role-Aware Welcome Header (CON-006, CON-007, CON-009, A.2.2) */}
+      <div
+        style={{
+          backgroundColor: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radii.lg,
+          padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          boxShadow: shadows.xs,
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.2rem" }}>
+            <h1 style={{ margin: 0, fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary }}>
+              {greetingPrefix}, {userName}
+            </h1>
+            <Badge variant={consoleMode === "ess" ? "success" : "info"} size="sm">
+              {consoleMode === "ess" ? "Employee (ESS)" : userRole}
+            </Badge>
+          </div>
+          <div style={{ fontSize: "11px", color: colors.textMuted, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span>As at {asAtTime}</span>
+            <button
+              type="button"
+              onClick={() =>
+                setAsAtTime(
+                  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+                    ", " +
+                    new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                )
+              }
+              style={{ border: "none", background: "none", color: colors.indigoAction, fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0 }}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          {consoleMode === "role" && (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary }}>
+              <span>Scope:</span>
+              <select
+                aria-label="Scope selector"
+                value={scopeDept}
+                onChange={(e) => setScopeDept(e.target.value)}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: radii.md,
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.surface,
+                  fontSize: typography.sizes.xs,
+                  fontWeight: 600,
+                }}
+              >
+                <option value="COMPANY">Company-wide (All Departments)</option>
+                {SEEDED_DEPARTMENTS.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    Department: {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <div
+            role="group"
+            aria-label="Console Mode Switcher"
+            style={{
+              display: "inline-flex",
+              padding: "2px",
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              backgroundColor: colors.bgApp,
+            }}
+          >
+            <button
+              type="button"
+              aria-pressed={consoleMode === "role"}
+              onClick={() => handleModeSwitch("role")}
+              style={{
+                padding: "0.32rem 0.75rem",
+                borderRadius: radii.sm,
+                border: "none",
+                fontSize: typography.sizes.xs,
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: consoleMode === "role" ? colors.indigoAction : "transparent",
+                color: consoleMode === "role" ? "#ffffff" : colors.textSecondary,
+              }}
+            >
+              HR Console
+            </button>
+            <button
+              type="button"
+              aria-pressed={consoleMode === "ess"}
+              onClick={() => handleModeSwitch("ess")}
+              style={{
+                padding: "0.32rem 0.75rem",
+                borderRadius: radii.sm,
+                border: "none",
+                fontSize: typography.sizes.xs,
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: consoleMode === "ess" ? colors.emeraldDark : "transparent",
+                color: consoleMode === "ess" ? "#ffffff" : colors.textSecondary,
+              }}
+            >
+              My ESS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* CON-004 & CON-005: In ESS mode, render ONLY the logged-in employee's own leave data + role shortcut */}
+      {consoleMode === "ess" ? (
+        <div>
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem 1rem",
+              borderRadius: radii.md,
+              backgroundColor: colors.emeraldSubtle,
+              border: `1px solid ${colors.emeraldBorder}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              fontSize: typography.sizes.xs,
+              color: colors.emeraldDark,
+              fontWeight: 600,
+            }}
+          >
+            <span>ESS Self-Service View — showing your personal leave balances, applications, and history only.</span>
+            <Button variant="outline" size="sm" onClick={() => handleModeSwitch("role")}>
+              Return to HR Console →
+            </Button>
+          </div>
+          <MyLeaveScreen />
+        </div>
+      ) : (
+        <>
       {/* Header & Sub-Navigation */}
       <div style={{ marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
@@ -438,11 +737,23 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 margin: 0,
               }}
             >
-              Time, Leave & Attendance Suite
+              Leave Management Suite
             </h1>
           </div>
 
           <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+            {onNavigateToWorkflows && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNavigateToWorkflows}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.GitBranch size={14} />
+                  <span>Approval Workflows</span>
+                </span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -463,60 +774,187 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
           </div>
         </div>
 
-        {/* Leave Navigation Tabs */}
+        {/* 5 Principal Leave Management Experiences Architecture */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "0.75rem",
+            marginBottom: "1rem",
+          }}
+        >
+          {[
+            {
+              key: "ess" as LeavePrincipalExperience,
+              num: "1",
+              title: "Employee Self-Service",
+              desc: "Apply for leave, check balances, plan leave, view history and confirm resumption.",
+              defaultTab: "ess_portal" as const,
+              badge: "My Leave",
+            },
+            {
+              key: "manager_workspace" as LeavePrincipalExperience,
+              num: "2",
+              title: "Manager Workspace",
+              desc: "Approve requests, monitor team availability, plan coverage and manage relief officers.",
+              defaultTab: "requests" as const,
+              badge: `${pendingLeavesCount} Pending`,
+            },
+            {
+              key: "hr_administration" as LeavePrincipalExperience,
+              num: "3",
+              title: "HR Administration",
+              desc: "Manage policies, entitlements, accruals, allowances, imports, exceptions and compliance.",
+              defaultTab: "policies" as const,
+              badge: "Governance",
+            },
+            {
+              key: "workforce_planning" as LeavePrincipalExperience,
+              num: "4",
+              title: "Workforce Planning",
+              desc: "Interactive calendars, leave trends, capacity analysis and departmental scheduling.",
+              defaultTab: "plan_history" as const,
+              badge: "Capacity",
+            },
+            {
+              key: "management_intelligence" as LeavePrincipalExperience,
+              num: "5",
+              title: "Management Intelligence",
+              desc: "Leave utilisation, outstanding liabilities, absence trends and predictive analytics.",
+              defaultTab: "dashboard" as const,
+              badge: "Analytics",
+            },
+          ].map((exp) => {
+            const selected = activeExperience === exp.key;
+            return (
+              <button
+                key={exp.key}
+                type="button"
+                onClick={() => {
+                  setActiveExperience(exp.key);
+                  setActiveTab(exp.defaultTab);
+                }}
+                style={{
+                  textAlign: "left",
+                  padding: "0.85rem 1rem",
+                  borderRadius: radii.md,
+                  border: `1.5px solid ${selected ? colors.indigoAction : colors.border}`,
+                  backgroundColor: selected ? colors.indigoSubtle : colors.surface,
+                  boxShadow: selected ? shadows.sm : shadows.xs,
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "0.35rem",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: selected ? colors.indigoAction : colors.textMuted, textTransform: "uppercase" }}>
+                    {exp.badge}
+                  </span>
+                  <Badge variant={selected ? "info" : "neutral"} size="sm">
+                    {exp.badge}
+                  </Badge>
+                </div>
+                <div style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  {exp.title}
+                </div>
+                <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.4 }}>
+                  {exp.desc}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Contextual Sub-Navigation Tabs for the Selected Experience */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "0.35rem",
+            justifyContent: "space-between",
+            gap: "0.5rem",
             borderBottom: `1px solid ${colors.border}`,
             paddingBottom: "0.35rem",
             overflowX: "auto",
           }}
         >
-          {[
-            { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
-            { key: "department_schedules", label: "Department Schedules & Rosters", icon: Icons.Clock },
-            { key: "attendance_zones", label: "Attendance by Time Zone", icon: Icons.Globe },
-            { key: "requests", label: "Leave Requests", icon: Icons.Users },
-            { key: "resumption", label: "Leave Resumption Requests", icon: Icons.FileCheck },
-            { key: "plan_history", label: "Leave Plan History", icon: Icons.Calendar },
-            { key: "policies", label: "Leave Policies", icon: Icons.FileText },
-            { key: "upload_history", label: "Upload Leave History", icon: Icons.Download },
-            { key: "balances", label: "Leave Balance", icon: Icons.Layers },
-            { key: "reserved_days", label: "Reserved Leave Days", icon: Icons.Lock },
-            { key: "additional_days", label: "Additional Leave Days", icon: Icons.ShieldCheck },
-            { key: "blocked_days", label: "Blocked Leave Days", icon: Icons.X },
-            { key: "allowances", label: "Leave Allowances", icon: Icons.Wallet },
-            { key: "settings", label: "Leave Settings", icon: Icons.Settings },
-          ].map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as typeof activeTab)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.45rem",
-                  padding: "0.55rem 0.9rem",
-                  borderRadius: radii.md,
-                  border: "none",
-                  backgroundColor: isActive ? colors.surfaceSubtle : "transparent",
-                  color: isActive ? colors.indigoAction : colors.textSecondary,
-                  fontWeight: isActive ? 700 : 500,
-                  fontSize: typography.sizes.xs,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  transition: "all 0.15s ease",
-                  borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
-                }}
-              >
-                <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", overflowX: "auto" }}>
+            {[
+              // 1. Employee Self-Service
+              { key: "ess_portal", exp: "ess", label: "My Leave Self-Service (Apply · Balances · Plan · History · Resumption)", icon: Icons.Calendar },
+
+              // 2. Manager Workspace
+              { key: "requests", exp: "manager_workspace", label: `Approve Requests (${pendingLeavesCount} Pending)`, icon: Icons.Users },
+              { key: "relief_coverage", exp: "manager_workspace", label: "Team Availability, Coverage & Relief Officers", icon: Icons.ShieldCheck },
+              { key: "resumption", exp: "manager_workspace", label: "Confirm Team Resumptions", icon: Icons.FileCheck },
+
+              // 3. HR Administration
+              { key: "policies", exp: "hr_administration", label: "Leave Policies & Entitlements", icon: Icons.FileText },
+              { key: "balances", exp: "hr_administration", label: "Accruals & Leave Balances", icon: Icons.Layers },
+              { key: "allowances", exp: "hr_administration", label: "Leave Allowances", icon: Icons.Wallet },
+              { key: "upload_history", exp: "hr_administration", label: "Historical Imports", icon: Icons.Download },
+              { key: "blocked_days", exp: "hr_administration", label: "Blocked / Blackout Exceptions", icon: Icons.X },
+              { key: "reserved_days", exp: "hr_administration", label: "Reserved Days", icon: Icons.Lock },
+              { key: "additional_days", exp: "hr_administration", label: "Additional Leave Grants", icon: Icons.Plus },
+              { key: "settings", exp: "hr_administration", label: "Compliance & Statutory Settings", icon: Icons.Settings },
+
+              // 4. Workforce Planning
+              { key: "plan_history", exp: "workforce_planning", label: "Interactive Calendars & Leave Trends", icon: Icons.Calendar },
+              { key: "department_schedules", exp: "workforce_planning", label: "Departmental Scheduling & Rosters", icon: Icons.Clock },
+              { key: "attendance_zones", exp: "workforce_planning", label: "Capacity Analysis & Time Zones", icon: Icons.Globe },
+
+              // 5. Management Intelligence
+              { key: "dashboard", exp: "management_intelligence", label: "Leave Utilisation & Executive Summary", icon: Icons.CommandCentre },
+              { key: "predictive_intelligence", exp: "management_intelligence", label: "Outstanding Liabilities, Absence Trends & Predictive Analytics", icon: Icons.TrendingUp },
+            ]
+              .filter((t) => showAllSubTabs || t.exp === activeExperience)
+              .map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key as typeof activeTab)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      padding: "0.55rem 0.9rem",
+                      borderRadius: radii.md,
+                      border: "none",
+                      backgroundColor: isActive ? colors.surfaceSubtle : "transparent",
+                      color: isActive ? colors.indigoAction : colors.textSecondary,
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: typography.sizes.xs,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
+                    }}
+                  >
+                    <tab.icon size={14} color={isActive ? colors.indigoAction : colors.textMuted} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAllSubTabs((v) => !v)}
+            style={{
+              background: "none",
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.sm,
+              padding: "0.3rem 0.65rem",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: colors.textSecondary,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {showAllSubTabs ? "Filter by Experience" : "Show All 17 Sub-Modules"}
+          </button>
         </div>
       </div>
 
@@ -551,6 +989,108 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === "dashboard" && (
         <div>
+          <LeaveMiniDashboard
+            mode="hr"
+            scope={scopeDept === "COMPANY" ? "company" : "department"}
+            dept={scopeDept}
+            onFilterPending={() => {
+              setRequestFilter("PENDING");
+              setActiveTab("requests");
+            }}
+          />
+
+          <LeaveAnalyticsPanel />
+
+          {/* CON-001 & CON-002: Employees Currently on Leave (Department-wise & Company-wide) */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.lg,
+              padding: "1.25rem",
+              marginBottom: "1.5rem",
+              boxShadow: shadows.xs,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.85rem" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 800, color: colors.textPrimary }}>
+                  Employees Currently on Leave ({currentlyOnLeaveRows.length})
+                </h2>
+                <p style={{ margin: "0.15rem 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Scope: {scopeDept === "COMPANY" ? "Company-wide" : `Department · ${scopeDept}`} · Includes relief manager &amp; expected resumption.
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {reliefGapCount > 0 && (
+                  <Badge variant="warning" size="sm">
+                    {reliefGapCount} Relief Coverage Gap{reliefGapCount === 1 ? "" : "s"}
+                  </Badge>
+                )}
+                <input
+                  type="text"
+                  placeholder="Search employee or ID..."
+                  value={onLeaveSearch}
+                  onChange={(e) => setOnLeaveSearch(e.target.value)}
+                  style={{
+                    padding: "0.35rem 0.65rem",
+                    borderRadius: radii.md,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: typography.sizes.xs,
+                    width: "190px",
+                  }}
+                />
+              </div>
+            </div>
+
+            {currentlyOnLeaveRows.length === 0 ? (
+              <p style={{ margin: 0, fontSize: typography.sizes.sm, color: colors.textMuted }}>
+                No employees are currently on leave in {scopeDept === "COMPANY" ? "Company-wide scope" : scopeDept}.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                  <thead>
+                    <tr style={{ backgroundColor: colors.bgApp, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                      {["Employee", "ID", "Department", "Leave Type", "Start Date", "End Date", "Expected Resumption", "Days", "Relief Manager", "Status"].map((h) => (
+                        <th key={h} style={{ padding: "0.55rem 0.65rem", fontWeight: 700, color: colors.textSecondary, whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentlyOnLeaveRows.map((row) => (
+                      <tr key={row.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                        <td style={{ padding: "0.55rem 0.65rem", fontWeight: 700, color: colors.textPrimary }}>
+                          {row.firstName} {row.lastName}
+                        </td>
+                        <td style={{ padding: "0.55rem 0.65rem", color: colors.textMuted }}>{row.staffId}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", color: colors.textSecondary }}>{row.department}</td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>{row.leaveType}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.startDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.endDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.resumptionDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", fontWeight: 700 }}>{row.requestedDays}d</td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>
+                          {row.reliefManager === "Unassigned" ? (
+                            <Badge variant="warning" size="sm">Unassigned</Badge>
+                          ) : (
+                            <span style={{ fontWeight: 600, color: colors.indigoPrimary }}>{row.reliefManager}</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>
+                          <Badge variant={row.liveStatus === "Relief Gap" ? "warning" : "success"} size="sm">
+                            {row.liveStatus}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           {/* Top Metric Tiles (Vibrant Colors & Left Accent Lines) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
             {/* Card 1: On Leave Today */}
@@ -575,7 +1115,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 2 Staff
               </div>
               <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.4rem" }}>
-                Kwame Mensah & Adjoa Asare
+                Kwame Mensah & Adjoa Bediako
               </div>
             </div>
 
@@ -601,7 +1141,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 {pendingLeavesCount} Request
               </div>
               <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.4rem" }}>
-                Clara Nukunu (Casual Leave)
+                Doreen Wesley (Casual Leave)
               </div>
             </div>
 
@@ -694,7 +1234,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 <Badge variant="info" size="sm">Smart Suggestion</Badge>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                I detected an upcoming 3-day weekend approaching for Ghana Practice (Independence Day on <strong>06 Mar 2026</strong>). <strong>Richard Mamphey</strong> and <strong>Philip Aryee</strong> currently hold over 17 days of unutilized annual leave. No critical project deliverables or client milestones are scheduled for that week. Would you like me to draft pre-approved leave requests to mitigate Q4 leave liability spikes?
+                I detected an upcoming 3-day weekend approaching for Ghana Practice (Independence Day on <strong>06 Mar 2026</strong>). <strong>Jemima Richards</strong> and <strong>Philip Aryee</strong> currently hold over 17 days of unutilized annual leave. No critical project deliverables or client milestones are scheduled for that week. Would you like me to draft pre-approved leave requests to mitigate Q4 leave liability spikes?
               </p>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
                 <button
@@ -729,6 +1269,39 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Workforce Leave Density & Coverage Heatmap */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radii.lg,
+              border: `1px solid ${colors.border}`,
+              padding: "1.25rem",
+              boxShadow: shadows.xs,
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                  Workforce Leave Density & Coverage Heatmap
+                </h3>
+                <p style={{ margin: "0.2rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
+                  Scheduled absence density across Accra & London practices to safeguard project coverage
+                </p>
+              </div>
+              <Badge variant="info" size="sm">Active Roster View</Badge>
+            </div>
+            <LeaveLoadStrip
+              rows={loadRows}
+              from="2026-05-01"
+              to="2026-05-31"
+              ramp={INDIGO_RAMP}
+              caption="May 2026 Daily Absence Load & Coverage Roster"
+            />
           </div>
 
           {/* Quick Dual Cards: Upcoming Leaves & Resumptions */}
@@ -1023,8 +1596,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                           l.status === "APPROVED"
                             ? "success"
                             : l.status === "REJECTED"
-                            ? "error"
-                            : "warning"
+                              ? "error"
+                              : "warning"
                         }
                         size="sm"
                       >
@@ -1052,14 +1625,54 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                             >
                               Approve
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAction(l.id, "REJECTED")}
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
-                            >
-                              Decline
-                            </Button>
+                            {confirmingRejectId === l.id ? (
+                              <div style={{ display: "inline-flex", gap: "0.25rem", alignItems: "center" }}>
+                                <input
+                                  type="text"
+                                  placeholder="Decline reason..."
+                                  value={rejectionReason}
+                                  onChange={(e) => setRejectionReason(e.target.value)}
+                                  style={{
+                                    fontSize: "11px",
+                                    padding: "0.2rem 0.4rem",
+                                    border: `1px solid ${colors.border}`,
+                                    borderRadius: radii.sm,
+                                    width: "130px",
+                                  }}
+                                />
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => handleAction(l.id, "REJECTED", rejectionReason || "Operational constraints")}
+                                  style={{ padding: "0.2rem 0.4rem", fontSize: "11px", backgroundColor: colors.error, borderColor: colors.error }}
+                                >
+                                  Confirm
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setConfirmingRejectId(null);
+                                    setRejectionReason("");
+                                  }}
+                                  style={{ padding: "0.2rem 0.4rem", fontSize: "11px" }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setConfirmingRejectId(l.id);
+                                  setRejectionReason("");
+                                }}
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                              >
+                                Decline
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>
@@ -1506,8 +2119,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               </thead>
               <tbody>
                 {[
-                  { id: "BATCH-2026-09", file: "Workforce_Ghana_2025_Final.csv", rows: "348 records", date: "2026-01-15", operator: "Richard Mamphey", status: "Verified 100%" },
-                  { id: "BATCH-2026-04", file: "Henley_Resources_Accra_Q1.xlsx", rows: "92 records", date: "2026-04-02", operator: "Adjoa Asare", status: "Verified 100%" },
+                  { id: "BATCH-2026-09", file: "Workforce_Ghana_2025_Final.csv", rows: "348 records", date: "2026-01-15", operator: "Jemima Richards", status: "Verified 100%" },
+                  { id: "BATCH-2026-04", file: "Henley_Resources_Accra_Q1.xlsx", rows: "92 records", date: "2026-04-02", operator: "Adjoa Bediako", status: "Verified 100%" },
                   { id: "BATCH-2026-11", file: "UK_Advisory_Leave_Sync.csv", rows: "45 records", date: "2026-11-01", operator: "Paa Kwesi Barnes", status: "Verified 100%" },
                 ].map((b) => (
                   <tr key={b.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
@@ -1731,7 +2344,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 {[
                   { title: "Executive Wellness & Mental Health Grant", days: "+3.0 Days", pool: "All Active Staff (91 Employees)", expiry: "31 Dec 2026", auth: "Paa Kwesi Barnes (Managing Principal)", status: "Active" },
                   { title: "Professional Examination Study Grant", days: "+5.0 Days", pool: "Advisory & Engineering Analysts", expiry: "30 Nov 2026", auth: "Sarah Jenkins (VP People)", status: "Active" },
-                  { title: "Paternity Compassionate Extension", days: "+5.0 Days", pool: "Eligible New Fathers", expiry: "31 Dec 2026", auth: "Richard Mamphey (HR Head)", status: "Active" },
+                  { title: "Paternity Compassionate Extension", days: "+5.0 Days", pool: "Eligible New Fathers", expiry: "31 Dec 2026", auth: "Jemima Richards (HR Head)", status: "Active" },
                 ].map((g, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
                     <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.textPrimary }}>{g.title}</td>
@@ -2126,8 +2739,51 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               )}
             </div>
 
+            {/* §4.4 Decision-Support Approval Context Panel Before Decision */}
+            <div
+              style={{
+                padding: "0.85rem",
+                borderRadius: radii.md,
+                backgroundColor: colors.surfaceSubtle,
+                border: `1px solid ${colors.border}`,
+                marginBottom: "1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.4rem",
+                fontSize: typography.sizes.xs,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase", fontSize: "11px" }}>
+                Approval Context & Availability Check
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Balance Sufficiency:</span>
+                <strong style={{ color: colors.emeraldDark }}>Sufficient (15.0d available vs {selectedLeaveForDetail.requested_days}d requested)</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Concurrent Squad Absences:</span>
+                <strong>1 colleague on leave (Squad availability: 86%)</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Minimum Staffing Floor:</span>
+                <strong style={{ color: colors.emeraldDark }}>✓ Above 75% configured floor</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Relief Officer Assigned:</span>
+                <strong style={{ color: colors.indigoPrimary }}>Assigned &amp; Accepted</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Blocked Period Check:</span>
+                <strong style={{ color: colors.emeraldDark }}>✓ No blackout conflict</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: colors.textSecondary }}>Approval Eligibility:</span>
+                <strong style={{ color: colors.emeraldDark }}>✓ Approver ≠ Applicant (No self-approval)</strong>
+              </div>
+            </div>
+
             {selectedLeaveForDetail.status === "PENDING" && (
-              <div style={{ display: "flex", gap: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <Button
                   variant="primary"
                   size="sm"
@@ -2137,24 +2793,296 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   }}
                   style={{ flex: 1, backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
                 >
-                  Approve Leave
+                  Approve Request
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    const instructions = prompt("Enter mandatory amendment instructions for the employee:");
+                    if (!instructions || !instructions.trim()) return;
+                    setFeedback(`Returned application #${selectedLeaveForDetail.id} for amendment: "${instructions.trim()}"`);
+                    setSelectedLeaveForDetail(null);
+                  }}
+                >
+                  Return for Amendment
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const rejectReason = prompt("Enter mandatory rejection reason:");
+                    if (!rejectReason || !rejectReason.trim()) return;
                     handleAction(selectedLeaveForDetail.id, "REJECTED");
                     setSelectedLeaveForDetail(null);
                   }}
                   style={{ flex: 1, color: colors.error }}
                 >
-                  Decline
+                  Reject (Reason Required)
                 </Button>
               </div>
             )}
           </div>
         )}
       </SlideOver>
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 1 SUB-VIEW: EMPLOYEE SELF-SERVICE PORTAL                       */}
+      {/* ========================================================================= */}
+      {activeTab === "ess_portal" && (
+        <div style={{ marginTop: "-1rem" }}>
+          <MyLeaveScreen />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 2 SUB-VIEW: TEAM AVAILABILITY, COVERAGE & RELIEF OFFICERS      */}
+      {/* ========================================================================= */}
+      {activeTab === "relief_coverage" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Team Availability & Coverage Summary Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Active Team Availability
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.emeraldDark, marginTop: "0.25rem" }}>
+                86.4%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                Above minimum 75% squad staffing threshold
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Active Relief Officers Assigned
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.indigoPrimary, marginTop: "0.25rem" }}>
+                {reliefAssignments.length} / {reliefAssignments.length}
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                100% of approved leaves have a designated relief officer
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Overlap Collision Alerts
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.warning, marginTop: "0.25rem" }}>
+                0 Critical
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                No two key-role holders in the same squad overlap
+              </div>
+            </div>
+          </div>
+
+          {/* Relief Officer Management & Coverage Matrix Table */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: typography.sizes.md, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                  Team Coverage &amp; Relief Officer Assignment Matrix
+                </h3>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Monitor team availability, verify handover checklists, and reassign relief officers when squad coverage shifts.
+                </span>
+              </div>
+              <Badge variant="success" size="sm">Manager Workspace</Badge>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.sm }}>
+              <thead>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ON-LEAVE STAFF MEMBER</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>LEAVE WINDOW</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>DESIGNATED RELIEF OFFICER</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>SQUAD COVERAGE</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>HANDOVER STATUS</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary, textAlign: "right" }}>MANAGE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reliefAssignments.map((ra) => (
+                  <tr key={ra.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>{ra.absentEmployee}</div>
+                      <div style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>{ra.department}</div>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{ra.leaveWindow}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.indigoPrimary }}>{ra.reliefOfficer}</td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={ra.squadCoveragePct >= 80 ? "success" : "warning"} size="sm">
+                        {ra.squadCoveragePct}% Covered
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={ra.handoverStatus.includes("Pending") ? "warning" : "success"} size="sm">
+                        {ra.handoverStatus}
+                      </Badge>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "right" }}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setReliefAssignments((prev) =>
+                            prev.map((item) =>
+                              item.id === ra.id ? { ...item, handoverStatus: "Verified & Active" } : item
+                            )
+                          );
+                          setFeedback(`Verified relief officer handover for ${ra.absentEmployee} (Covered by ${ra.reliefOfficer}).`);
+                        }}
+                      >
+                        Verify Coverage
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EXPERIENCE 5 SUB-VIEW: MANAGEMENT INTELLIGENCE & PREDICTIVE ANALYTICS     */}
+      {/* ========================================================================= */}
+      {activeTab === "predictive_intelligence" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Executive KPI Cards: Utilisation, Liability, Absence Rate, Burnout Risk */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "1rem" }}>
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Org Leave Utilisation Rate
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.indigoPrimary, marginTop: "0.25rem" }}>
+                68.2%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.success, marginTop: "0.25rem" }}>
+                Target: 70% by Q3 · +4.1% YoY
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Outstanding Leave Liability
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.warning, marginTop: "0.25rem" }}>
+                GH₵ 148,600
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                312 unbooked accrued days across 91 staff
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Unplanned Absence Rate
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.emeraldDark, marginTop: "0.25rem" }}>
+                1.8%
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, marginTop: "0.25rem" }}>
+                Below 2.5% benchmark · Bradford median: 18
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: colors.surface, padding: "1.25rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+              <div style={{ fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>
+                Predictive Burnout / Forfeiture Alerts
+              </div>
+              <div style={{ fontSize: typography.sizes.xxl, fontWeight: 700, color: colors.error, marginTop: "0.25rem" }}>
+                6 Staff
+              </div>
+              <div style={{ fontSize: typography.sizes.xs, color: colors.error, marginTop: "0.25rem" }}>
+                &lt;20% leave used in 9 months · Nudge recommended
+              </div>
+            </div>
+          </div>
+
+          {/* Departmental Utilisation, Liability & Predictive Forecast Table */}
+          <div style={{ backgroundColor: colors.surface, borderRadius: radii.md, border: `1px solid ${colors.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: typography.sizes.md, fontWeight: 600, color: colors.textPrimary, margin: 0 }}>
+                  Departmental Utilisation, Financial Liabilities &amp; Predictive Absence Forecast
+                </h3>
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Accrued balance-sheet liability, absence trends, and Q4 capacity projections.
+                </span>
+              </div>
+              <Badge variant="info" size="sm">Management Intelligence</Badge>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.sm }}>
+              <thead>
+                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>DEPARTMENT</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>LEAVE UTILISATION</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>UNBOOKED DAYS</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ACCRUED LIABILITY (GH₵)</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>ABSENCE TREND</th>
+                  <th style={{ padding: "0.75rem 1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>PREDICTIVE SIGNAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    dept: "Cloud & Edge Engineering",
+                    util: "58%",
+                    unbooked: "94 days",
+                    liability: "GH₵ 52,400",
+                    trend: "Stable (1.4% unplanned)",
+                    signal: "High Q4 carryover / burnout risk (3 engineers <15% used)",
+                    variant: "warning" as const,
+                  },
+                  {
+                    dept: "FinTech & Payments Product",
+                    util: "71%",
+                    unbooked: "68 days",
+                    liability: "GH₵ 38,100",
+                    trend: "Improving (−0.6% MoM)",
+                    signal: "Balanced pacing · On track for year-end cap",
+                    variant: "success" as const,
+                  },
+                  {
+                    dept: "People, Culture & Operations",
+                    util: "76%",
+                    unbooked: "42 days",
+                    liability: "GH₵ 21,900",
+                    trend: "Low absence (1.1%)",
+                    signal: "Healthy utilisation · Zero forfeiture exposure",
+                    variant: "success" as const,
+                  },
+                  {
+                    dept: "Customer Service & Regional Support",
+                    util: "64%",
+                    unbooked: "108 days",
+                    liability: "GH₵ 36,200",
+                    trend: "Elevated Mondays (2.9%)",
+                    signal: "Recommend staggered December roster lock",
+                    variant: "warning" as const,
+                  },
+                ].map((row) => (
+                  <tr key={row.dept} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.textPrimary }}>{row.dept}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.indigoPrimary }}>{row.util}</td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{row.unbooked}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontWeight: 600, color: colors.warning }}>{row.liability}</td>
+                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{row.trend}</td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <Badge variant={row.variant} size="sm">{row.signal}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL: SUBMIT LEAVE REQUEST                                               */}
@@ -2221,10 +3149,10 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                   style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                 >
                   <option value="Paa Kwesi Barnes">Paa Kwesi Barnes (Managing Principal)</option>
-                  <option value="Richard Mamphey">Richard Mamphey (HR Head)</option>
+                  <option value="Jemima Richards">Jemima Richards (HR Head)</option>
                   <option value="Benedicta Agbesi">Benedicta Agbesi (People & Culture)</option>
                   <option value="Philip Aryee">Philip Aryee (Cloud Engineering)</option>
-                  <option value="Clara Nukunu">Clara Nukunu (Customer Service)</option>
+                  <option value="Doreen Wesley">Doreen Wesley (Customer Service)</option>
                 </select>
               </div>
 
@@ -2247,10 +3175,46 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                 </select>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.5rem 0.75rem", backgroundColor: colors.surfaceSubtle, borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}` }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textPrimary, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isHalfDay}
+                    onChange={(e) => setIsHalfDay(e.target.checked)}
+                    style={{ cursor: "pointer" }}
+                  />
+                  Half-Day Request (0.5 Day)
+                </label>
+                {isHalfDay && (
+                  <div style={{ display: "flex", gap: "0.6rem", marginLeft: "auto" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: typography.sizes.xs, cursor: "pointer", color: colors.textPrimary }}>
+                      <input
+                        type="radio"
+                        name="halfPeriod"
+                        value="morning"
+                        checked={halfPeriod === "morning"}
+                        onChange={() => setHalfPeriod("morning")}
+                      />
+                      Morning
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: typography.sizes.xs, cursor: "pointer", color: colors.textPrimary }}>
+                      <input
+                        type="radio"
+                        name="halfPeriod"
+                        value="afternoon"
+                        checked={halfPeriod === "afternoon"}
+                        onChange={() => setHalfPeriod("afternoon")}
+                      />
+                      Afternoon
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: isHalfDay ? "1fr" : "1fr 1fr", gap: "1rem" }}>
                 <div>
                   <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                    Start Date
+                    {isHalfDay ? "Leave Date" : "Start Date"}
                   </label>
                   <input
                     type="date"
@@ -2259,17 +3223,19 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
                     style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
-                  />
-                </div>
+                {!isHalfDay && (
+                  <div>
+                    <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -2304,6 +3270,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -6,7 +6,8 @@ import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
-import { formatCellIfDate } from "../../utils/date";
+import { formatCellIfDate, formatDate } from "../../utils/date";
+import { ReportingCataloguePanel } from "./ReportingCataloguePanel";
 
 export interface ReportItem {
   id: number;
@@ -36,12 +37,12 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Core HR & Headcount",
     pack: "Admin/Compliance Pack",
     type: "Operational Export",
-    description: "Complete registry of all 45 active workforce members with roles, emails, manager hierarchies, and work locations.",
-    kpis: ["Total Headcount: 45", "Departments: 7", "Data Completeness: 99.4%", "Active Ratio: 100%"],
-    sampleAiInsight: "Workforce directory integrity is at 99.4% with all 45 records fully verified. Zero missing emergency contacts or duplicate tax identifiers detected across London and West Africa hubs.",
+    description: "Complete registry of all 54 active workforce members across 8 departments with roles, emails, manager hierarchies, and work locations.",
+    kpis: ["Total Headcount: 54", "Departments: 8", "Data Completeness: 99.4%", "Active Ratio: 100%"],
+    sampleAiInsight: "Workforce directory integrity is at 99.4% with all 54 records fully verified across Accra, London, and Windhoek hubs.",
     metrics: [
-      { label: "Active Employees", value: "45", delta: "+2 this mo", trend: "up" },
-      { label: "Practice Locations", value: "2 (UK/GH)", trend: "neutral" },
+      { label: "Active Employees", value: "54", delta: "+2 this mo", trend: "up" },
+      { label: "Practice Locations", value: "3 (ACC/LON/WDH)", trend: "neutral" },
       { label: "Verified National IDs", value: "100%", trend: "up" },
     ],
     sampleRows: [
@@ -59,10 +60,10 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Executive Pack",
     type: "Strategic Dashboard",
     description: "Total headcount vs Full-Time Equivalents (FTE), broken down by department, practice location, and contract model.",
-    kpis: ["Total Headcount: 45", "Full-Time FTE: 43.5", "Contractors: 3", "Span of Control: 1:5.8"],
+    kpis: ["Total Headcount: 54", "Full-Time FTE: 52.5", "Contractors: 3", "Span of Control: 1:5.8"],
     sampleAiInsight: "FTE utilization stands at 96.6% with engineering leading headcount expansion (+18% YoY). Span of control remains healthy at 1:5.8 across core consulting practices.",
     metrics: [
-      { label: "Total FTE", value: "43.5", delta: "+4.5 YoY", trend: "up" },
+      { label: "Total FTE", value: "52.5", delta: "+4.5 YoY", trend: "up" },
       { label: "Avg Span of Control", value: "5.8:1", trend: "neutral" },
       { label: "Contingent Ratio", value: "6.7%", trend: "neutral" },
     ],
@@ -234,7 +235,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Manager Pack",
     type: "Strategic Dashboard",
     description: "Live real-time telemetry of staff clocked in, late, on approved PTO, or active on remote sprints today.",
-    kpis: ["Present Today: 42/45", "On Leave: 3", "Remote Active: 26", "Tardiness Rate: 0.8%"],
+    kpis: ["Present Today: 50/54", "On Leave: 4", "Remote Active: 28", "Tardiness Rate: 0.8%"],
     sampleAiInsight: "93.3% workforce presence confirmed today with 26 engineers active on remote client VPCs. 3 staff are on pre-approved annual leave with full coverage arranged.",
     metrics: [
       { label: "Present Today", value: "93.3%", trend: "up" },
@@ -291,7 +292,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Time, Attendance & Leave",
     pack: "Manager Pack",
     type: "Strategic Dashboard",
-    description: "Calculates Bradford Factor scores ($S^2 \times D$) to identify disruptive short-term unplanned absence patterns.",
+    description: "Calculates Bradford Factor scores (S² × D) to identify disruptive short-term unplanned absence patterns.",
     kpis: ["Low Risk (<50): 97.8%", "Moderate Risk (51-200): 2.2%", "Action Triggered (>200): 0"],
     sampleAiInsight: "97.8% of staff maintain Bradford scores below 50 (zero operational concern). No personnel have reached the 200 threshold requiring line manager review.",
     metrics: [
@@ -805,7 +806,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     type: "Strategic Dashboard",
     description: "Visualizes performance score distributions across departments to ensure calibration integrity and prevent grade inflation.",
     kpis: ["Top Tier (Exceeds): 24%", "Core (Meets): 71%", "Needs Support: 5%", "Calibration Drift: 0.2%"],
-    sampleAiInsight: "Appraisal calibration exhibits a healthy distribution: 24% Exceeds, 71% Meets, and 5% Needs Support. Framework purity trigger prevented hybrid inflation.",
+    sampleAiInsight: "Appraisal calibration exhibits a healthy distribution: 24% Exceeds, 71% Meets, and 5% Needs Support across all operational departments.",
     metrics: [
       { label: "Exceeds Expectations", value: "24.4%", trend: "neutral" },
       { label: "Meets Target", value: "71.1%", trend: "neutral" },
@@ -823,7 +824,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     category: "Performance & Development",
     pack: "Manager Pack",
     type: "Strategic Dashboard",
-    description: "Real-time key result progress for FY26 Q4 under strict single-framework OKR governance.",
+    description: "Real-time key result progress for FY26 Q4 under enterprise OKR governance.",
     kpis: ["Overall OKR Velocity: 84%", "On Track: 38 Goals", "At Risk: 4 Goals", "Completed: 12 Goals"],
     sampleAiInsight: "Company-wide OKR velocity reached 84% with 6 weeks remaining in Q4. 38 of 42 active key results are on track for certified closure.",
     metrics: [
@@ -881,10 +882,10 @@ const ALL_60_REPORTS: ReportItem[] = [
     pack: "Executive Pack",
     type: "Strategic Dashboard",
     description: "Evaluates the company's verified skill inventory against the required capabilities for upcoming 2027 advisory mandates.",
-    kpis: ["Core Competency Coverage: 92%", "Critical Gaps: 2 Skills (Rust, Post-Quantum)", "Upskilling Pipeline: 12 Staff"],
+    kpis: ["Core Skill Coverage: 92%", "Critical Gaps: 2 Skills (Rust, Post-Quantum)", "Upskilling Pipeline: 12 Staff"],
     sampleAiInsight: "Core consulting coverage is strong at 92%. Critical future skill gaps in Rust and Post-Quantum cryptography have been targeted with dedicated internal gig cohorts.",
     metrics: [
-      { label: "Competency Coverage", value: "92.4%", trend: "up" },
+      { label: "Skill Coverage", value: "92.4%", trend: "up" },
       { label: "Active Upskilling", value: "12 Staff", trend: "up" },
     ],
     sampleRows: [
@@ -1139,7 +1140,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     type: "Operational Export",
     description: "Tracks whether departing personnel have completed architectural documentation and handed off git repos to peers.",
     kpis: ["Handover Completion: 100%", "Git Repo Re-assigned: 100%", "Shadow Sessions: 4 Completed"],
-    sampleAiInsight: "All departure handovers completed with architectural ADR updates and full repository transfer before final clearance.",
+    sampleAiInsight: "All departure handovers completed with architectural documentation updates and full repository transfer before final clearance.",
     metrics: [
       { label: "Handover Complete", value: "100%", trend: "up" },
       { label: "Shadowing Done", value: "100%", trend: "up" },
@@ -1168,7 +1169,10 @@ const ALL_60_REPORTS: ReportItem[] = [
   },
 ];
 
-export const ReportsAnalyticsView: React.FC = () => {
+import type { UserPersona } from "../shell/AppSidebar";
+
+export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ persona }) => {
+  const isEmployeeEss = persona === "employee";
   const [activeMainSection, setActiveMainSection] = useState<"catalog" | "workforce_planning" | "role_dashboards">("catalog");
   const [reportLocale, setReportLocale] = useState<"en" | "fr">("en");
   const [selectedRoleDashboard, setSelectedRoleDashboard] = useState<"sales" | "it" | "legal">("sales");
@@ -1192,6 +1196,14 @@ export const ReportsAnalyticsView: React.FC = () => {
   // Filter Reports List
   const filteredReports = useMemo(() => {
     return ALL_60_REPORTS.filter((r) => {
+      if (
+        isEmployeeEss &&
+        r.pack !== "General" &&
+        r.category !== "Time, Attendance & Leave" &&
+        r.category !== "Performance & Development"
+      ) {
+        return false;
+      }
       // Pack filter
       if (selectedPack === "MANAGER" && r.pack !== "Manager Pack") return false;
       if (selectedPack === "EXECUTIVE" && r.pack !== "Executive Pack") return false;
@@ -1292,8 +1304,8 @@ export const ReportsAnalyticsView: React.FC = () => {
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(9.5);
         doc.setFont("helvetica", "normal");
-        doc.text(`Category: ${report.category}  |  Pack: ${report.pack}  |  Report ID: #${report.id}`, 14, 41);
-        doc.text(`Generated: ${new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`, 14, 46);
+        doc.text(`Category: ${report.category}  |  Report ID: #${report.id}`, 14, 41);
+        doc.text(`Generated: ${formatDate(new Date())}`, 14, 46);
 
         // Divider
         doc.setDrawColor(226, 232, 240);
@@ -1308,7 +1320,7 @@ export const ReportsAnalyticsView: React.FC = () => {
         doc.setTextColor(67, 56, 202);
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
-        doc.text("DEDE AI EXECUTIVE DIGEST (Verified Edge Telemetry)", 18, 61);
+        doc.text("DEDE AI EXECUTIVE DIGEST (Verified Operations Report)", 18, 61);
 
         doc.setTextColor(30, 27, 75);
         doc.setFont("helvetica", "normal");
@@ -1443,7 +1455,8 @@ export const ReportsAnalyticsView: React.FC = () => {
 
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1400px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      
+      <ReportingCataloguePanel />
+
       {/* Page Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
@@ -1626,7 +1639,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                 fontSize: "11px",
                 fontWeight: 500,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = colors.indigoSubtle;
@@ -1754,7 +1767,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1781,7 +1794,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1808,7 +1821,7 @@ export const ReportsAnalyticsView: React.FC = () => {
             borderRadius: radii.lg,
             padding: "1.1rem 1.25rem",
             cursor: "pointer",
-            transition: "all 0.15s ease",
+            transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             boxShadow: shadows.xs,
           }}
         >
@@ -1865,7 +1878,7 @@ export const ReportsAnalyticsView: React.FC = () => {
                 fontSize: "11px",
                 fontWeight: selectedCategory === cat.key ? 700 : 500,
                 cursor: "pointer",
-                transition: "all 0.12s ease",
+                transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
               }}
             >
               {cat.label}
@@ -1949,35 +1962,6 @@ export const ReportsAnalyticsView: React.FC = () => {
                   #{report.id}
                 </span>
 
-                <div style={{ display: "flex", gap: "0.35rem" }}>
-                  <span
-                    style={{
-                      fontSize: "9px",
-                      fontWeight: 600,
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: radii.full,
-                      backgroundColor: report.type === "Strategic Dashboard" ? colors.emeraldSubtle : colors.surfaceSubtle,
-                      color: report.type === "Strategic Dashboard" ? colors.emeraldDark : colors.textSecondary,
-                      border: `1px solid ${report.type === "Strategic Dashboard" ? colors.emeraldBorder : colors.border}`,
-                    }}
-                  >
-                    {report.type}
-                  </span>
-                  {report.pack !== "General" && (
-                    <span
-                      style={{
-                        fontSize: "9px",
-                        fontWeight: 600,
-                        padding: "0.1rem 0.4rem",
-                        borderRadius: radii.full,
-                        backgroundColor: colors.indigoSubtle,
-                        color: colors.indigoPrimary,
-                      }}
-                    >
-                      {report.pack}
-                    </span>
-                  )}
-                </div>
               </div>
 
               {/* Title & Description */}
@@ -2389,7 +2373,6 @@ export const ReportsAnalyticsView: React.FC = () => {
                     REPORT #{activeReportModal.id}
                   </span>
                   <Badge variant="neutral" size="sm">{activeReportModal.category}</Badge>
-                  <Badge variant="success" size="sm">{activeReportModal.type}</Badge>
                 </div>
                 <h2 style={{ margin: "4px 0 0 0", fontSize: typography.sizes.lg, fontWeight: 700, color: colors.indigoPrimary }}>
                   {activeReportModal.name}

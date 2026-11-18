@@ -164,7 +164,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
               gap: "0.35rem",
               fontSize: "11px",
               fontFamily: typography.fontMono,
-              transition: "all 0.15s ease",
+              transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = colors.surfaceSubtle;

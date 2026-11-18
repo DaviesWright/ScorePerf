@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
-import { Badge } from "../../design-system/Badge";
+import { Badge, frameworkVariant } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { drillProps } from "../../utils/drill";
@@ -10,6 +10,8 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { PerformanceConfigurationStudio } from "./PerformanceConfigurationStudio";
+import { GeneralAppraisalSettingsView } from "./GeneralAppraisalSettingsView";
+import { PerformanceMiniDashboard } from "./PerformanceMiniDashboard";
 
 export interface CycleRecord {
   id: number;
@@ -33,6 +35,7 @@ interface RevieweeEvaluation {
   role: string;
   department: string;
   selfRating: number;
+  selfComments?: string;
   managerRating: number;
   feedback: string;
   status: "CALIBRATED" | "PENDING_REVIEW";
@@ -137,7 +140,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       id: 2,
       tier: "Tier 2: Direct Supervisor Sign-off",
       role: "Immediate Supervisor",
-      officer: "Richard Mamphey (Senior Clinical Administrator)",
+      officer: "Richard Amoah (Senior Clinical Administrator)",
       serviceId: "GH/SC-OPS/3091",
       score: 4.0,
       status: "LOCKED_AND_SIGNED",
@@ -179,7 +182,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     },
   ]);
 
-  // State 3: Strict Numeric Trait-Based Competency Matrix (1-5 Scale)
+  // State 3: Strict Numeric Trait-Based Skill Matrix (1-5 Scale)
   const [traitScores, setTraitScores] = useState<Record<string, number>>({
     "Communication & Tactical Briefing": 4,
     "Team Collaboration & Joint Interoperability": 5,
@@ -201,14 +204,15 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
   // Performance Management Governance & Settings State
   const [settingsPrimaryTab, setSettingsPrimaryTab] = useState<
+    | "General Appraisal"
     | "Framework & Methodology"
     | "Multi-Tier Sign-Off Chains"
-    | "Competency & Trait Matrix"
+    | "Skill & Trait Matrix"
     | "360° Peer Review & Calibration"
     | "Nine-Box Talent Matrix"
     | "PIP & Governance Exceptions"
     | "Configuration Studio (Rules Engine)"
-  >("Framework & Methodology");
+  >("General Appraisal");
 
   // Search & Filter in Requests Table (Screenshot 4)
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
@@ -223,10 +227,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     const depts = [
       { dept: "Healthcare Operations", team: "Clinical Governance Unit", manager: "Dr. Emmanuel K. Quarshie", role: "Clinical Operations Officer", color: "#0284c7" },
       { dept: "Engineering & Cloud", team: "Hyperdrive Edge Performance Squad", manager: "Benedicta Agbesi", role: "Cloud Infrastructure Engineer", color: "#6366f1" },
-      { dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", manager: "Richard Mamphey", role: "People Operations Specialist", color: "#ec4899" },
+      { dept: "People & Culture", team: "West Africa Talent Onboarding Taskforce", manager: "Jemima Richards", role: "People Operations Specialist", color: "#ec4899" },
       { dept: "Technology Advisory", team: "Corporate Information Security Committee", manager: "Paa Kwesi Barnes", role: "Security & Governance Consultant", color: "#8b5cf6" },
       { dept: "Finance & Accounting", team: "Statutory Tax & Audit Reconciliation Team", manager: "Kojo Antwi", role: "Financial Planning Analyst", color: "#f59e0b" },
-      { dept: "Client Success", team: "Regional Enterprise Client Care Hub", manager: "Clara Nukunu", role: "Enterprise Client Account Partner", color: "#10b981" },
+      { dept: "Client Success", team: "Regional Enterprise Client Care Hub", manager: "Doreen Wesley", role: "Enterprise Client Account Partner", color: "#10b981" },
     ];
     return Array.from({ length: 84 }, (_, i) => {
       const deptInfo = depts[i % depts.length];
@@ -260,7 +264,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     {
       id: 1,
       requestNo: 1,
-      ownerName: "Richard Mamphey",
+      ownerName: "Jemima Richards",
       ownerStaffId: "SHR/GH/038",
       ownerRole: "Head, Human Resources",
       ownerAvatarColor: "#6366f1",
@@ -273,13 +277,13 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         { title: "Financial: Reduce annual recruitment spend by 22% via internal gig sourcing", weight: 30, target: "GH₵120,000 saved", metric: "Cost Variance" },
         { title: "Customer: Achieve 98% internal SLA adherence on HR advisory queries", weight: 25, target: "98% Positive CSAT", metric: "SLA Index" },
         { title: "Internal Processes: Roll out automated Pre-boarding across all African entities", weight: 25, target: "100% Entities", metric: "Entity Rollout" },
-        { title: "Learning & Growth: Certify 4 People & Culture analysts in single-framework calibration standards", weight: 20, target: "4 Certified", metric: "Certs Issued" },
+        { title: "Learning & Growth: Certify 4 People & Culture analysts in appraisal calibration standards", weight: 20, target: "4 Certified", metric: "Certs Issued" },
       ],
     },
     {
       id: 2,
       requestNo: 2,
-      ownerName: "Clara Nukunu",
+      ownerName: "Doreen Wesley",
       ownerStaffId: "SCG153",
       ownerRole: "Customer Service Executive",
       ownerAvatarColor: "#10b981",
@@ -296,7 +300,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     {
       id: 3,
       requestNo: 3,
-      ownerName: "Adjoa Asare",
+      ownerName: "Adjoa Bediako",
       ownerStaffId: "GH/2017/6/13/094",
       ownerRole: "HR Analytics & Information System Specialist",
       ownerAvatarColor: "#ec4899",
@@ -481,7 +485,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       id: 5,
       level: "Employee",
       title: "Build and deploy 60 Interactive HR Reports with AI Query Translation",
-      lead: "Adjoa Asare",
+      lead: "Adjoa Bediako",
       framework: "BSC",
       progressPct: 95,
       alignedToParent: "Technology Advisory Division",
@@ -548,9 +552,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     },
     {
       id: 104,
-      employeeName: "Clara Nukunu",
+      employeeName: "Doreen Wesley",
       employeeRole: "Customer Service Executive",
-      supervisorName: "Richard Mamphey",
+      supervisorName: "Jemima Richards",
       cycleTitle: "Enterprise Annual Appraisal",
       framework: "OKR",
       goalTitle: "Deliver first-response resolution in under 4 minutes on priority tickets",
@@ -574,6 +578,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "People & Culture Consultant",
       department: "People & Culture",
       selfRating: 4.5,
+      selfComments: "Exceeded all planned HR onboarding SLAs by 18%. Streamlined Document Centre records for 54 staff members across Accra and London.",
       managerRating: 4.2,
       feedback: "Exceptional ownership of workforce onboarding and policy documentation.",
       status: "PENDING_REVIEW",
@@ -584,6 +589,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "Senior Edge Systems Consultant",
       department: "Cloud & Edge Engineering",
       selfRating: 4.8,
+      selfComments: "Architected distributed edge worker caching with sub-15ms p99 response times across UK and West Africa hubs.",
       managerRating: 4.7,
       feedback: "Led Hyperdrive edge caching architecture with remarkable technical rigor.",
       status: "CALIBRATED",
@@ -594,6 +600,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       role: "Director of Enterprise Advisory",
       department: "Enterprise Advisory",
       selfRating: 4.3,
+      selfComments: "Closed 2 major strategic enterprise advisory mandates in Q2, aligning corporate strategy to execution roadmaps.",
       managerRating: 4.5,
       feedback: "Strong commercial alignment and strategic engagement leadership.",
       status: "PENDING_REVIEW",
@@ -605,9 +612,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
   const [showNewCheckInModal, setShowNewCheckInModal] = useState(false);
   const [cycleTitle, setCycleTitle] = useState("");
   const [cycleDesc, setCycleDesc] = useState("");
-  const [selectedFramework, setSelectedFramework] = useState<"OKR" | "MBO" | "BSC">("OKR");
+  const [selectedFramework, setSelectedFramework] = useState<"OKR" | "MBO" | "BSC">("BSC");
   const [startDate, setStartDate] = useState("2026-04-01");
   const [endDate, setEndDate] = useState("2026-06-30");
+  const [okrViewMode, setOkrViewMode] = useState<"heatmap" | "tree">("heatmap");
+  const [calibrationNotes, setCalibrationNotes] = useState<Record<number, string>>({});
 
   // New Check-in modal form state
   const [newCheckInEmployee, setNewCheckInEmployee] = useState("Benedicta Agbesi");
@@ -623,20 +632,82 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Active Cycle constraint: at most one active cycle (Open, In Review, Calibration, or Active) per company
+  const activeCycle = cycles.find((c) => {
+    const s = (c.status || "").toUpperCase();
+    return s === "ACTIVE" || s === "OPEN" || s === "IN REVIEW" || s === "IN_REVIEW" || s === "CALIBRATION";
+  });
+
   // Performance Management Settings Configuration State
   const [frameworkConfig, setFrameworkConfig] = useState({
-    activeFramework: "BSC" as "BSC" | "OKR",
-    strictSingleFramework: true,
     financialWeight: 30,
     customerWeight: 50,
     internalWeight: 15,
     learningWeight: 5,
-    okrGradingScale: "0_1" as "0_1" | "percentage",
     minObjectivesPerEmployee: 5,
     maxObjectivesPerEmployee: 8,
     mandatoryCorporateAlignment: true,
     allowEmployeeProposeKeyResults: true,
   });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // Load the company's saved settings once. Until they arrive, the form shows the defaults above.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/hr/performance/settings", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { settings?: { pillarWeights: { financial: number; customer: number; internal: number; learning: number }; minObjectives: number; maxObjectives: number; mandatoryCorporateAlignment: boolean; allowEmployeeProposeKeyResults: boolean } } | null) => {
+        const s = data?.settings;
+        if (cancelled || !s) return;
+        setFrameworkConfig({
+          financialWeight: s.pillarWeights.financial,
+          customerWeight: s.pillarWeights.customer,
+          internalWeight: s.pillarWeights.internal,
+          learningWeight: s.pillarWeights.learning,
+          minObjectivesPerEmployee: s.minObjectives,
+          maxObjectivesPerEmployee: s.maxObjectives,
+          mandatoryCorporateAlignment: s.mandatoryCorporateAlignment,
+          allowEmployeeProposeKeyResults: s.allowEmployeeProposeKeyResults,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Saves only after the server confirms. Errors from the server (validation, or not HR) are shown as they come back.
+  const saveFrameworkSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch("/api/hr/performance/settings/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pillarWeights: {
+            financial: frameworkConfig.financialWeight,
+            customer: frameworkConfig.customerWeight,
+            internal: frameworkConfig.internalWeight,
+            learning: frameworkConfig.learningWeight,
+          },
+          minObjectives: frameworkConfig.minObjectivesPerEmployee,
+          maxObjectives: frameworkConfig.maxObjectivesPerEmployee,
+          mandatoryCorporateAlignment: frameworkConfig.mandatoryCorporateAlignment,
+          allowEmployeeProposeKeyResults: frameworkConfig.allowEmployeeProposeKeyResults,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; errors?: string[] };
+      if (!res.ok) {
+        setStatusMessage({ text: [data.error ?? "The settings were not saved.", ...(data.errors ?? [])].join(" "), error: true });
+        return;
+      }
+      setStatusMessage({ text: "Performance framework and cascading scorecard weights saved." });
+    } catch {
+      setStatusMessage({ text: "The server could not be reached. Settings were not saved.", error: true });
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const [signOffChainConfig, setSignOffChainConfig] = useState({
     immutableSelfScore: true,
@@ -652,8 +723,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     ],
   });
 
-  const [competencyMatrixConfig, setCompetencyMatrixConfig] = useState({
-    competencyWeightPercent: 30,
+  const [skillMatrixConfig, setSkillMatrixConfig] = useState({
+    skillWeightPercent: 30,
     goalWeightPercent: 70,
     mandatoryPassingGrade: 3.0,
     traits: [
@@ -723,10 +794,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         framework_code: selectedFramework,
         framework_name:
           selectedFramework === "OKR"
-            ? "Objectives & Key Results (Single-Framework)"
+            ? "Objectives & Key Results (OKR)"
             : selectedFramework === "MBO"
-            ? "Management by Objectives (Single-Framework)"
-            : "Balanced Scorecard (Single-Framework)",
+              ? "Management by Objectives (MBO)"
+              : "Balanced Scorecard (BSC)",
         status: "ACTIVE",
         start_date: startDate,
         end_date: endDate,
@@ -829,6 +900,50 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     };
   }, [objectiveRequests]);
 
+  const [livePerformanceStats, setLivePerformanceStats] = useState<{
+    goalsCount: number;
+    assessmentsCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/hr/performance/goals", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/hr/performance/assessments", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([gData, aData]: [{ results?: unknown[] } | null, { results?: unknown[] } | null]) => {
+        if (cancelled) return;
+        if (gData?.results || aData?.results) {
+          setLivePerformanceStats({
+            goalsCount: gData?.results?.length ?? 0,
+            assessmentsCount: aData?.results?.length ?? 0,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const [appraisalPeriodOpen, setAppraisalPeriodOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("scoreview_appraisal_period_open") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleAppraisalPeriod = () => {
+    const next = !appraisalPeriodOpen;
+    setAppraisalPeriodOpen(next);
+    try {
+      localStorage.setItem("scoreview_appraisal_period_open", String(next));
+      window.dispatchEvent(new Event("scoreview:appraisal-period-changed"));
+    } catch { }
+  };
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
       {/* Platform Header & Navigation Tabs */}
@@ -839,6 +954,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Enterprise Performance Suite
               </span>
+              {livePerformanceStats && (
+                <Badge variant="success" size="sm">
+                  Live DB · {livePerformanceStats.goalsCount} Goals · {livePerformanceStats.assessmentsCount} Assessments
+                </Badge>
+              )}
             </div>
             <h1
               style={{
@@ -853,7 +973,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </h1>
           </div>
 
-          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
+            <Button
+              variant={appraisalPeriodOpen ? "secondary" : "primary"}
+              size="sm"
+              onClick={toggleAppraisalPeriod}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <Icons.Lock size={14} />
+                <span>{appraisalPeriodOpen ? "Close Appraisal Period (Lock ESS)" : "Open Appraisal Period"}</span>
+              </span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -876,12 +1006,19 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span>Log 1-on-1 Check-in</span>
               </span>
             </Button>
-            <Button variant="primary" size="sm" onClick={() => setShowNewCycleModal(true)}>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <Icons.Plus size={14} />
-                <span>Initiate Cycle</span>
-              </span>
-            </Button>
+            <span title={activeCycle ? `Close or finalize cycle "${activeCycle.title}" before creating a new one.` : undefined}>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={Boolean(activeCycle)}
+                onClick={() => setShowNewCycleModal(true)}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.Plus size={14} />
+                  <span>Initiate Cycle</span>
+                </span>
+              </Button>
+            </span>
           </div>
         </div>
 
@@ -900,7 +1037,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             { key: "dashboard", label: "Dashboard", icon: Icons.CommandCentre },
             { key: "cascading_bsc", label: "Cascading BSC", icon: Icons.Layers },
             { key: "military_chain", label: "Sequential Sign-off", icon: Icons.ShieldCheck },
-            { key: "trait_matrix", label: "Strict Trait Matrix", icon: Icons.Award },
+            { key: "trait_matrix", label: "Core Values Review", icon: Icons.Award },
             { key: "okr_heatmap", label: "OKR Heatmap", icon: Icons.Activity },
             { key: "nine_box", label: "9-Box Succession", icon: Icons.Users },
             { key: "cycles", label: "Appraisal Cycles", icon: Icons.Calendar },
@@ -930,7 +1067,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   fontSize: typography.sizes.xs,
                   cursor: "pointer",
                   whiteSpace: "nowrap",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   borderBottom: isActive ? `2px solid ${colors.indigoAction}` : "2px solid transparent",
                 }}
               >
@@ -973,6 +1110,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "dashboard" && (
         <div>
+          <PerformanceMiniDashboard onOpenInsights={() => setActiveMainTab("insights")} />
           {/* Top Appraisal Cycle Selector Bar (Screenshot 3) */}
           <div
             style={{
@@ -1038,7 +1176,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     fontSize: typography.sizes.xs,
                     fontWeight: 600,
                     cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   }}
                 >
                   <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: colors.brandBlue }} />
@@ -1072,7 +1210,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "rgba(37, 99, 235, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "NO_OBJECTIVES" ? "2px solid #2563eb" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1101,7 +1239,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "ACTIVE" ? "rgba(249, 115, 22, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "ACTIVE" ? "2px solid #f97316" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1130,7 +1268,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "rgba(239, 68, 68, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "PENDING_APPROVAL" ? "2px solid #ef4444" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1159,7 +1297,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "APPROVED" ? "rgba(139, 92, 246, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "APPROVED" ? "2px solid #8b5cf6" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1188,7 +1326,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 backgroundColor: dashboardDrilldownCohort === "DECLINED" ? "rgba(16, 185, 129, 0.1)" : "transparent",
                 outline: dashboardDrilldownCohort === "DECLINED" ? "2px solid #10b981" : "none",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
@@ -1214,17 +1352,16 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               style={{
                 backgroundColor: colors.surface,
                 borderRadius: radii.lg,
-                border: `2px solid ${
-                  dashboardDrilldownCohort === "NO_OBJECTIVES"
-                    ? "#2563eb"
-                    : dashboardDrilldownCohort === "ACTIVE"
+                border: `2px solid ${dashboardDrilldownCohort === "NO_OBJECTIVES"
+                  ? "#2563eb"
+                  : dashboardDrilldownCohort === "ACTIVE"
                     ? "#f97316"
                     : dashboardDrilldownCohort === "PENDING_APPROVAL"
-                    ? "#ef4444"
-                    : dashboardDrilldownCohort === "APPROVED"
-                    ? "#8b5cf6"
-                    : "#10b981"
-                }`,
+                      ? "#ef4444"
+                      : dashboardDrilldownCohort === "APPROVED"
+                        ? "#8b5cf6"
+                        : "#10b981"
+                  }`,
                 padding: "1.25rem 1.5rem",
                 marginBottom: "1.5rem",
                 boxShadow: shadows.md,
@@ -1513,7 +1650,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                In <strong>{selectedAppraisalCycle}</strong>, 38 total objective requests have been processed. Ghana Practice exhibits a <strong>100% adherence rate</strong> to Balanced Scorecard four-pillar weighting (Financial, Customer, Internal Processes, Learning & Growth). <strong>4 continuous 1-on-1 check-ins</strong> were logged this sprint with an average progress velocity of <strong>79.8%</strong>.
+                In <strong>{selectedAppraisalCycle}</strong>, 38 total objective requests have been processed. <strong>4 continuous 1-on-1 check-ins</strong> were logged this sprint.
               </p>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
                 <button
@@ -1593,8 +1730,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         Period: {formatDateRange(cycle.start_date, cycle.end_date)}
                       </div>
                     </div>
-                    <Badge variant="bsc" size="sm">
-                      {cycle.framework_code || "OKR"} Pure
+                    <Badge variant={frameworkVariant(cycle.framework_code)} size="sm">
+                      {cycle.framework_code || "BSC"}
                     </Badge>
                   </div>
                 ))}
@@ -1685,6 +1822,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
                 Four-pillar strategic weighting (Financial {bscWeights.financial}%, Customer {bscWeights.customer}%, Internal Processes {bscWeights.internal}%, Learning &amp; Growth {bscWeights.learning}%). Direct ladder-up from individual contributor KPIs to executive corporate objectives.
               </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.35rem" }}>
+              <Badge variant="info" size="sm">Labels Snapshotted at Cycle Open</Badge>
+              <span style={{ fontSize: "11px", color: colors.textMuted }}>Frozen across active appraisal cycle</span>
             </div>
           </div>
 
@@ -1915,44 +2056,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "military_chain" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {/* Header Banner */}
-          <div
-            style={{
-              padding: "1rem 1.25rem",
-              borderRadius: radii.lg,
-              backgroundColor: "#f8fafc",
-              border: `1px solid ${colors.borderStrong}`,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Icons.ShieldCheck size={18} color="#0f172a" />
-                <h2 style={{ fontSize: typography.sizes.base, fontWeight: 800, color: "#0f172a", margin: 0 }}>
-                  Sequential Hierarchical Appraisal Workflow (5-Tier Chain)
-                </h2>
-              </div>
-              <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Multi-tier sequential appraisal protocol: Immutable score locks at each level, employee credential verification, cryptographic digital stamps, and automated executive PDF dossier generation.
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setMilitaryPdfGenerated(true);
-                  setStatusMessage({ text: "Official Executive Appraisal PDF generated with cryptographic digital stamps." });
-                }}
-              >
-                <Icons.FileText size={14} />
-                <span>Generate Stamped PDF</span>
-              </Button>
-            </div>
-          </div>
-
           {/* Sequential 5-Tier Command Sign-Off Chain */}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             {militaryChain.map((step) => {
@@ -2037,8 +2140,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                               s.id === 3
                                 ? { ...s, status: "LOCKED_AND_SIGNED", timestamp: new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC", digitalStamp: "HOD-SEAL #1104-PASSED" }
                                 : s.id === 4
-                                ? { ...s, status: "PENDING_ENDORSEMENT" }
-                                : s
+                                  ? { ...s, status: "PENDING_ENDORSEMENT" }
+                                  : s
                             )
                           );
                           setStatusMessage({ text: "Tier 3 (HOD) endorsed successfully. Routed to Divisional Director." });
@@ -2054,36 +2157,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             })}
           </div>
 
-          {/* Stamped Executive PDF Preview Modal Banner */}
-          {militaryPdfGenerated && (
-            <div
-              style={{
-                padding: "1.25rem 1.5rem",
-                borderRadius: radii.lg,
-                backgroundColor: "#f8fafc",
-                border: "2px solid #0f172a",
-                boxShadow: shadows.md,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Icons.Award size={18} color="#0f172a" />
-                  <span style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>
-                    Official Form EXEC-GH/APPRAISAL/2026 Ready
-                  </span>
-                </div>
-                <Badge variant="success" size="sm">Tamper-Proof Audit Hash Verified</Badge>
-              </div>
-              <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                The appraisal dossier for <strong>Emmanuel K. Quarshie</strong> has been bundled with locked self-scores, line manager grades, and cryptographic digital stamps. This document complies with statutory health service guidelines and ISO 27001 audit standards.
-              </p>
-            </div>
-          )}
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* TAB: STRICT NUMERIC COMPETENCY TRAIT MATRIX (1-5 Scale)                   */}
+      {/* TAB: STRICT NUMERIC SKILL TRAIT MATRIX (1-5 Scale)                   */}
       {/* ========================================================================= */}
       {activeMainTab === "trait_matrix" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -2103,11 +2181,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Icons.Award size={18} color={colors.indigoAction} />
                 <h2 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: 0 }}>
-                  Strict Numeric Competency Scoring Matrix (1-5 Scale)
+                  Core Values &amp; Behavioral Skill Review (1-5 Scale)
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Evaluates behavioral, operational, and disciplinary traits on a strict numeric scale (1 = Unsatisfactory, 2 = Marginal, 3 = Competent, 4 = Superior, 5 = Exemplary) completely independent of goal OKRs.
+                Evaluates behavioral, operational, and organizational core values on a 5-point scale (1 = Unsatisfactory, 2 = Marginal, 3 = Competent, 4 = Superior, 5 = Exemplary) aligned with enterprise standards.
               </p>
             </div>
           </div>
@@ -2193,7 +2271,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                             fontWeight: currentScore === lvl.score ? 700 : 500,
                             fontSize: "11px",
                             cursor: "pointer",
-                            transition: "all 0.12s ease",
+                            transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                           }}
                         >
                           {lvl.label}
@@ -2233,94 +2311,238 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </h2>
               </div>
               <p style={{ fontSize: typography.sizes.xs, color: colors.indigoPrimary, margin: "0.25rem 0 0 0" }}>
-                Real-time organizational heatmap categorizing key results across 4 performance thresholds: 🚨 Critical (&lt;30%), 🛠 Off Track (30-69%), 👌 On Track (70-99%), 🚀 Exceeded (&gt;100%).
+                Real-time organizational heatmap and cascading alignment tree (Company → Team → Individual).
               </p>
             </div>
-          </div>
-
-          {/* Threshold Summary Stat Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-            {[
-              { label: "🚀 Exceeded (>100%)", count: 4, pct: "18%", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
-              { label: "👌 On Track (70-99%)", count: 12, pct: "55%", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
-              { label: "🛠 Off Track (30-69%)", count: 5, pct: "23%", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-              { label: "🚨 Critical (<30%)", count: 1, pct: "4%", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                style={{
-                  padding: "1rem",
-                  borderRadius: radii.md,
-                  backgroundColor: stat.bg,
-                  border: `1px solid ${stat.border}`,
-                }}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Button
+                variant={okrViewMode === "heatmap" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => setOkrViewMode("heatmap")}
               >
-                <div style={{ fontSize: "11px", fontWeight: 700, color: stat.color, textTransform: "uppercase" }}>
-                  {stat.label}
-                </div>
-                <div style={{ fontSize: "1.75rem", fontWeight: 800, color: stat.color, marginTop: "0.25rem" }}>
-                  {stat.count} <span style={{ fontSize: "12px", fontWeight: 500, color: colors.textMuted }}>({stat.pct})</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Departmental OKR Heatmap Grid */}
-          <div
-            style={{
-              backgroundColor: colors.surface,
-              borderRadius: radii.lg,
-              border: `1px solid ${colors.border}`,
-              padding: "1.5rem",
-              boxShadow: shadows.xs,
-            }}
-          >
-            <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1rem 0" }}>
-              Active Key Results by Department
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {[
-                { dept: "Cloud & Edge Engineering", okr: "Achieve sub-15ms edge latency across UK & Accra hubs", progress: 104, threshold: "🚀 Exceeded", color: "#16a34a" },
-                { dept: "Healthcare Operations", okr: "Zero clinical medication errors and 98% shift handover compliance", progress: 99, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "People & Culture", okr: "Close 84 missing objective submissions via Dede automated nudges", progress: 88, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "Advisory & Client Delivery", okr: "Deliver 12 enterprise digital twin roadmaps for Pan-African clients", progress: 74, threshold: "👌 On Track", color: "#2563eb" },
-                { dept: "Finance & Total Rewards", okr: "Automate Ghana SSNIT, GRA, and UK PAYE tax compliance filing", progress: 58, threshold: "🛠 Off Track", color: "#d97706" },
-                { dept: "Commercial & Business Development", okr: "Expand West Africa FinTech client pipeline by GHS 2.5M", progress: 28, threshold: "🚨 Critical", color: "#dc2626" },
-              ].map((row, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: "0.85rem 1rem",
-                    borderRadius: radii.md,
-                    backgroundColor: colors.surfaceSubtle,
-                    border: `1px solid ${colors.border}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{ flex: 1, marginRight: "1.5rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
-                      <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted }}>{row.dept}</span>
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: row.color }}>{row.threshold}</span>
-                    </div>
-                    <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
-                      {row.okr}
-                    </div>
-                  </div>
-
-                  <div style={{ width: "160px", display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <div style={{ flex: 1, height: "8px", borderRadius: radii.full, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(row.progress, 100)}%`, height: "100%", backgroundColor: row.color }} />
-                    </div>
-                    <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: row.color, minWidth: "40px", textAlign: "right" }}>
-                      {row.progress}%
-                    </span>
-                  </div>
-                </div>
-              ))}
+                Heatmap Radar
+              </Button>
+              <Button
+                variant={okrViewMode === "tree" ? "primary" : "outline"}
+                size="sm"
+                onClick={() => setOkrViewMode("tree")}
+              >
+                Cascading Alignment Tree
+              </Button>
             </div>
           </div>
+
+          {okrViewMode === "heatmap" ? (
+            <>
+              {/* Threshold Summary Stat Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                {[
+                  { label: "🚀 Exceeded (>100%)", count: 4, pct: "18%", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+                  { label: "👌 On Track (70-99%)", count: 12, pct: "55%", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe" },
+                  { label: "🛠 Off Track (30-69%)", count: 5, pct: "23%", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+                  { label: "🚨 Critical (<30%)", count: 1, pct: "4%", color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    style={{
+                      padding: "1rem",
+                      borderRadius: radii.md,
+                      backgroundColor: stat.bg,
+                      border: `1px solid ${stat.border}`,
+                    }}
+                  >
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: stat.color, textTransform: "uppercase" }}>
+                      {stat.label}
+                    </div>
+                    <div style={{ fontSize: "1.75rem", fontWeight: 800, color: stat.color, marginTop: "0.25rem" }}>
+                      {stat.count} <span style={{ fontSize: "12px", fontWeight: 500, color: colors.textMuted }}>({stat.pct})</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Departmental OKR Heatmap Grid */}
+              <div
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  border: `1px solid ${colors.border}`,
+                  padding: "1.5rem",
+                  boxShadow: shadows.xs,
+                }}
+              >
+                <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: "0 0 1rem 0" }}>
+                  Active Key Results by Department
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {[
+                    { dept: "Cloud & Edge Engineering", okr: "Achieve sub-15ms edge latency across UK & Accra hubs", progress: 104, threshold: "🚀 Exceeded", color: "#16a34a" },
+                    { dept: "Healthcare Operations", okr: "Zero clinical medication errors and 98% shift handover compliance", progress: 99, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "People & Culture", okr: "Close 84 missing objective submissions via Dede automated nudges", progress: 88, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "Advisory & Client Delivery", okr: "Deliver 12 enterprise digital twin roadmaps for Pan-African clients", progress: 74, threshold: "👌 On Track", color: "#2563eb" },
+                    { dept: "Finance & Total Rewards", okr: "Automate Ghana SSNIT, GRA, and UK PAYE tax compliance filing", progress: 58, threshold: "🛠 Off Track", color: "#d97706" },
+                    { dept: "Commercial & Business Development", okr: "Expand West Africa FinTech client pipeline by GHS 2.5M", progress: 28, threshold: "🚨 Critical", color: "#dc2626" },
+                  ].map((row, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "0.85rem 1rem",
+                        borderRadius: radii.md,
+                        backgroundColor: colors.surfaceSubtle,
+                        border: `1px solid ${colors.border}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ flex: 1, marginRight: "1.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem" }}>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted }}>{row.dept}</span>
+                          <span style={{ fontSize: "11px", fontWeight: 800, color: row.color }}>{row.threshold}</span>
+                        </div>
+                        <div style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          {row.okr}
+                        </div>
+                      </div>
+
+                      <div style={{ width: "160px", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{ flex: 1, height: "8px", borderRadius: radii.full, backgroundColor: "#e2e8f0", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.min(row.progress, 100)}%`, height: "100%", backgroundColor: row.color }} />
+                        </div>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 800, color: row.color, minWidth: "40px", textAlign: "right" }}>
+                          {row.progress}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Hierarchical Alignment Tree (Company -> Team -> Individual) */
+            <div
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radii.lg,
+                border: `1px solid ${colors.border}`,
+                padding: "1.5rem",
+                boxShadow: shadows.xs,
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.75rem" }}>
+                <div>
+                  <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary, margin: 0 }}>
+                    Hierarchical OKR Alignment Tree
+                  </h3>
+                  <p style={{ fontSize: "11px", color: colors.textMuted, margin: "0.2rem 0 0 0" }}>
+                    Enforces mandatory alignment. Individual OKRs attach to Team OKRs or directly to Company OKRs.
+                  </p>
+                </div>
+                <Badge variant="info" size="sm">Cascading Hierarchy Verified</Badge>
+              </div>
+
+              {/* Company OKR Root Node 1 */}
+              <div style={{ border: `1px solid ${colors.indigoBorder}`, borderRadius: radii.md, padding: "1rem", backgroundColor: colors.surfaceSubtle }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Badge variant="okr" size="sm">Company OKR</Badge>
+                    <strong style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary }}>
+                      Accelerate Pan-African Digital Infrastructure Expansion
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <span style={{ fontSize: "11px", color: colors.textMuted }}>Owner: Executive Leadership</span>
+                    <Badge variant="success" size="sm">88% (On Track)</Badge>
+                  </div>
+                </div>
+
+                {/* Level 2 Children */}
+                <div style={{ marginTop: "1rem", marginLeft: "1.5rem", paddingLeft: "1rem", borderLeft: `2px dashed ${colors.borderStrong}`, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Team OKR Child */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Team OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Cloud &amp; Edge Engineering: Sub-15ms edge latency across UK &amp; Accra hubs
+                        </span>
+                      </div>
+                      <Badge variant="success" size="sm">104% (Exceeded)</Badge>
+                    </div>
+
+                    {/* Level 3 Child: Individual OKR attached to Team */}
+                    <div style={{ marginTop: "0.5rem", marginLeft: "1.25rem", paddingLeft: "0.75rem", borderLeft: `2px solid ${colors.borderSubtle}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.4rem 0" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                          <span style={{ fontSize: "11px", color: colors.textSecondary }}>
+                            Kwesi Barnes: Deploy Cloudflare Workers &amp; KV Edge Caching Engine
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}>100%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skip-Level Child: Individual OKR attached directly to Company OKR */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Kwame Mensah: Direct Executive Board Briefing &amp; Pan-African Strategic Sponsor Engagement
+                        </span>
+                        <Badge variant="info" size="sm">Direct Alignment</Badge>
+                      </div>
+                      <Badge variant="success" size="sm">92% (On Track)</Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
+                      Attached directly to Company OKR. Parent: Accelerate Pan-African Digital Infrastructure.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Company OKR Root Node 2 */}
+              <div style={{ border: `1px solid ${colors.indigoBorder}`, borderRadius: radii.md, padding: "1rem", backgroundColor: colors.surfaceSubtle }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Badge variant="okr" size="sm">Company OKR</Badge>
+                    <strong style={{ fontSize: typography.sizes.sm, color: colors.indigoPrimary }}>
+                      Institutionalize World-Class People Governance &amp; High-Trust Culture
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                    <span style={{ fontSize: "11px", color: colors.textMuted }}>Owner: People &amp; Culture</span>
+                    <Badge variant="success" size="sm">91% (On Track)</Badge>
+                  </div>
+                </div>
+
+                {/* Level 2 Children */}
+                <div style={{ marginTop: "1rem", marginLeft: "1.5rem", paddingLeft: "1rem", borderLeft: `2px dashed ${colors.borderStrong}`, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {/* Skip-Level Child: Individual OKR attached directly to Company OKR */}
+                  <div style={{ padding: "0.75rem", borderRadius: radii.sm, backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <Badge variant="neutral" size="sm">Individual OKR</Badge>
+                        <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textPrimary }}>
+                          Akosua Mensah: Lead ISO-27001 People Governance &amp; Data Ethics Certification
+                        </span>
+                        <Badge variant="info" size="sm">Direct Alignment</Badge>
+                      </div>
+                      <Badge variant="success" size="sm">95% (On Track)</Badge>
+                    </div>
+                    <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem", marginLeft: "0.25rem" }}>
+                      Attached directly to Company OKR.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2367,16 +2589,16 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
               {[
                 { box: "Rough Diamond", pot: "High Potential", perf: "Low Performance", staff: "1 Employee", names: ["K. Mensah (Assembly Worker)"], alert: "Needs Mentorship" },
-                { box: "Future Star", pot: "High Potential", perf: "Moderate Performance", staff: "2 Employees", names: ["Clara Nukunu", "P. Mensah"], alert: "Accelerate" },
+                { box: "Future Star", pot: "High Potential", perf: "Moderate Performance", staff: "2 Employees", names: ["Doreen Wesley", "P. Mensah"], alert: "Accelerate" },
                 { box: "Consistent Star (HiPo)", pot: "High Potential", perf: "High Performance", staff: "3 Employees", names: ["Emmanuel K. Quarshie", "Sarah Jenkins"], alert: "Executive Pipeline ⭐" },
 
                 { box: "Inconsistent Performer", pot: "Medium Potential", perf: "Low Performance", staff: "0 Employees", names: [], alert: "Review" },
-                { box: "Core Contributor", pot: "Medium Potential", perf: "Moderate Performance", staff: "8 Employees", names: ["Adjoa Asare", "Benedicta Agbesi"], alert: "Stable Core" },
+                { box: "Core Contributor", pot: "Medium Potential", perf: "Moderate Performance", staff: "8 Employees", names: ["Adjoa Bediako", "Benedicta Agbesi"], alert: "Stable Core" },
                 { box: "High Performer", pot: "Medium Potential", perf: "High Performance", staff: "4 Employees", names: ["Marcus Chen", "Julian Vance"], alert: "Reward & Retain" },
 
                 { box: "Risk / Talent Action", pot: "Low Potential", perf: "Low Performance", staff: "1 Employee", names: ["E. Quaye"], alert: "8-Week PIP ⚠️" },
                 { box: "Solid Professional", pot: "Low Potential", perf: "Moderate Performance", staff: "3 Employees", names: ["B. Appiah"], alert: "Specialist" },
-                { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Employees", names: ["Richard Mamphey"], alert: "Flight Risk Alert 🚨" },
+                { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Employees", names: ["Jemima Richards"], alert: "Flight Risk Alert 🚨" },
               ].map((q, idx) => (
                 <div
                   key={idx}
@@ -2734,7 +2956,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </h4>
                 <p style={{ margin: "0.4rem 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted, maxWidth: "420px", marginLeft: "auto", marginRight: "auto" }}>
                   {requestStatusFilter === "DECLINED"
-                    ? "Zero objectives have been returned for revision. All 9 active employee scorecards comply with single-framework standards."
+                    ? "Zero objectives have been returned for revision. All 9 active employee scorecards comply with appraisal standards."
                     : "No objective records matched your search query or status filter."}
                 </p>
                 <Button size="sm" variant="outline" onClick={() => { setRequestStatusFilter("ALL"); setRequestSearchQuery(""); }}>
@@ -2742,202 +2964,202 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 </Button>
               </div>
             ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
-              <thead>
-                <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, width: "40px" }}>NO</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OWNER</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE TYPE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE REQUESTS STATUS</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>SUBSIDIARY</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL CYCLE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>DATE</th>
-                  <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredObjectiveRequests.map((req) => (
-                  <tr
-                    key={req.id}
-                    style={{
-                      borderBottom: `1px solid ${colors.borderSubtle}`,
-                      transition: "background-color 0.1s ease",
-                    }}
-                  >
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textMuted, fontWeight: 600 }}>
-                      {req.requestNo}
-                    </td>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                <thead>
+                  <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, width: "40px" }}>NO</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OWNER</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE TYPE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>OBJECTIVE REQUESTS STATUS</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>SUBSIDIARY</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL CYCLE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700 }}>DATE</th>
+                    <th style={{ padding: "0.65rem 0.85rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredObjectiveRequests.map((req) => (
+                    <tr
+                      key={req.id}
+                      style={{
+                        borderBottom: `1px solid ${colors.borderSubtle}`,
+                        transition: "background-color 0.1s ease",
+                      }}
+                    >
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textMuted, fontWeight: 600 }}>
+                        {req.requestNo}
+                      </td>
 
-                    {/* OWNER Cell (Screenshot 4) */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-                        <div
+                      {/* OWNER Cell (Screenshot 4) */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: req.ownerAvatarColor,
+                              color: colors.surface,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 700,
+                              fontSize: "11px",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {req.ownerName.split(" ").map((n) => n[0]).join("")}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, color: colors.textPrimary }}>
+                              {req.ownerName}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textMuted, fontFamily: typography.fontMono }}>
+                              {req.ownerStaffId}
+                            </div>
+                            <div style={{ fontSize: "11px", color: colors.textSecondary }}>
+                              {req.ownerRole}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* OBJECTIVE TYPE */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        <span
                           style={{
-                            width: "32px",
-                            height: "32px",
-                            borderRadius: "50%",
-                            backgroundColor: req.ownerAvatarColor,
-                            color: colors.surface,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
                             fontWeight: 700,
                             fontSize: "11px",
-                            flexShrink: 0,
+                            padding: "0.2rem 0.5rem",
+                            borderRadius: radii.sm,
+                            backgroundColor: req.objectiveType === "BSC" ? "rgba(99, 102, 241, 0.1)" : "rgba(16, 185, 129, 0.1)",
+                            color: req.objectiveType === "BSC" ? colors.indigoPrimary : colors.emeraldDark,
                           }}
                         >
-                          {req.ownerName.split(" ").map((n) => n[0]).join("")}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 700, color: colors.textPrimary }}>
-                            {req.ownerName}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, fontFamily: typography.fontMono }}>
-                            {req.ownerStaffId}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textSecondary }}>
-                            {req.ownerRole}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* OBJECTIVE TYPE */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      <span
-                        style={{
-                          fontWeight: 700,
-                          fontSize: "11px",
-                          padding: "0.2rem 0.5rem",
-                          borderRadius: radii.sm,
-                          backgroundColor: req.objectiveType === "BSC" ? "rgba(99, 102, 241, 0.1)" : "rgba(16, 185, 129, 0.1)",
-                          color: req.objectiveType === "BSC" ? colors.indigoPrimary : colors.emeraldDark,
-                        }}
-                      >
-                        {req.objectiveType}
-                      </span>
-                    </td>
-
-                    {/* OBJECTIVE REQUESTS STATUS (Pill styles from Screenshot 4) */}
-                    <td style={{ padding: "0.75rem 0.85rem" }}>
-                      {req.status === "APPROVED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(16, 185, 129, 0.15)",
-                            color: "#059669",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          APPROVED
+                          {req.objectiveType}
                         </span>
-                      )}
-                      {req.status === "UNDETERMINED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(168, 85, 247, 0.15)",
-                            color: "#7e22ce",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          UNDETERMINED
-                        </span>
-                      )}
-                      {req.status === "PENDING APPROVAL" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(249, 115, 22, 0.15)",
-                            color: "#c2410c",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          PENDING APPROVAL
-                        </span>
-                      )}
-                      {req.status === "DECLINED" && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            fontWeight: 700,
-                            padding: "0.25rem 0.7rem",
-                            borderRadius: radii.full,
-                            backgroundColor: "rgba(239, 68, 68, 0.15)",
-                            color: "#b91c1c",
-                            display: "inline-block",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          DECLINED
-                        </span>
-                      )}
-                    </td>
+                      </td>
 
-                    {/* SUBSIDIARY */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary }}>
-                      {req.subsidiary}
-                    </td>
-
-                    {/* APPRAISAL CYCLE */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textPrimary, fontWeight: 500 }}>
-                      {req.appraisalCycle}
-                    </td>
-
-                    {/* DATE (Clean formatted date) */}
-                    <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary, whiteSpace: "nowrap" }}>
-                      {formatDate(req.date)}
-                    </td>
-
-                    {/* ACTIONS */}
-                    <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedRequestForDetail(req)}
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "11px" }}
-                        >
-                          Inspect
-                        </Button>
-                        {req.status !== "APPROVED" && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleApproveRequest(req.id)}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px", backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
+                      {/* OBJECTIVE REQUESTS STATUS (Pill styles from Screenshot 4) */}
+                      <td style={{ padding: "0.75rem 0.85rem" }}>
+                        {req.status === "APPROVED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(16, 185, 129, 0.15)",
+                              color: "#059669",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
                           >
-                            Approve
-                          </Button>
+                            APPROVED
+                          </span>
                         )}
-                        {req.status !== "DECLINED" && (
+                        {req.status === "UNDETERMINED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(168, 85, 247, 0.15)",
+                              color: "#7e22ce",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            UNDETERMINED
+                          </span>
+                        )}
+                        {req.status === "PENDING APPROVAL" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(249, 115, 22, 0.15)",
+                              color: "#c2410c",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            PENDING APPROVAL
+                          </span>
+                        )}
+                        {req.status === "DECLINED" && (
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "0.25rem 0.7rem",
+                              borderRadius: radii.full,
+                              backgroundColor: "rgba(239, 68, 68, 0.15)",
+                              color: "#b91c1c",
+                              display: "inline-block",
+                              letterSpacing: "0.04em",
+                            }}
+                          >
+                            DECLINED
+                          </span>
+                        )}
+                      </td>
+
+                      {/* SUBSIDIARY */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary }}>
+                        {req.subsidiary}
+                      </td>
+
+                      {/* APPRAISAL CYCLE */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textPrimary, fontWeight: 500 }}>
+                        {req.appraisalCycle}
+                      </td>
+
+                      {/* DATE (Clean formatted date) */}
+                      <td style={{ padding: "0.75rem 0.85rem", color: colors.textSecondary, whiteSpace: "nowrap" }}>
+                        {formatDate(req.date)}
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td style={{ padding: "0.75rem 0.85rem", textAlign: "right", whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeclineRequest(req.id)}
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                            onClick={() => setSelectedRequestForDetail(req)}
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "11px" }}
                           >
-                            Decline
+                            Inspect
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {req.status !== "APPROVED" && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleApproveRequest(req.id)}
+                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", backgroundColor: colors.emeraldDark, borderColor: colors.emeraldDark }}
+                            >
+                              Approve
+                            </Button>
+                          )}
+                          {req.status !== "DECLINED" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeclineRequest(req.id)}
+                              style={{ padding: "0.25rem 0.5rem", fontSize: "11px", color: colors.error }}
+                            >
+                              Decline
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
@@ -2953,7 +3175,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   Operational Automation
                 </span>
-                
+
               </div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
                 Bulk Actions & Mass Management
@@ -3069,7 +3291,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                   </h3>
                 </div>
                 <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with single-framework mathematical validation.
+                  Import external spreadsheet ratings (CSV / Excel) directly into active cycle scores with automated score validation.
                 </p>
 
                 <div
@@ -3218,7 +3440,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
+
 
       {/* ========================================================================= */}
       {/* TAB 3: OBJECTIVES SETUP (Screenshot 5)                                     */}
@@ -3278,7 +3500,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     fontSize: typography.sizes.xs,
                     fontWeight: 700,
                     cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   }}
                 >
                   {subTab}
@@ -3398,7 +3620,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.35rem" }}>
-                          <Badge variant={obj.framework === "BSC" ? "bsc" : "okr"} size="sm">
+                          <Badge variant={frameworkVariant(obj.framework)} size="sm">
                             {obj.framework}
                           </Badge>
                           <span style={{ fontSize: "11px", color: colors.textMuted }}>
@@ -3638,10 +3860,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                           ci.status === "COMPLETED"
                             ? "success"
                             : ci.status === "ON_TRACK"
-                            ? "info"
-                            : ci.status === "NEEDS_ATTENTION"
-                            ? "warning"
-                            : "error"
+                              ? "info"
+                              : ci.status === "NEEDS_ATTENTION"
+                                ? "warning"
+                                : "error"
                         }
                         size="sm"
                       >
@@ -3666,9 +3888,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
 
-      
+
+
 
       {/* ========================================================================= */}
       {/* TAB 5: FORMAL APPRAISAL CYCLES                                            */}
@@ -3681,16 +3903,46 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 Formal Appraisal Cycles
               </h2>
               <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, margin: "0.25rem 0 0 0" }}>
-                Enforces strict single-framework mathematical purity. Cycles cannot mix OKR and Balanced Scorecard scoring models.
+                Enforces framework consistency across evaluation cycles. Each cycle uses a dedicated scoring methodology.
               </p>
             </div>
-            <Button variant="primary" size="sm" onClick={() => setShowNewCycleModal(true)}>
-              <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                <Icons.Plus size={14} />
-                <span>Launch Cycle</span>
-              </span>
-            </Button>
+            <span title={activeCycle ? `Close or finalize cycle "${activeCycle.title}" before creating a new one.` : undefined}>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={Boolean(activeCycle)}
+                onClick={() => setShowNewCycleModal(true)}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <Icons.Plus size={14} />
+                  <span>Launch Cycle</span>
+                </span>
+              </Button>
+            </span>
           </div>
+
+          {activeCycle && (
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "0.75rem 1rem",
+                borderRadius: radii.md,
+                backgroundColor: colors.surfaceSubtle,
+                border: `1px solid ${colors.indigoBorder}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Icons.ShieldCheck size={16} color={colors.indigoAction} />
+                <span style={{ fontSize: typography.sizes.xs, color: colors.textPrimary }}>
+                  <strong>Active Cycle:</strong> &ldquo;{activeCycle.title}&rdquo; ({activeCycle.framework_code || "BSC"}) is currently <strong>{activeCycle.status}</strong>. Only one active appraisal cycle is permitted at a time.
+                </span>
+              </div>
+              <Badge variant="info" size="sm">Active Cycle Lock Enforced</Badge>
+            </div>
+          )}
 
           <div
             style={{
@@ -3705,7 +3957,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <thead>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>CYCLE TITLE</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FRAMEWORK (SINGLE-FRAMEWORK)</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>APPRAISAL FRAMEWORK</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>PERIOD</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTIONS</th>
@@ -3719,8 +3971,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{c.description}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
-                      <Badge variant="bsc" size="sm">
-                        {c.framework_code || "OKR"} Pure
+                      <Badge variant={frameworkVariant(c.framework_code)} size="sm">
+                        {c.framework_code || "BSC"}
                       </Badge>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>
@@ -3748,9 +4000,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
 
-      
+
+
 
       {/* ========================================================================= */}
       {/* TAB 6: APPRAISALS & CALIBRATION                                           */}
@@ -3792,9 +4044,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <tr style={{ backgroundColor: colors.surfaceSubtle, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EMPLOYEE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>DEPARTMENT</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>SELF RATING</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>MANAGER RATING</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>FEEDBACK</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>EMPLOYEE SELF-APPRAISAL</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>SUPERVISOR REVIEW &amp; SCORE</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700 }}>STATUS</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textAlign: "right" }}>ACTION</th>
                 </tr>
@@ -3807,14 +4058,17 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <div style={{ fontSize: "11px", color: colors.textMuted }}>{ev.role}</div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary }}>{ev.department}</td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.brandBlue }}>
-                      {ev.selfRating} / 5.0
+                    <td style={{ padding: "0.85rem 1rem", maxWidth: "250px" }}>
+                      <div style={{ fontWeight: 700, color: colors.brandBlue }}>{ev.selfRating} / 5.0</div>
+                      <div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic", marginTop: "2px" }}>
+                        &ldquo;{ev.selfComments || ev.feedback}&rdquo;
+                      </div>
                     </td>
-                    <td style={{ padding: "0.85rem 1rem", fontWeight: 700, color: colors.emeraldDark }}>
-                      {ev.managerRating} / 5.0
-                    </td>
-                    <td style={{ padding: "0.85rem 1rem", color: colors.textSecondary, fontStyle: "italic", maxWidth: "240px" }}>
-                      &ldquo;{ev.feedback}&rdquo;
+                    <td style={{ padding: "0.85rem 1rem", maxWidth: "250px" }}>
+                      <div style={{ fontWeight: 700, color: colors.emeraldDark }}>{ev.managerRating} / 5.0</div>
+                      <div style={{ fontSize: "11px", color: colors.textSecondary, fontStyle: "italic", marginTop: "2px" }}>
+                        &ldquo;{ev.feedback}&rdquo;
+                      </div>
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
                       <Badge variant={ev.status === "CALIBRATED" ? "success" : "warning"} size="sm">
@@ -3845,7 +4099,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         </div>
       )}
 
-      
+
 
       {/* ========================================================================= */}
       {/* TAB 7: PERFORMANCE INSIGHTS & 9-BOX TALENT MATRIX                          */}
@@ -3889,7 +4143,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               {/* Box 2: High Potential, Moderate Performance */}
               <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}`, backgroundColor: "rgba(99, 102, 241, 0.05)" }}>
                 <span style={{ fontSize: "10px", fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase" }}>High Potential (Growth)</span>
-                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Clara Nukunu</div>
+                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Doreen Wesley</div>
                 <div style={{ fontSize: "11px", color: colors.textMuted }}>Customer Service</div>
               </div>
 
@@ -3929,14 +4183,14 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               {/* Box 8: Low Potential, Moderate Performance */}
               <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}`, backgroundColor: colors.surfaceSubtle }}>
                 <span style={{ fontSize: "10px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>Effective Specialist</span>
-                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Richard Mamphey</div>
+                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Jemima Richards</div>
                 <div style={{ fontSize: "11px", color: colors.textMuted }}>HR Head</div>
               </div>
 
               {/* Box 9: Low Potential, High Performance */}
               <div style={{ padding: "1rem", borderRadius: radii.md, border: `1px solid ${colors.borderSubtle}`, backgroundColor: "rgba(16, 185, 129, 0.05)" }}>
                 <span style={{ fontSize: "10px", fontWeight: 700, color: "#065f46", textTransform: "uppercase" }}>Trusted Professional</span>
-                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Adjoa Asare</div>
+                <div style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.textPrimary, marginTop: "0.35rem" }}>Adjoa Bediako</div>
                 <div style={{ fontSize: "11px", color: colors.textMuted }}>HRIS & Analytics</div>
               </div>
             </div>
@@ -4007,9 +4261,10 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             }}
           >
             {[
+              "General Appraisal",
               "Framework & Methodology",
               "Multi-Tier Sign-Off Chains",
-              "Competency & Trait Matrix",
+              "Skill & Trait Matrix",
               "360° Peer Review & Calibration",
               "Nine-Box Talent Matrix",
               "PIP & Governance Exceptions",
@@ -4051,6 +4306,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             })}
           </div>
 
+          {/* TAB 0: GENERAL APPRAISAL */}
+          {settingsPrimaryTab === "General Appraisal" && (
+            <GeneralAppraisalSettingsView />
+          )}
+
           {/* TAB 1: FRAMEWORK & METHODOLOGY */}
           {settingsPrimaryTab === "Framework & Methodology" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -4069,7 +4329,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Performance Framework &amp; Cascading Governance
                     </h3>
                     <p style={{ margin: "0.25rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                      Configure enterprise objective models, 4-pillar Balanced Scorecard weights, OKR stretch thresholds, and single-framework purity rules.
+                      Configure enterprise objective models, 4-pillar Balanced Scorecard weights, OKR stretch thresholds, and scoring calibration rules.
                     </p>
                   </div>
                 </div>
@@ -4081,44 +4341,18 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textSecondary, marginBottom: "0.5rem" }}>
                         Primary Organizational Methodology
                       </label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                        <div
-                          onClick={() => setFrameworkConfig({ ...frameworkConfig, activeFramework: "BSC" })}
-                          style={{
-                            padding: "0.85rem 1rem",
-                            borderRadius: radii.md,
-                            border: `2px solid ${frameworkConfig.activeFramework === "BSC" ? colors.indigoAction : colors.border}`,
-                            backgroundColor: frameworkConfig.activeFramework === "BSC" ? colors.indigoSubtle : colors.surfaceSubtle,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div style={{ fontWeight: 800, fontSize: typography.sizes.xs, color: colors.textPrimary, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <span>Balanced Scorecard</span>
-                            {frameworkConfig.activeFramework === "BSC" && <Badge variant="success" size="sm">Active</Badge>}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem" }}>
-                            Strategic 4-quadrant weighting for operational and financial alignment.
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={() => setFrameworkConfig({ ...frameworkConfig, activeFramework: "OKR" })}
-                          style={{
-                            padding: "0.85rem 1rem",
-                            borderRadius: radii.md,
-                            border: `2px solid ${frameworkConfig.activeFramework === "OKR" ? colors.indigoAction : colors.border}`,
-                            backgroundColor: frameworkConfig.activeFramework === "OKR" ? colors.indigoSubtle : colors.surfaceSubtle,
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div style={{ fontWeight: 800, fontSize: typography.sizes.xs, color: colors.textPrimary, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                            <span>Objectives &amp; KRs (OKR)</span>
-                            {frameworkConfig.activeFramework === "OKR" && <Badge variant="success" size="sm">Active</Badge>}
-                          </div>
-                          <div style={{ fontSize: "11px", color: colors.textMuted, marginTop: "0.25rem" }}>
-                            Agile, high-velocity stretch targets with 0.0–1.0 confidence grading.
-                          </div>
-                        </div>
+                      <div
+                        style={{
+                          padding: "0.85rem 1rem",
+                          borderRadius: radii.md,
+                          border: `1px solid ${colors.border}`,
+                          backgroundColor: colors.surfaceSubtle,
+                          fontSize: "11px",
+                          color: colors.textMuted,
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        Each appraisal cycle takes one framework (Balanced Scorecard, OKR or MBO) when it is created. The framework cannot be changed after that.
                       </div>
                     </div>
 
@@ -4132,9 +4366,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 700, fontSize: typography.sizes.xs, color: colors.indigoPrimary }}>
-                          Single-Framework Mathematical Integrity
+                          Calibration & Scoring Governance
                         </span>
-                        <Badge variant="bsc" size="sm">Enforced</Badge>
+                        <Badge variant="neutral" size="sm">Enforced</Badge>
                       </div>
                       <p style={{ margin: "6px 0 0 0", fontSize: "11px", color: colors.textSecondary, lineHeight: 1.45 }}>
                         Individual appraisal cycles are locked to a single framework. Combining qualitative OKRs with mathematical BSC quadrant scores within the same cycle is prohibited to prevent compensation distortion.
@@ -4290,7 +4524,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setStatusMessage({ text: "Performance framework and cascading scorecard weights saved successfully." })}
+                        disabled={settingsSaving}
+                        onClick={saveFrameworkSettings}
                       >
                         Save Framework Settings
                       </Button>
@@ -4475,8 +4710,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             </div>
           )}
 
-          {/* TAB 3: COMPETENCY & TRAIT MATRIX */}
-          {settingsPrimaryTab === "Competency & Trait Matrix" && (
+          {/* TAB 3: SKILL & TRAIT MATRIX */}
+          {settingsPrimaryTab === "Skill & Trait Matrix" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
               <div
                 style={{
@@ -4490,7 +4725,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", borderBottom: `1px solid ${colors.borderSubtle}`, paddingBottom: "0.75rem" }}>
                   <div>
                     <h3 style={{ fontSize: typography.sizes.sm, fontWeight: 800, color: colors.textPrimary, margin: 0, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      Behavioral Competencies &amp; Trait Scoring Matrix
+                      Behavioral Skills &amp; Trait Scoring Matrix
                     </h3>
                     <p style={{ margin: "0.25rem 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
                       Evaluate non-negotiable professional behaviors on a strict 1–5 scale, decoupled from goal OKR percentages.
@@ -4505,7 +4740,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       Evaluated Behavioral Traits (Weights must sum to 100%)
                     </label>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                      {competencyMatrixConfig.traits.map((trait) => (
+                      {skillMatrixConfig.traits.map((trait) => (
                         <div
                           key={trait.id}
                           style={{
@@ -4549,8 +4784,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.25rem" }}>
                             <input
                               type="number"
-                              value={competencyMatrixConfig.goalWeightPercent}
-                              onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, goalWeightPercent: parseInt(e.target.value, 10) || 0 })}
+                              value={skillMatrixConfig.goalWeightPercent}
+                              onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, goalWeightPercent: parseInt(e.target.value, 10) || 0 })}
                               style={{ width: "65px", padding: "0.35rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, fontWeight: 700 }}
                             />
                             <span style={{ fontSize: "12px", color: colors.textMuted }}>%</span>
@@ -4558,12 +4793,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         </div>
 
                         <div>
-                          <label style={{ fontSize: "11px", color: colors.textMuted, display: "block" }}>Competencies Weight</label>
+                          <label style={{ fontSize: "11px", color: colors.textMuted, display: "block" }}>Skills Weight</label>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", marginTop: "0.25rem" }}>
                             <input
                               type="number"
-                              value={competencyMatrixConfig.competencyWeightPercent}
-                              onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, competencyWeightPercent: parseInt(e.target.value, 10) || 0 })}
+                              value={skillMatrixConfig.skillWeightPercent}
+                              onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, skillWeightPercent: parseInt(e.target.value, 10) || 0 })}
                               style={{ width: "65px", padding: "0.35rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs, fontWeight: 700 }}
                             />
                             <span style={{ fontSize: "12px", color: colors.textMuted }}>%</span>
@@ -4571,20 +4806,20 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         </div>
                       </div>
                       <div style={{ fontSize: "11px", color: colors.emeraldDark, fontWeight: 600, marginTop: "0.6rem" }}>
-                        Total: {competencyMatrixConfig.goalWeightPercent + competencyMatrixConfig.competencyWeightPercent}%
+                        Total: {skillMatrixConfig.goalWeightPercent + skillMatrixConfig.skillWeightPercent}%
                       </div>
                     </div>
 
                     <div>
                       <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 700, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                        Mandatory Passing Competency Gate
+                        Mandatory Passing Skill Gate
                       </label>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <input
                           type="number"
                           step="0.1"
-                          value={competencyMatrixConfig.mandatoryPassingGrade}
-                          onChange={(e) => setCompetencyMatrixConfig({ ...competencyMatrixConfig, mandatoryPassingGrade: parseFloat(e.target.value) || 3.0 })}
+                          value={skillMatrixConfig.mandatoryPassingGrade}
+                          onChange={(e) => setSkillMatrixConfig({ ...skillMatrixConfig, mandatoryPassingGrade: parseFloat(e.target.value) || 3.0 })}
                           style={{ width: "75px", padding: "0.45rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.xs }}
                         />
                         <span style={{ fontSize: "11px", color: colors.textMuted }}>
@@ -4597,9 +4832,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => setStatusMessage({ text: "Behavioral competency scoring matrix and passing gate saved." })}
+                        onClick={() => setStatusMessage({ text: "Behavioral skill scoring matrix and passing gate saved." })}
                       >
-                        Save Competency Settings
+                        Save Skill Settings
                       </Button>
                     </div>
                   </div>
@@ -4694,7 +4929,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                         Anonymity &amp; Blind Spot Detection Shield
                       </div>
                       <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: colors.textSecondary }}>
-                        Peer feedback comments are blinded if reviewer group is $\ge {peerReviewConfig.anonymityThreshold}$ personnel. Automatic Blind Spot alerts fire when self-evaluations diverge by $\ge {peerReviewConfig.blindSpotGapThreshold}$ points from peer consensus.
+                        Peer feedback comments are blinded if reviewer group is at least {peerReviewConfig.anonymityThreshold} personnel. Automatic Blind Spot alerts fire when self-evaluations diverge by at least {peerReviewConfig.blindSpotGapThreshold} points from peer consensus.
                       </p>
                     </div>
                   </div>
@@ -4810,16 +5045,16 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
                   {[
                     { box: "Rough Diamond", pot: "High Potential", perf: "Low Performance", staff: "1 Staff", names: ["K. Mensah (Assembly Worker)"], alert: "Mentorship & Alignment", color: "#fef3c7", border: "#fde68a" },
-                    { box: "Future Star", pot: "High Potential", perf: "Moderate Performance", staff: "2 Staff", names: ["Clara Nukunu", "P. Mensah"], alert: "Fast-Track Stretch Assignments", color: "#ecfdf5", border: "#a7f3d0" },
+                    { box: "Future Star", pot: "High Potential", perf: "Moderate Performance", staff: "2 Staff", names: ["Doreen Wesley", "P. Mensah"], alert: "Fast-Track Stretch Assignments", color: "#ecfdf5", border: "#a7f3d0" },
                     { box: "Consistent Star (HiPo)", pot: "High Potential", perf: "High Performance", staff: "3 Staff", names: ["Emmanuel K. Quarshie", "Sarah Jenkins"], alert: "Executive Succession Pipeline ⭐", color: "#dcfce7", border: "#86efac" },
 
                     { box: "Inconsistent Performer", pot: "Moderate Potential", perf: "Low Performance", staff: "0 Staff", names: [], alert: "Targeted Coaching", color: "#f8fafc", border: "#e2e8f0" },
-                    { box: "Core Contributor", pot: "Moderate Potential", perf: "Moderate Performance", staff: "8 Staff", names: ["Adjoa Asare", "Benedicta Agbesi"], alert: "Stable Organizational Core", color: "#f1f5f9", border: "#cbd5e1" },
+                    { box: "Core Contributor", pot: "Moderate Potential", perf: "Moderate Performance", staff: "8 Staff", names: ["Adjoa Bediako", "Benedicta Agbesi"], alert: "Stable Organizational Core", color: "#f1f5f9", border: "#cbd5e1" },
                     { box: "High Performer", pot: "Moderate Potential", perf: "High Performance", staff: "4 Staff", names: ["Marcus Chen", "Julian Vance"], alert: "Reward & Retain", color: "#e0e7ff", border: "#c7d2fe" },
 
                     { box: "Risk / Talent Action", pot: "Low Potential", perf: "Low Performance", staff: "1 Staff", names: ["E. Quaye"], alert: "8-Week Structured PIP ⚠️", color: "#fef2f2", border: "#fecaca" },
                     { box: "Solid Professional", pot: "Low Potential", perf: "Moderate Performance", staff: "3 Staff", names: ["B. Appiah"], alert: "Deep Technical Specialist", color: "#f8fafc", border: "#e2e8f0" },
-                    { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Staff", names: ["Richard Mamphey"], alert: "Flight Risk Alert 🚨", color: "#fff1f2", border: "#fecdd3" },
+                    { box: "Trusted Master", pot: "Low Potential", perf: "High Performance", staff: "2 Staff", names: ["Jemima Richards"], alert: "Flight Risk Alert 🚨", color: "#fff1f2", border: "#fecdd3" },
                   ].map((q, idx) => (
                     <div
                       key={idx}
@@ -4861,7 +5096,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.25rem", borderTop: `1px solid ${colors.borderSubtle}`, paddingTop: "1rem" }}>
                   <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                    Calibrated against Q4 Single-Framework appraisal scores.
+                    Calibrated against Q4 appraisal cycle scores.
                   </span>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <Button variant="outline" size="sm" onClick={() => setStatusMessage({ text: "Dede AI calibrated 9-Box talent matrix: 4 HiPo successors verified." })}>
@@ -5074,9 +5309,6 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
                 <span style={{ fontSize: typography.sizes.xs, color: colors.textMuted }}>Cycle & Subsidiary</span>
-                <Badge variant={selectedRequestForDetail.objectiveType === "BSC" ? "bsc" : "okr"} size="sm">
-                  {selectedRequestForDetail.objectiveType} Pure
-                </Badge>
               </div>
               <div style={{ fontWeight: 700, fontSize: typography.sizes.sm, color: colors.textPrimary }}>
                 {selectedRequestForDetail.appraisalCycle}
@@ -5280,8 +5512,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     <option value="Benedicta Agbesi">Benedicta Agbesi</option>
                     <option value="Philip Aryee">Philip Aryee</option>
                     <option value="Julian Vance">Julian Vance</option>
-                    <option value="Clara Nukunu">Clara Nukunu</option>
-                    <option value="Adjoa Asare">Adjoa Asare</option>
+                    <option value="Doreen Wesley">Doreen Wesley</option>
+                    <option value="Adjoa Bediako">Adjoa Bediako</option>
                   </select>
                 </div>
 
@@ -5297,7 +5529,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     <option value="Sarah Jenkins">Sarah Jenkins (VP People)</option>
                     <option value="Paa Kwesi Barnes">Paa Kwesi Barnes (Managing Principal)</option>
                     <option value="Richard Barnes">Richard Barnes (CEO)</option>
-                    <option value="Richard Mamphey">Richard Mamphey (HR Head)</option>
+                    <option value="Jemima Richards">Jemima Richards (HR Head)</option>
                   </select>
                 </div>
               </div>
@@ -5463,15 +5695,15 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
 
               <div>
                 <label style={{ display: "block", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary, marginBottom: "0.3rem" }}>
-                  Methodology Framework (Single-Framework Pure)
+                  Evaluation Methodology Framework
                 </label>
                 <select
                   value={selectedFramework}
                   onChange={(e) => setSelectedFramework(e.target.value as typeof selectedFramework)}
                   style={{ width: "100%", padding: "0.55rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontSize: typography.sizes.sm }}
                 >
+                  <option value="BSC">BSC — Balanced Scorecard (4 Quadrants, weighted %) — Default</option>
                   <option value="OKR">OKR — Objectives & Key Results (0.0 to 1.0 scoring)</option>
-                  <option value="BSC">BSC — Balanced Scorecard (4 Quadrants, weighted %)</option>
                   <option value="MBO">MBO — Management by Objectives (Target % completion)</option>
                 </select>
               </div>
@@ -5534,12 +5766,12 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         isOpen={Boolean(selectedCycleForReview)}
         onClose={() => setSelectedCycleForReview(null)}
         title={selectedCycleForReview ? selectedCycleForReview.title : ""}
-        subtitle={selectedCycleForReview ? `Calibration & Manager Assessments • [${selectedCycleForReview.framework_code || "OKR"} Pure]` : ""}
+        subtitle={selectedCycleForReview ? `Calibration & Manager Assessments • [${selectedCycleForReview.framework_code || "BSC"}]` : ""}
       >
         {selectedCycleForReview && (
           <div>
             <div style={{ marginBottom: "1rem", fontSize: typography.sizes.xs, color: colors.textSecondary }}>
-              Review self-ratings, submit manager scores, and calibrate performance scores for your direct reports under {selectedCycleForReview.framework_code || "OKR"} methodology.
+              Review self-ratings, submit manager scores, and calibrate performance scores for your direct reports under {selectedCycleForReview.framework_code || "BSC"} methodology.
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -5567,7 +5799,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     </Badge>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", margin: "0.75rem 0", padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", margin: "0.75rem 0", padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
                     <div>
                       <span style={{ fontSize: "11px", color: colors.textMuted }}>Self Assessment</span>
                       <div style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.brandBlue }}>
@@ -5575,31 +5807,80 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                       </div>
                     </div>
                     <div>
-                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Manager Calibration</span>
+                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Manager Rating</span>
                       <div style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.emeraldDark }}>
                         {ev.managerRating} / 5.0
                       </div>
                     </div>
+                    <div>
+                      <span style={{ fontSize: "11px", color: colors.textMuted }}>Normalized Score</span>
+                      <div style={{ fontSize: typography.sizes.base, fontWeight: 800, color: colors.indigoPrimary }}>
+                        {Math.round((ev.managerRating / 5.0) * 100)} / 100
+                      </div>
+                    </div>
                   </div>
 
-                  <p style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontStyle: "italic", margin: "0 0 0.75rem 0" }}>
-                    &ldquo;{ev.feedback}&rdquo;
-                  </p>
+                  <div style={{ padding: "0.5rem 0.75rem", backgroundColor: colors.surface, borderRadius: radii.sm, border: `1px solid ${colors.indigoBorder}`, margin: "0.5rem 0" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: colors.indigoPrimary, textTransform: "uppercase", marginBottom: "0.2rem" }}>
+                      📝 Employee Self-Appraisal Comments (Visible to Supervisor):
+                    </div>
+                    <div style={{ fontSize: typography.sizes.xs, color: colors.textPrimary, fontStyle: "italic" }}>
+                      &ldquo;{ev.selfComments || ev.feedback}&rdquo;
+                    </div>
+                  </div>
+
+                  <div style={{ margin: "0.5rem 0" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 700, color: colors.emeraldDark, textTransform: "uppercase", marginBottom: "0.2rem" }}>
+                      💬 Supervisor Review Feedback:
+                    </div>
+                    <div style={{ fontSize: typography.sizes.xs, color: colors.textSecondary, fontStyle: "italic" }}>
+                      &ldquo;{ev.feedback}&rdquo;
+                    </div>
+                  </div>
 
                   {ev.status !== "CALIBRATED" && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setEvaluations((prev) =>
-                          prev.map((item) => (item.id === ev.id ? { ...item, status: "CALIBRATED" } : item))
-                        );
-                        setStatusMessage({ text: `Calibrated rating for ${ev.name} submitted.` });
-                      }}
-                      style={{ width: "100%" }}
-                    >
-                      Calibrate & Finalize Score
-                    </Button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: colors.textPrimary, marginBottom: "0.25rem" }}>
+                          Supervisor Review Comments * (MANDATORY to score employee)
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Enter mandatory supervisor review commentary and score rationale..."
+                          value={calibrationNotes[ev.id] || ""}
+                          onChange={(e) => setCalibrationNotes((prev) => ({ ...prev, [ev.id]: e.target.value }))}
+                          style={{
+                            width: "100%",
+                            padding: "0.4rem 0.5rem",
+                            borderRadius: radii.sm,
+                            border: `1px solid ${colors.border}`,
+                            fontSize: typography.sizes.xs,
+                          }}
+                          required
+                        />
+                      </div>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          if (!calibrationNotes[ev.id]?.trim()) {
+                            alert("Supervisor comments are MANDATORY before scoring and submitting this employee's appraisal.");
+                            return;
+                          }
+                          setEvaluations((prev) =>
+                            prev.map((item) =>
+                              item.id === ev.id
+                                ? { ...item, status: "CALIBRATED", feedback: calibrationNotes[ev.id] }
+                                : item
+                            )
+                          );
+                          setStatusMessage({ text: `Supervisor score and mandatory review comments recorded for ${ev.name}.` });
+                        }}
+                        style={{ width: "100%" }}
+                      >
+                        Submit Supervisor Score &amp; Calibrate
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}

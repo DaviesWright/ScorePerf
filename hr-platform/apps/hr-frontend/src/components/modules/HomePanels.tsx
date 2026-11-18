@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { formatDate } from "../../utils/date";
 
 // Home-page panels on the Dashboard: announcements (HR admins can post and archive), birthdays in the next 14
 // days, and the staff directory. Live data only; the demo login has no API behind it.
@@ -50,8 +51,8 @@ const S = {
 };
 
 const Caption = ({ children }: { children: string }) => <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{children}</caption>;
-const fmt = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
-const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" });
+const fmt = (iso: string) => formatDate(iso);
+const fmtDay = (iso: string) => formatDate(iso, { format: "dayMonth" });
 
 export const HomePanels: React.FC<{ realSession: boolean }> = ({ realSession }) => {
   const [data, setData] = useState<HomeData | null>(null);
