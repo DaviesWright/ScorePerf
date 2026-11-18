@@ -451,7 +451,7 @@ export const ApprovalWorkflowsView: React.FC<ApprovalWorkflowsViewProps> = () =>
                   backgroundColor: isMakerCheckerActive ? "rgba(16, 185, 129, 0.1)" : colors.surfaceSubtle,
                   color: isMakerCheckerActive ? colors.emeraldDark : colors.textSecondary,
                   cursor: "pointer",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 <span
@@ -567,7 +567,7 @@ export const ApprovalWorkflowsView: React.FC<ApprovalWorkflowsViewProps> = () =>
                       fontSize: "11px",
                       fontWeight: isSelected ? 700 : 500,
                       cursor: "pointer",
-                      transition: "all 0.15s ease",
+                      transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                     }}
                   >
                     {d === "ALL" ? "All Domains" : d}

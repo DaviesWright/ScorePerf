@@ -33,7 +33,7 @@ Also present outside the sidebar: command palette (Cmd+K), omni-agent drawer, "C
 
 ### 1.3 Performance Management today (`PerformanceManagementView.tsx`, 5,612 lines)
 
-- **Tabs (14):** Dashboard, Cascading BSC, Sequential Sign-off, Strict Trait Matrix, OKR Heatmap, 9-Box Succession, Appraisal Cycles, Requests, Objectives Setup, Appraisals, Bulk Actions, 1-on-1 Check-ins, Settings, Performance Insights.
+- **Tabs (14):** Dashboard, Cascading BSC, Sequential Sign-off, Core Values Review, OKR Heatmap, 9-Box Succession, Appraisal Cycles, Requests, Objectives Setup, Appraisals, Bulk Actions, 1-on-1 Check-ins, Settings, Performance Insights.
 - **Workflow:** an HR user creates a cycle under one framework (OKR, MBO or BSC; the framework cannot change once set) -> objectives are set and approved -> self and manager scores -> calibration -> cycle closes.
 - **Data (database):** `performance_cycles` (framework, title, dates, `status`), `framework_types`, `framework_configurations`, `kpis`, `performance_assignments`, `performance_reviews` (cycle, employee, reviewer, self/manager/calibrated score, `status`, `feedback`).
 - **API:** `GET/POST /cycles`, `POST /cycles/:id/transition`, `GET/POST /appraisals`, `POST /kpis`, `POST /scores/calculate`, `GET /frameworks`. Performance has real endpoints; Leave does not.
@@ -62,7 +62,7 @@ Also present outside the sidebar: command palette (Cmd+K), omni-agent drawer, "C
 ### Suppress
 - **Modules:** Command Centre, Reports & AI, Workforce Directory, Client Engagements, Skills & Gig Board, Nerve Center, Onboarding & Exit, Hardware and Fleet, IT Helpdesk, Employee Settings, Approval Workflows, Data Governance, Disciplinary, Policies & Handbooks, Self-Service.
 - **Inside Leave:** Attendance by Time Zone, Department Schedules & Rosters, Upload History, Plan History, Reserved / Additional / Blocked days, Allowances (hold as phase 2, see Q4).
-- **Inside Performance:** Cascading BSC grid, Sequential Sign-off, Strict Trait Matrix, OKR Heatmap, 9-Box Succession, Bulk Actions, Performance Insights, PMS Settings.
+- **Inside Performance:** Cascading BSC grid, Sequential Sign-off, Core Values Review, OKR Heatmap, 9-Box Succession, Bulk Actions, Performance Insights, PMS Settings.
 - **Chrome:** AI drawer and "Dede AI" labels, EN/FR toggle, sandbox toggle, persona switcher (real roles only), payslip shortcut, welcome briefing, decorative badges.
 
 ### Suppression approach (reversible)
@@ -105,8 +105,8 @@ Balance            Annual 18 of 25 days   Sick 8 of 10   Study 3 of 5
 -------------------------------------------------------------------
 Upcoming and recent requests
 Dates              Type    Days  Status       Approver   Action
-12-16 Nov 2026     Annual  5     Pending      R. Mamphey [Cancel]
-03-04 Oct 2026     Sick    2     Approved     R. Mamphey
+12-16 Nov 2026     Annual  5     Pending      J. Richards [Cancel]
+03-04 Oct 2026     Sick    2     Approved     J. Richards
 -------------------------------------------------------------------
 ```
 
@@ -117,7 +117,7 @@ Leave type *      [ Annual v ]       Balance after: 13 days
 Start date *      [ date ]    End date * [ date ]    Days: 5 (excl. 1 holiday)
 Reason            [ text area ]
 Attachment        [ choose file ]  (required for sick leave over 2 days)
-Approver          Richard Mamphey (from your reporting line)
+Approver          Jemima Richards (from your reporting line)
                               [Cancel]  [Submit request]
 ```
 Errors appear beside the field in text; overlaps with existing requests are blocked with a message.
@@ -126,7 +126,7 @@ Errors appear beside the field in text; overlaps with existing requests are bloc
 ```
 Approvals (3 pending)       Filter: [Pending v]  [Team v]  Search [____]
 Employee      Dates          Type    Days  Cover/clash note        Action
-A. Asare      12-16 Nov      Annual  5     2 of 6 team away        [Approve] [Reject]
+A. Bediako    12-16 Nov      Annual  5     2 of 6 team away        [Approve] [Reject]
 Reject opens a required "reason" field. Row opens a detail panel (balance, history).
 ```
 
@@ -134,7 +134,7 @@ Reject opens a required "reason" field. Row opens a detail panel (balance, histo
 ```
 Reviews - Q4 2026 cycle (closes 15 Dec)     Filter: [All v]  Search [____]
 Employee      Self review   Manager review   Calibrated   Status
-A. Asare      Submitted     Not started      -            Awaiting manager
+A. Bediako    Submitted     Not started      -            Awaiting manager
 K. Antwi      Submitted     Submitted        4.0          Calibrated
 Row opens the review form.
 ```
@@ -150,7 +150,7 @@ Manager view adds Approve / Return with comment.
 
 **Review form**
 ```
-Review: A. Asare - Q4 2026
+Review: A. Bediako - Q4 2026
 Goals (read-only)  table of goals with a score field 1-5 per goal
 Overall self score [ 1-5 ]   Comments [ text ]       (employee step)
 Manager score      [ 1-5 ]   Feedback [ text ]       (manager step)

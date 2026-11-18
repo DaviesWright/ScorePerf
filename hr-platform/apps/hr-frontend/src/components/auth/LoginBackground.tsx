@@ -117,7 +117,7 @@ export const LoginBackground: React.FC = () => {
                 padding: 0,
                 cursor: "pointer",
                 backgroundColor: i === active ? "#ffffff" : "rgba(255,255,255,0.5)",
-                transition: reducedMotion ? "none" : "all 0.25s ease",
+                transition: reducedMotion ? "none" : "background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease",
               }}
             />
           ))}

@@ -90,7 +90,7 @@ const SETTINGS_TABS: TabDefinition[] = [
   {
     key: "document_formats",
     label: "Document Formats",
-    description: "Allowed file MIME types, 10MB size ceilings, Cloudflare AI OCR and virus scanning",
+    description: "Allowed file MIME types, 10MB size ceilings, AI OCR and virus scanning",
     icon: Icons.FileCheck,
   },
   {
@@ -405,7 +405,7 @@ export const EmployeeSettingsView: React.FC = () => {
 
         <div style={{ display: "flex", gap: "0.6rem" }}>
           <button
-            onClick={() => showNotification("All settings synchronized to Cloudflare Hyperdrive Postgres.")}
+            onClick={() => showNotification("All settings saved.")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -480,7 +480,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   color: isSelected ? colors.indigoAction : colors.textPrimary,
                   textAlign: "left",
                   cursor: "pointer",
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                   fontWeight: isSelected ? 600 : 400,
                   fontSize: typography.sizes.sm,
                 }}
@@ -791,7 +791,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   >
                     <Icons.ShieldCheck size={18} color={colors.emeraldDark} />
                     <div style={{ fontSize: typography.sizes.sm, color: colors.textPrimary }}>
-                      <strong>Strict Collision Safeguard Active:</strong> The Cloudflare D1 / Hyperdrive Postgres index enforces unique constraints. If an existing ID exists in the database, the generator automatically increments to the next free integer.
+                      <strong>Strict Collision Safeguard Active:</strong> The system enforces unique IDs. If an existing ID exists in the database, the generator automatically increments to the next free integer.
                     </div>
                   </div>
                 </div>
@@ -1031,7 +1031,7 @@ export const EmployeeSettingsView: React.FC = () => {
                         checked={expiryReminders.autoDraftRenewal}
                         onChange={(e) => setExpiryReminders((p) => ({ ...p, autoDraftRenewal: e.target.checked }))}
                       />
-                      <span><strong>Auto-draft contract renewal addendum</strong> via Omni-Agent when manager clicks "Renew"</span>
+                      <span><strong>Auto-draft contract renewal addendum</strong> via Dede AI when manager clicks "Renew"</span>
                     </label>
                   </div>
                 </div>
@@ -1460,7 +1460,7 @@ export const EmployeeSettingsView: React.FC = () => {
                       checked={docFormatConfig.enableWorkersAiOcr}
                       onChange={(e) => setDocFormatConfig((p) => ({ ...p, enableWorkersAiOcr: e.target.checked }))}
                     />
-                    <span><strong>Enable Cloudflare Workers AI OCR</strong> — Automatically transcribe uploaded medical notes, passports, and utility bills for instant verification.</span>
+                    <span><strong>Enable AI OCR</strong> — Automatically transcribe uploaded medical notes, passports, and utility bills for instant verification.</span>
                   </label>
 
                   <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontSize: typography.sizes.sm, color: colors.textPrimary, cursor: "pointer" }}>
@@ -1579,7 +1579,7 @@ export const EmployeeSettingsView: React.FC = () => {
                   { key: "payslipPeek", label: "Instant Payslip Peek Card", desc: "Allows employees to view latest net pay and HMRC / GRA RTI breakdown." },
                   { key: "leaveBalance", label: "Annual Leave Allowance & 1-Click Request", desc: "Displays remaining leave balance and instant draft request." },
                   { key: "anniversariesCarousel", label: "Birthdays & Work Anniversaries Carousel", desc: "Social community feed celebrating colleague milestones." },
-                  { key: "internalGigs", label: "Internal Gig Board & Skill Matches", desc: "Recommends cross-functional projects matching verified employee competencies." },
+                  { key: "internalGigs", label: "Internal Gig Board & Skill Matches", desc: "Recommends cross-functional projects matching verified employee skills." },
                   { key: "vibeCheckVoice", label: "10-Second Voice & Emoji Vibe Check", desc: "Allows anonymous weekly pulse feedback with sentiment waveform analysis." },
                   { key: "companyFinancialRunway", label: "Company Financial Runway & Burn Rate", desc: "CONFIDENTIAL: Restrict strictly to Executive & Finance roles." },
                 ].map((widget) => (

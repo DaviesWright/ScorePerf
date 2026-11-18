@@ -36,7 +36,7 @@ export interface NewLeaveRequest {
   halfDay?: "morning" | "afternoon";
 }
 
-export type Result = { ok: true } | { ok: false; error: string };
+export type Result = { ok: true; id?: number } | { ok: false; error: string };
 
 export interface LeaveApi {
   me(): Promise<{ balances: LeaveBalance[]; requests: LeaveRequestView[] }>;
@@ -65,8 +65,8 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<{ 
   return { status: res.status, data };
 }
 
-const asResult = (r: { status: number; data: { error?: string } }): Result =>
-  r.status >= 200 && r.status < 300 ? { ok: true } : { ok: false, error: r.data.error ?? (r.status === 401 ? "Your session has expired. Sign in again." : "Something went wrong. Try again.") };
+const asResult = (r: { status: number; data: { id?: number; error?: string } }): Result =>
+  r.status >= 200 && r.status < 300 ? { ok: true, id: r.data.id } : { ok: false, error: r.data.error ?? (r.status === 401 ? "Your session has expired. Sign in again." : "Something went wrong. Try again.") };
 
 export const httpLeaveApi: LeaveApi = {
   async me() {

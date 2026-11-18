@@ -30,6 +30,7 @@ interface CommandPaletteProps {
   employees: EmployeeRecord[];
   onSelectEmployee?: (emp: EmployeeRecord) => void;
   onOpenPayslip?: () => void;
+  onOpenDede?: () => void;
   onOpenOmniAgent?: () => void;
   onQuickAction?: (action: string) => void;
 }
@@ -41,6 +42,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   employees,
   onSelectEmployee,
   onOpenPayslip,
+  onOpenDede,
   onOpenOmniAgent,
   onQuickAction,
 }) => {
@@ -76,32 +78,34 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   // Build the complete Command List
   const baseActions: CommandItem[] = [
     {
-      id: "action_payslip",
-      feature: "payslip",
-      title: "View Latest Payslip · November 2026 (GH₵28,450.00 Net)",
-      subtitle: "Instant payslip inspection & certified GRA / SSNIT breakdown",
+      id: "action_document_centre",
+      view: "document_centre",
+      title: "Open Document Centre · Policies & Submissions",
+      subtitle: "Employee credential uploads, Code of Conduct & Company Handbooks",
       category: "Direct Action",
       icon: <Icons.FileText size={16} color={colors.emeraldDark} />,
-      keywords: ["payslip", "pay", "salary", "wage", "slip", "payslips", "remuneration", "net pay", "p60", "tax", "ghs"],
+      keywords: ["document", "upload", "id", "contract", "certificate", "conduct", "policy", "handbook"],
       badge: "Instant Open",
       badgeVariant: "emerald",
       onSelect: () => {
-        if (onOpenPayslip) onOpenPayslip();
+        onSelectView("document_centre");
         onClose();
       },
     },
     {
-      id: "action_omni_agent",
+      id: "action_dede_ai",
       feature: "ai_assistant",
-      title: "Launch Dede AI Copilot (⌘J)",
-      subtitle: "Zero-UI conversational assistant, leave drafting & OCR document parser",
+      title: "Launch Dede AI Assistant (⌘J)",
+      subtitle: "Conversational workforce assistant, policy guidance & HR intelligence",
       category: "Direct Action",
       icon: <Icons.Sparkles size={16} color={colors.indigoAction} />,
-      keywords: ["dede", "omni", "agent", "ai", "copilot", "samira", "assistant", "workflow", "accra"],
+      keywords: ["dede", "ai", "copilot", "assistant", "workflow", "accra"],
       badge: "⌘J",
       badgeVariant: "indigo",
       onSelect: () => {
-        if (onOpenOmniAgent) onOpenOmniAgent();
+        window.dispatchEvent(new Event("dede:open"));
+        if (onOpenDede) onOpenDede();
+        else if (onOpenOmniAgent) onOpenOmniAgent();
         onClose();
       },
     },
@@ -200,7 +204,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "action_career_gigs",
       view: "skills_marketplace",
       title: "Browse Internal Gig Board & Skills Navigator",
-      subtitle: "Explore high-impact projects matched to verified competencies",
+      subtitle: "Explore high-impact projects matched to verified skills",
       category: "Direct Action",
       icon: <Icons.Compass size={16} color={colors.emeraldDark} />,
       keywords: ["gig", "gigs", "skills", "marketplace", "career", "projects", "internal mobility", "learning"],
@@ -231,12 +235,40 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_self_service",
       view: "self_service",
       title: "My Self-Service & Personal Workspace (ESS)",
-      subtitle: "Personal profile, assigned laptop, holiday balance & quick payslip",
+      subtitle: "Personal profile, assigned laptop, holiday balance & documents",
       category: "Navigation",
       icon: <Icons.Users size={16} color={colors.textSecondary} />,
       keywords: ["self service", "ess", "profile", "personal", "my space", "home"],
       onSelect: () => {
         onSelectView("self_service");
+        onClose();
+      },
+    },
+    {
+      id: "nav_my_leave",
+      view: "my_leave",
+      title: "My Leave Management",
+      subtitle: "Apply for leave, check balances & review past requests",
+      category: "Navigation",
+      icon: <Icons.Calendar size={16} color={colors.textSecondary} />,
+      keywords: ["my leave", "leave", "holiday", "pto", "apply leave", "vacation"],
+      badge: "Self-Service",
+      onSelect: () => {
+        onSelectView("my_leave");
+        onClose();
+      },
+    },
+    {
+      id: "nav_my_performance",
+      view: "my_performance",
+      title: "My Performance Workspace",
+      subtitle: "Take appraisal self-review, propose objectives & review aligned tasks",
+      category: "Navigation",
+      icon: <Icons.Target size={16} color={colors.textSecondary} />,
+      keywords: ["my performance", "self review", "appraisal", "my objectives", "tasks"],
+      badge: "Appraisal",
+      onSelect: () => {
+        onSelectView("my_performance");
         onClose();
       },
     },
@@ -250,6 +282,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       keywords: ["command centre", "dashboard", "overview", "brief", "daily brief", "kpis"],
       onSelect: () => {
         onSelectView("command_centre");
+        onClose();
+      },
+    },
+    {
+      id: "nav_dashboard",
+      view: "dashboard",
+      title: "At-a-Glance Dashboard",
+      subtitle: "Merged overview with live charts, progress heatmaps, and leave heatmaps",
+      category: "Navigation",
+      icon: <Icons.Activity size={16} color={colors.indigoAction} />,
+      keywords: ["dashboard", "glance", "heatmap", "overview", "charts", "headcount", "leave trend", "progress"],
+      badge: "Live Charts",
+      badgeVariant: "indigo",
+      onSelect: () => {
+        onSelectView("dashboard");
         onClose();
       },
     },
@@ -272,7 +319,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_workforce_directory",
       view: "workforce_directory",
       title: "Employee Directory & Workforce Roster",
-      subtitle: "45 active staff, departments, management hierarchies & profiles",
+      subtitle: "54 active staff, departments, management hierarchies & profiles",
       category: "Navigation",
       icon: <Icons.Users size={16} color={colors.textSecondary} />,
       keywords: ["directory", "employees", "staff", "people", "team", "roster", "workforce"],
@@ -286,12 +333,42 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       id: "nav_performance_pms",
       view: "performance_pms",
       title: "Performance Management (OKR / MBO / BSC)",
-      subtitle: "Strict single-framework appraisal cycles & competency reviews",
+      subtitle: "Appraisal cycles, KPI scorecards & skill reviews",
       category: "Navigation",
       icon: <Icons.Target size={16} color={colors.textSecondary} />,
       keywords: ["performance", "pms", "appraisals", "reviews", "okr", "mbo", "bsc", "framework"],
       onSelect: () => {
         onSelectView("performance_pms");
+        onClose();
+      },
+    },
+    {
+      id: "nav_objectives",
+      view: "objectives",
+      title: "OKR & BSC Objectives Management",
+      subtitle: "Standalone goal setting, weighting to 100%, manager approvals & HR amendments",
+      category: "Navigation",
+      icon: <Icons.Target size={16} color={colors.emeraldDark} />,
+      keywords: ["objectives", "okr", "bsc", "goals", "key results", "targets", "weighting", "amendments"],
+      badge: "Strategy",
+      badgeVariant: "emerald",
+      onSelect: () => {
+        onSelectView("objectives");
+        onClose();
+      },
+    },
+    {
+      id: "nav_performance_setup",
+      view: "performance_setup",
+      title: "Performance Setup & Corporate Strategy Import",
+      subtitle: "Cycle configuration, review stages, custom rating scales & CSV strategy import",
+      category: "Navigation",
+      icon: <Icons.Settings size={16} color={colors.peachAccent} />,
+      keywords: ["performance setup", "setup", "rating scale", "scales", "cycle", "workflow stages", "strategy import", "csv", "reporting lines"],
+      badge: "Config",
+      badgeVariant: "peach",
+      onSelect: () => {
+        onSelectView("performance_setup");
         onClose();
       },
     },
@@ -429,6 +506,34 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
     },
+    {
+      id: "nav_company_setup",
+      view: "company_setup",
+      title: "Company Setup & Office Management",
+      subtitle: "Offices, departments, approval levels, and system integrations",
+      category: "Navigation",
+      icon: <Icons.Settings size={16} color={colors.textSecondary} />,
+      keywords: ["company setup", "offices", "departments", "accra", "london", "levels", "roles", "integrations"],
+      onSelect: () => {
+        onSelectView("company_setup");
+        onClose();
+      },
+    },
+    {
+      id: "nav_organogram",
+      view: "organogram",
+      title: "Corporate Organogram",
+      subtitle: "Interactive organizational hierarchy with solid & dotted reporting lines",
+      category: "Navigation",
+      icon: <Icons.GitBranch size={16} color={colors.emeraldDark} />,
+      keywords: ["organogram", "hierarchy", "org chart", "reporting lines", "tree", "structure"],
+      badge: "Hierarchy",
+      badgeVariant: "emerald",
+      onSelect: () => {
+        onSelectView("organogram");
+        onClose();
+      },
+    },
   ];
 
   // Employee matching items
@@ -534,7 +639,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             ref={inputRef}
             autoFocus
             type="text"
-            placeholder="Type 'Payslip', 'Leave', 'Vibe', 'Wallet', or search workforce..."
+            placeholder="Type 'Leave', 'Performance', 'Document', 'People', or search workforce..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -588,7 +693,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 fontSize: typography.sizes.sm,
               }}
             >
-              No commands matching &quot;{query}&quot;. Try typing &quot;Payslip&quot;, &quot;Leave&quot;, or &quot;Wallet&quot;.
+              No commands matching &quot;{query}&quot;. Try typing &quot;Leave&quot;, &quot;Performance&quot;, or &quot;Document&quot;.
             </div>
           ) : (
             combinedItems.map((item, index) => {
@@ -607,7 +712,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     cursor: "pointer",
                     backgroundColor: isSelected ? colors.indigoSubtle : "transparent",
                     borderLeft: isSelected ? `3px solid ${colors.indigoAccent}` : "3px solid transparent",
-                    transition: "all 0.08s ease",
+                    transition: "background-color 0.08s ease, border-color 0.08s ease, color 0.08s ease, box-shadow 0.08s ease, opacity 0.08s ease",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0, flex: 1 }}>

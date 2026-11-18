@@ -3,10 +3,11 @@ import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Icons } from "../../design-system/Icons";
 import { UserAvatar } from "./UserAvatar";
 import { PhotoUploadButton } from "./PhotoUploadButton";
-import type { ModuleViewKey } from "../shell/AppSidebar";
+import type { ModuleViewKey, UserPersona } from "../shell/AppSidebar";
 
 interface ProfileMenuProps {
   user: { name: string; email: string; role: string; avatarText: string };
+  persona?: UserPersona;
   photoUrl?: string | null;
   onUploadPhoto: (file: File) => Promise<string | null>;
   onRemovePhoto: () => void;
@@ -28,7 +29,7 @@ const itemStyle: React.CSSProperties = {
   gap: "0.6rem",
 };
 
-export const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, photoUrl, onUploadPhoto, onRemovePhoto, onNavigate, onSignOut }) => {
+export const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, persona, photoUrl, onUploadPhoto, onRemovePhoto, onNavigate, onSignOut }) => {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
@@ -90,9 +91,14 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({ user, photoUrl, onUplo
             <Icons.Users size={14} color={colors.textMuted} />
             <span>My profile</span>
           </button>
-          <button type="button" role="menuitem" style={itemStyle} onClick={() => go("employee_settings")}>
+          <button
+            type="button"
+            role="menuitem"
+            style={itemStyle}
+            onClick={() => go(persona === "employee" ? "my_profile" : "employee_settings")}
+          >
             <Icons.Settings size={14} color={colors.textMuted} />
-            <span>Settings</span>
+            <span>{persona === "employee" ? "Bank & tax settings" : "Settings"}</span>
           </button>
           <button
             type="button"

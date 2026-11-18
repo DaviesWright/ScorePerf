@@ -227,6 +227,14 @@ CREATE TABLE IF NOT EXISTS corporate_strategy_goals (
 
 CREATE INDEX IF NOT EXISTS idx_corporate_strategy_company ON corporate_strategy_goals(company_id);
 
+-- Company performance settings (migration 0014). One row per company; validated in packages/shared.
+CREATE TABLE IF NOT EXISTS performance_settings (
+    company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+    settings JSONB NOT NULL,
+    updated_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
 -- In-app notifications (migration 0011): leave and trip events to the solid manager and HR.
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
@@ -585,6 +593,7 @@ CREATE TABLE IF NOT EXISTS payslips (
     net_pay NUMERIC(12, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'draft' NOT NULL,
     paid_at TIMESTAMPTZ,
+    storage_key TEXT, -- migration 0015: PDF object key in the DOCS bucket
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, employee_id, month, year)
 );
@@ -594,6 +603,8 @@ CREATE TABLE IF NOT EXISTS asset_categories (
     id SERIAL PRIMARY KEY,
     company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
+    overdue_days INTEGER CONSTRAINT asset_categories_overdue_days_check CHECK (overdue_days IS NULL OR overdue_days BETWEEN 1 AND 3650), -- migration 0019
+    depreciation_months INTEGER CONSTRAINT asset_categories_depreciation_check CHECK (depreciation_months IS NULL OR depreciation_months BETWEEN 1 AND 600), -- migration 0019
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     UNIQUE (company_id, name)
 );
@@ -609,8 +620,16 @@ CREATE TABLE IF NOT EXISTS company_assets (
         CONSTRAINT company_assets_status_check CHECK (status IN ('available', 'allocated', 'maintenance', 'retired', 'lost')),
     asset_condition VARCHAR(20) DEFAULT 'good' NOT NULL -- migration 0007: new, good, fair or poor
         CONSTRAINT company_assets_condition_check CHECK (asset_condition IN ('new', 'good', 'fair', 'poor')),
+    purchase_date DATE, -- migration 0019
+    purchase_price NUMERIC(12, 2) CONSTRAINT company_assets_purchase_price_check CHECK (purchase_price IS NULL OR purchase_price >= 0), -- migration 0019
+    warranty_expiry DATE, -- migration 0019
+    notes TEXT, -- migration 0019
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Migration 0019: serial numbers unique per company where recorded.
+CREATE UNIQUE INDEX IF NOT EXISTS company_assets_company_serial_unique
+    ON company_assets (company_id, serial_number) WHERE serial_number IS NOT NULL AND serial_number <> '';
 
 -- Assignment ledger. An open assignment has return_date NULL; migration 0007 allows at most one per asset.
 CREATE TABLE IF NOT EXISTS asset_allocations (
@@ -630,6 +649,43 @@ CREATE TABLE IF NOT EXISTS asset_allocations (
 
 CREATE UNIQUE INDEX IF NOT EXISTS asset_allocations_one_open
     ON asset_allocations (asset_id) WHERE return_date IS NULL;
+
+-- Migration 0019: write-off requests (pending until the holder's solid manager decides; approved at once when no current holder).
+CREATE TABLE IF NOT EXISTS asset_write_offs (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    asset_id INTEGER NOT NULL REFERENCES company_assets(id) ON DELETE CASCADE,
+    allocation_id INTEGER REFERENCES asset_allocations(id) ON DELETE SET NULL,
+    holder_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL CHECK (char_length(reason) BETWEEN 3 AND 1000),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    requested_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    decided_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ,
+    decision_note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asset_write_offs_one_pending
+    ON asset_write_offs (asset_id) WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_asset_write_offs_company_status ON asset_write_offs (company_id, status);
+
+-- Migration 0019: offboarding recovery tasks, one open task per person.
+CREATE TABLE IF NOT EXISTS asset_recovery_tasks (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    status VARCHAR(10) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    opened_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    opened_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    closed_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    closed_at TIMESTAMPTZ,
+    close_note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asset_recovery_tasks_one_open
+    ON asset_recovery_tasks (employee_id) WHERE status = 'open';
 
 -- 13. Helpdesk & Support
 CREATE TABLE IF NOT EXISTS helpdesk_categories (
@@ -702,8 +758,42 @@ CREATE TABLE IF NOT EXISTS employee_documents (
     file_url TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'pending' NOT NULL,
     expiry_date DATE,
+    acknowledged_at TIMESTAMPTZ, -- migration 0015
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
+
+-- Self-service (migration 0015). Banking and tax values change only through an approved request.
+CREATE TABLE IF NOT EXISTS employee_bank_tax_fields (
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    field VARCHAR(40) NOT NULL
+        CONSTRAINT employee_bank_tax_fields_field_check CHECK (field IN ('bankName', 'accountHolderName', 'accountNumber', 'routingCode', 'taxId')),
+    value TEXT NOT NULL,
+    updated_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    PRIMARY KEY (employee_id, field)
+);
+
+CREATE TABLE IF NOT EXISTS profile_change_requests (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    field VARCHAR(40) NOT NULL
+        CONSTRAINT profile_change_requests_field_check CHECK (field IN ('bankName', 'accountHolderName', 'accountNumber', 'routingCode', 'taxId')),
+    old_value TEXT NOT NULL DEFAULT '',
+    new_value TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+        CONSTRAINT profile_change_requests_status_check CHECK (status IN ('pending', 'approved', 'rejected')),
+    decided_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ,
+    decision_comment TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    CONSTRAINT profile_change_requests_decided_check CHECK (status = 'pending' OR decided_at IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS profile_change_requests_one_pending
+    ON profile_change_requests (employee_id, field) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_profile_change_requests_company_status ON profile_change_requests (company_id, status);
 
 -- Indexes for Multi-Tenant Query Acceleration
 CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);
@@ -718,4 +808,39 @@ CREATE INDEX IF NOT EXISTS idx_leave_requests_emp ON leave_requests(company_id, 
 CREATE INDEX IF NOT EXISTS idx_payslips_emp_period ON payslips(company_id, employee_id, year, month);
 CREATE INDEX IF NOT EXISTS idx_tickets_company_status ON helpdesk_tickets(company_id, status);
 CREATE INDEX IF NOT EXISTS idx_candidates_job ON candidates(company_id, job_position_id, stage);
+
+-- Offices as rows and the department link (migration 0016). The backfill is data, so it lives only in the migration.
+CREATE TABLE IF NOT EXISTS offices (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(255) NOT NULL DEFAULT '',
+    country VARCHAR(2) NOT NULL CONSTRAINT offices_country_check CHECK (country ~ '^[A-Z]{2}$'),
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE (company_id, name)
+);
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS office_id INTEGER REFERENCES offices(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_departments_office ON departments (office_id);
+
+-- Integration connections (migration 0017). Secret values are never stored; secret_refs names Worker secrets.
+CREATE TABLE IF NOT EXISTS integration_connections (
+    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    provider VARCHAR(30) NOT NULL
+        CONSTRAINT integration_connections_provider_check CHECK (provider IN ('business_central', 'seamless_hr', 'clay_hr', 'coursera')),
+    label VARCHAR(100) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    base_url TEXT NOT NULL DEFAULT '',
+    secret_refs JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    PRIMARY KEY (company_id, provider)
+);
+
+-- Approval levels (migration 0018). Absent row = defaults from packages/shared (approvalLevels.ts).
+CREATE TABLE IF NOT EXISTS approval_settings (
+    company_id INTEGER PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+    settings JSONB NOT NULL,
+    updated_by INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
 

@@ -17,7 +17,18 @@ export interface AuthenticatedUser {
   location: string;
 }
 
+// The first entry is the default demo user, so the HR manager opens first.
 export const PRESET_USERS: AuthenticatedUser[] = [
+  {
+    id: "EMP-003",
+    name: "Jemima Richards",
+    email: "jemima.richards@bscscoreview.com",
+    role: "Head, Human Resources",
+    persona: "hr_admin",
+    avatarText: "JR",
+    department: "People Operations",
+    location: "Accra Global Hub",
+  },
   {
     id: "EMP-001",
     name: "Paa Kwesi Barnes",
@@ -32,7 +43,7 @@ export const PRESET_USERS: AuthenticatedUser[] = [
     id: "EMP-002",
     name: "Benedicta Agbesi",
     email: "benedicta.agbesi@bscscoreview.com",
-    role: "Lead Software Engineer (Demo Admin)",
+    role: "Lead Software Engineer",
     persona: "hr_director",
     avatarText: "BA",
     department: "Engineering & Cloud",
@@ -42,29 +53,19 @@ export const PRESET_USERS: AuthenticatedUser[] = [
     id: "EMP-005",
     name: "Philip Aryee",
     email: "philip.aryee@bscscoreview.com",
-    role: "Cloud Engineer (Demo Admin)",
+    role: "Cloud Engineer",
     persona: "hr_director",
     avatarText: "PA",
     department: "Engineering & Cloud",
     location: "Windhoek Hub",
   },
   {
-    id: "EMP-003",
-    name: "Richard Mamphey",
-    email: "richard.mamphey@bscscoreview.com",
-    role: "Head, Human Resources",
-    persona: "hr_admin",
-    avatarText: "RM",
-    department: "People Operations",
-    location: "Accra Global Hub",
-  },
-  {
     id: "EMP-004",
-    name: "Adjoa Asare",
-    email: "adjoa.asare@bscscoreview.com",
+    name: "Adjoa Bediako",
+    email: "adjoa.bediako@bscscoreview.com",
     role: "HR Analytics Specialist",
     persona: "line_manager",
-    avatarText: "AA",
+    avatarText: "AB",
     department: "People Analytics",
     location: "Accra Global Hub",
   },
@@ -81,7 +82,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberMe, setRememberMe] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [workspaceDomain, setWorkspaceDomain] = useState<string>("senrab.scoreview.com");
 
   const handleUserSelect = (user: AuthenticatedUser) => {
     setSelectedUser(user);
@@ -145,11 +145,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{ fontSize: "11px", color: colors.textMuted }}>
-            Domain: <strong style={{ color: colors.textPrimary }}>{workspaceDomain}</strong>
-          </div>
-        </div>
       </header>
 
       {/* Main Content Form */}
@@ -194,14 +189,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               Sign in to ScoReview HR
             </h1>
             <p style={{ fontSize: typography.sizes.xs, color: colors.textMuted, margin: 0 }}>
-              Single-framework calibrated performance & workforce intelligence
+              Calibrated performance management &amp; workforce intelligence
             </p>
           </div>
 
           {/* Quick Demo Persona Switcher */}
           <div style={{ marginBottom: "1.5rem" }}>
             <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: colors.textMuted, marginBottom: "0.45rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Select Active Enterprise Persona (Demo Mode)
+              Select Active Enterprise Persona
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
               {PRESET_USERS.map((user) => {
@@ -221,7 +216,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                       display: "flex",
                       alignItems: "center",
                       gap: "0.5rem",
-                      transition: "all 0.15s ease",
+                      transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                     }}
                   >
                     <div
@@ -448,13 +443,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <span>SOC2 Type II &amp; ISO 27001 Certified</span>
           </span>
           <span>•</span>
-          <span>256-Bit TLS Edge Encryption</span>
+          <span>256-Bit TLS Encryption</span>
         </div>
 
         <div style={{ display: "flex", gap: "1rem" }}>
           <span>Hubs: Accra (GH) • London (UK)</span>
-          <span>•</span>
-          <span>Single-Framework Calibration Active</span>
         </div>
       </footer>
     </div>

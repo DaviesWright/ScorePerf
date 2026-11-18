@@ -798,7 +798,7 @@ export const OmniAgentDrawer: React.FC<OmniAgentDrawerProps> = ({
                     border: `1px solid ${isCurrent ? colors.indigoAction : isDone ? "#a7f3d0" : colors.border}`,
                     backgroundColor: isCurrent ? "#ffffff" : isDone ? "rgba(16, 185, 129, 0.03)" : colors.surfaceSubtle,
                     cursor: "pointer",
-                    transition: "all 0.12s ease",
+                    transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>

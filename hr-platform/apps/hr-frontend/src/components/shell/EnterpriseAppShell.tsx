@@ -5,8 +5,7 @@ import { colors } from "../../design-system/tokens";
 import { AppSidebar, ModuleViewKey, UserPersona } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CommandPalette } from "../../design-system/CommandPalette";
-import { OmniAgentDrawer } from "../ai/OmniAgentDrawer";
-import { CommandCentreView } from "../modules/CommandCentreView";
+import { DedeWidget } from "../ai/DedeWidget";
 import { WorkforceDirectoryView, EmployeeRecord, AssetRecord } from "../modules/WorkforceDirectoryView";
 import { PerformanceManagementView, CycleRecord } from "../modules/PerformanceManagementView";
 import { SkillsMarketplaceView } from "../modules/SkillsMarketplaceView";
@@ -17,17 +16,40 @@ import { TimeAndLeaveView, LeaveRecord } from "../modules/TimeAndLeaveView";
 import { LeaveScreen } from "../modules/LeaveSimple";
 import { ObjectivesScreen } from "../modules/ObjectivesSimple";
 import { DashboardScreen } from "../modules/DashboardSimple";
+import { CommandCentreView } from "../modules/CommandCentreView";
+import { TeamDashboardView } from "../modules/TeamDashboardView";
 import { AssetsScreen } from "../modules/AssetsSimple";
+import { PerformanceSetupScreen } from "../modules/PerformanceSetupScreen";
+import { CompanySetupScreen } from "../modules/CompanySetupScreen";
+import { EmployeeHomeScreen } from "../modules/EmployeeHomeScreen";
+import { ProfileChangesScreen } from "../modules/ProfileChangesScreen";
+import { PayslipsScreen } from "../modules/PayslipsScreen";
+import { DocumentCentreScreen } from "../modules/DocumentCentreScreen";
+import { MyPerformanceScreen } from "../modules/MyPerformanceScreen";
+import { MyLeaveScreen } from "../modules/MyLeaveScreen";
 import { HelpdeskView, TicketRecord } from "../modules/HelpdeskView";
 import { ProjectPortfolioView, ProjectRecord } from "../modules/ProjectPortfolioView";
 import { GovernanceView } from "../modules/GovernanceView";
 import { EmployeeSelfServiceView } from "../modules/EmployeeSelfServiceView";
 import { ReportsAnalyticsView } from "../modules/ReportsAnalyticsView";
 import { EmployeeSettingsView } from "../modules/EmployeeSettingsView";
+import { CelebrationsView } from "../modules/CelebrationsView";
 import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
+import { OrganogramView } from "../modules/OrganogramView";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
+import { SEEDED_EMPLOYEES, SEEDED_EMPLOYMENT_EDGES, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
+import {
+  ArchitecturalRoleCode,
+  availableContexts,
+  ContextSwitchAuditEntry,
+  contextToPersona,
+  ExperienceContext,
+  switchContext,
+  UserContextTuple,
+} from "../../domain/orgCore";
+import { ContextNotice } from "../common/ContextSwitcher";
 import { SHELL_MODE, firstEnabledView, isViewEnabled } from "../../config/modules";
 import { PlainShell } from "./PlainShell";
 import { clearHeadshot, loadHeadshot, processHeadshot, saveHeadshot } from "../../utils/headshot";
@@ -46,6 +68,8 @@ interface EnterpriseAppShellProps {
   apiOnline: boolean;
   /** The signed-in user from the API, when the browser has a real session. Absent only in demo-login mode. */
   initialUser?: AuthenticatedUser | null;
+  initialExperience?: ExperienceContext;
+  initialDeepLinkView?: ModuleViewKey;
 }
 
 export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
@@ -57,16 +81,21 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   initialProjects,
   apiOnline,
   initialUser = null,
+  initialExperience,
+  initialDeepLinkView,
 }) => {
-  const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(firstEnabledView());
+  // Employees with a real session land on their home (self_service). Everyone else lands on the dashboard.
+  const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(() =>
+    initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
+  );
   // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
-  const setCurrentView = (view: ModuleViewKey) => {
-    if (isViewEnabled(view)) setCurrentViewRaw(view);
+  const setCurrentView = (requested: ModuleViewKey) => {
+    if (isViewEnabled(requested)) setCurrentViewRaw(requested);
   };
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
-    const source = initialEmployees.length > 0 ? initialEmployees : DEFAULT_EMPLOYEES;
+    const source = initialEmployees.length > 0 || initialUser ? initialEmployees : DEFAULT_EMPLOYEES;
     return source.map((emp) => {
       if (emp.team_name) return emp;
       const dept = emp.department_name || "";
@@ -84,17 +113,42 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   });
   const [cycles, setCycles] = useState<CycleRecord[]>(initialCycles);
   // The API sends nothing until the frontend has a login, so the demo registry stands in.
-  const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 ? initialAssets : DEMO_ASSETS);
-  const [leaves, setLeaves] = useState<LeaveRecord[]>(initialLeaves);
+  const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 || initialUser ? initialAssets : DEMO_ASSETS);
+  const [leaves, setLeaves] = useState<LeaveRecord[]>(() => {
+    if (initialLeaves.length >= 50 || initialUser) return initialLeaves;
+    return SEEDED_LEAVE_REQUESTS.map((r) => ({
+      id: r.id,
+      first_name: r.firstName,
+      last_name: r.lastName,
+      staff_id: r.staffId,
+      department: r.department,
+      leave_type_name: r.leaveType,
+      start_date: r.startDate,
+      end_date: r.endDate,
+      requested_days: String(r.requestedDays),
+      status: r.status,
+      reason: r.reason,
+      approver: r.approverName,
+    }));
+  });
   const [tickets, setTickets] = useState<TicketRecord[]>(initialTickets);
-  const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 ? initialProjects : DEMO_PROJECTS);
+  const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 || initialUser ? initialProjects : DEMO_PROJECTS);
 
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [isOmniAgentOpen, setIsOmniAgentOpen] = useState(false);
-  const [omniInitialTab, setOmniInitialTab] = useState<"prompts" | "chat">("prompts");
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
+  const [leaveSubTab, setLeaveSubTab] = useState<string | undefined>(undefined);
+  const [contextNotice, setContextNotice] = useState<string | null>(null);
+  const [contextAuditLog, setContextAuditLog] = useState<ContextSwitchAuditEntry[]>([]);
+  const [activeContextId, setActiveContextId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem("scoreview_last_context_id");
+    } catch {
+      return null;
+    }
+  });
 
   // Authentication & Session State
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
@@ -112,7 +166,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           sessionStorage.removeItem("scoreview_show_welcome");
           setIsWelcomeModalOpen(true);
         }
-      } catch {}
+      } catch { }
       setHasCheckedAuth(true);
       return;
     }
@@ -131,13 +185,174 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     }
   }, []);
 
+  const handleSelectPersona = (newPersona: UserPersona) => {
+    setPersona(newPersona);
+    setCurrentUser((prev) => {
+      if (!prev) return prev;
+      const roleMap: Record<UserPersona, string> = {
+        employee: "Employee (Self-Service)",
+        line_manager: "Team Lead / Supervisor",
+        hr_admin: "HR Administrator",
+        hr_director: "Managing Principal",
+      };
+      const updated = {
+        ...prev,
+        persona: newPersona,
+        role: roleMap[newPersona] || prev.role,
+      };
+      try {
+        localStorage.setItem("scoreview_session", JSON.stringify(updated));
+      } catch { }
+      return updated;
+    });
+
+    if (
+      newPersona === "employee" &&
+      (currentView === "company_setup" ||
+        currentView === "performance_setup" ||
+        currentView === "admin_nerve_center" ||
+        currentView === "approval_workflows" ||
+        currentView === "workforce_directory" ||
+        currentView === "command_centre" ||
+        currentView === "dashboard" ||
+        currentView === "performance_pms" ||
+        currentView === "time_and_leave" ||
+        currentView === "objectives" ||
+        currentView === "reports_analytics")
+    ) {
+      setCurrentView("self_service");
+    }
+  };
+
+  // Compute available contexts for the signed-in user (FR-CTX-001..004)
+  const userContexts: UserContextTuple[] = React.useMemo(() => {
+    const matchedSeed = currentUser
+      ? SEEDED_EMPLOYEES.find(
+        (e) =>
+          e.email.toLowerCase() === currentUser.email.toLowerCase() ||
+          e.staffId === currentUser.id,
+      )
+      : undefined;
+
+    // Base held roles come from the user's record (or demo login role), NOT the currently active persona,
+    // so switching to ESS does not drop MSS/HRMS from the ContextSwitcher.
+    const demoBasePersona = initialUser?.persona ?? "hr_director";
+    const roles: ArchitecturalRoleCode[] = matchedSeed
+      ? matchedSeed.architecturalRoles ?? [matchedSeed.architecturalRole]
+      : demoBasePersona === "employee"
+        ? ["EMPLOYEE"]
+        : demoBasePersona === "line_manager"
+          ? ["DEPARTMENT_HEAD"]
+          : ["SUPER_ADMIN", "HR_MANAGER"];
+
+    return availableContexts({
+      employeeId: String(matchedSeed?.id ?? "EMP-PKB-001"),
+      roles,
+      departmentName: matchedSeed?.departmentName ?? currentUser?.department ?? "Platform & Edge Engineering",
+      assignedHrUnits: matchedSeed?.assignedHrUnits,
+      edges: matchedSeed ? SEEDED_EMPLOYMENT_EDGES : undefined,
+    });
+  }, [currentUser, initialUser]);
+
+  // FR-CTX-014 / VAL-CTX-007: Enforce deep-link experience (/ess, /mss, /hrms)
+  useEffect(() => {
+    if (!initialExperience || !hasCheckedAuth) return;
+    const targetCtx = userContexts.find((c) => c.experience === initialExperience);
+    if (!targetCtx) {
+      const ess = userContexts[0];
+      setActiveContextId(ess.contextId);
+      setPersona("employee");
+      setCurrentView("self_service");
+      setContextNotice(
+        `Access denied (403): You do not hold the ${initialExperience} context. Redirected to My Work (ESS).`,
+      );
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", "/ess");
+      }
+      return;
+    }
+    setActiveContextId(targetCtx.contextId);
+    const nextPersona = contextToPersona(targetCtx.experience, targetCtx.role);
+    setPersona(nextPersona);
+    if (initialDeepLinkView && isViewEnabled(initialDeepLinkView)) {
+      setCurrentViewRaw(initialDeepLinkView);
+    } else if (targetCtx.experience === "ESS") {
+      setCurrentViewRaw("self_service");
+    } else {
+      setCurrentViewRaw("command_centre");
+    }
+  }, [initialExperience, initialDeepLinkView, hasCheckedAuth, userContexts]);
+
+  const activeContext: UserContextTuple = React.useMemo(() => {
+    if (activeContextId) {
+      const found = userContexts.find((c) => c.contextId === activeContextId);
+      if (found) return found;
+    }
+    const desiredExp = persona === "employee" ? "ESS" : persona === "line_manager" ? "MSS" : "HRMS";
+    return userContexts.find((c) => c.experience === desiredExp) ?? userContexts[0];
+  }, [activeContextId, userContexts, persona]);
+
+  const handleSelectContext = (requestedContextId: string) => {
+    const result = switchContext({
+      available: userContexts,
+      requestedContextId,
+      userId: currentUser?.id ?? "EMP-PKB-001",
+      employeeId: currentUser?.id ?? "EMP-PKB-001",
+      fromContext: activeContext.experience,
+    });
+    if (!result.ok) {
+      setContextNotice("That context is no longer available. You've been returned to My Work.");
+      const ess = userContexts[0];
+      setActiveContextId(ess.contextId);
+      handleSelectPersona("employee");
+      setCurrentView("self_service");
+      return;
+    }
+    setContextAuditLog((prev) => [result.audit, ...prev.slice(0, 49)]);
+    setActiveContextId(result.context.contextId);
+    try {
+      localStorage.setItem("scoreview_last_context_id", result.context.contextId);
+    } catch { }
+    const nextPersona = contextToPersona(result.context.experience, result.context.role);
+    handleSelectPersona(nextPersona);
+    if (result.context.experience === "ESS") {
+      setCurrentView("self_service");
+    } else {
+      setCurrentView("command_centre");
+    }
+
+    // Server-side context token issuance & scope verification (FR-CTX-007, FR-CTX-008)
+    void fetch("/api/context/switch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contextId: requestedContextId,
+        employeeId: currentUser?.email ?? currentUser?.id ?? "1",
+        userId: currentUser?.id ?? "1",
+        fromContext: activeContext.experience,
+      }),
+    })
+      .then(async (res) => {
+        if (res.status === 403) {
+          setContextNotice("Your selected context is no longer authorized. You've been returned to My Work.");
+          const ess = userContexts[0];
+          setActiveContextId(ess.contextId);
+          handleSelectPersona("employee");
+          setCurrentView("self_service");
+        }
+      })
+      .catch(() => {
+        // Offline / static fallback preserves local domain switch
+      });
+  };
+
   const handleLoginSuccess = (user: AuthenticatedUser) => {
     setCurrentUser(user);
     setPersona(user.persona);
     setPhotoUrl(loadHeadshot(user.id));
     try {
       localStorage.setItem("scoreview_session", JSON.stringify(user));
-    } catch {}
+    } catch { }
     setIsWelcomeModalOpen(true);
   };
 
@@ -164,24 +379,24 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       // Real session: clear the httpOnly cookie on the server, then go to the sign-in screen.
       try {
         await fetch("/api/session", { method: "DELETE" });
-      } catch {}
+      } catch { }
       window.location.assign("/login");
       return;
     }
     try {
       localStorage.removeItem("scoreview_session");
-    } catch {}
+    } catch { }
     setCurrentUser(null);
     setPhotoUrl(null);
     setIsWelcomeModalOpen(false);
   };
 
-  // Keyboard shortcut listener: ⌘J for Omni-Agent
+  // Keyboard shortcut listener: ⌘J / Ctrl+J for Dede AI
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
         e.preventDefault();
-        setIsOmniAgentOpen((prev) => !prev);
+        window.dispatchEvent(new Event("dede:open"));
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -202,10 +417,22 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Employee Directory";
       case "performance_pms":
         return "Appraisal Oversight";
+      case "performance_setup":
+        return "Performance Setup: Strategy & Reporting Lines";
+      case "company_setup":
+        return "Company Setup: Offices, Approval Levels & Integrations";
+      case "my_profile":
+        return "Bank & Tax Details: Changes Need HR Approval";
+      case "payslips":
+        return "Payslips";
+      case "document_centre":
+        return "Document Centre: Policies and Acknowledgments";
+      case "my_performance":
+        return "My Performance (read only)";
       case "objectives":
         return "Objectives";
       case "dashboard":
-        return "Dashboard";
+        return "ScoReview Console";
       case "assets":
         return "Assets";
       case "skills_marketplace":
@@ -230,6 +457,16 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         return "Disciplinary Management & Case Reviews";
       case "policies_handbook":
         return "Policies & Handbooks";
+      case "organogram":
+        return "Organogram";
+      case "my_leave":
+        return "My Leave Portal";
+      case "celebrations":
+        return "Celebrations & Milestones";
+      case "team_celebrations":
+        return "Team Celebrations";
+      default:
+        return "Workforce Intelligence";
     }
   };
 
@@ -245,6 +482,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         setCurrentView("asset_management");
         break;
       case "request_leave":
+        if (persona === "employee") {
+          setCurrentView("my_leave");
+          break;
+        }
         if (!isViewEnabled("time_and_leave")) break;
         setShowLeaveModalDirectly(true);
         setCurrentView("time_and_leave");
@@ -255,22 +496,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     }
   };
 
-  const handleOmniWorkflow = (workflow: string) => {
-    if (workflow === "accra_leave") {
-      const newLeave: LeaveRecord = {
-        id: Date.now(),
-        first_name: "Paa",
-        last_name: "Barnes",
-        leave_type_name: "Annual Leave",
-        start_date: "2026-05-08",
-        end_date: "2026-05-08",
-        requested_days: "1.0",
-        status: "APPROVED",
-        reason: "Travel to Accra (Auto-drafted by Omni-Agent)",
-      };
-      setLeaves((prev) => [newLeave, ...prev]);
-    }
-  };
+
 
   if (!hasCheckedAuth) {
     return (
@@ -318,201 +544,358 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  // Staging environment (staging.bscscoreview.com) uses the dark teal rail ("plain");
+  // Production (hr.bscscoreview.com) maintains its original full colors ("full").
+  const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
+  const effectiveShellMode = isStaging ? "plain" : (SHELL_MODE === "plain" && !isStaging ? "full" : SHELL_MODE);
+
   // The module screen itself, shared by both frames.
   const viewContent = (
     <>
-          {!isViewEnabled(currentView) && (
-            <div role="alert" style={{ padding: "2rem" }}>
-              This module is not enabled for this deployment.
-            </div>
-          )}
-          {currentView === "self_service" && (
-            <EmployeeSelfServiceView
-              currentEmployee={{
-                id: 1,
-                name: currentUser.name,
-                email: currentUser.email,
-                role: currentUser.role,
-                department: currentUser.department,
-                manager: "Board of Directors",
-                annualLeaveTotal: 25,
-                annualLeaveUsed: 7,
-              }}
-              assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
-              personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
-              onRequestLeave={() => {
-                setShowLeaveModalDirectly(true);
-                setCurrentView("time_and_leave");
-              }}
-              onReportIssue={() => setCurrentView("helpdesk")}
-              onOpenPayslip={() => setIsPayslipModalOpen(true)}
-              onNavigate={setCurrentView}
-            />
-          )}
+      {!isViewEnabled(currentView) && (
+        <div role="alert" style={{ padding: "2rem" }}>
+          This module is not enabled for this deployment.
+        </div>
+      )}
+      {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
+      {currentView === "self_service" && !initialUser && (
+        <EmployeeSelfServiceView
+          currentEmployee={{
+            id: 1,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            department: currentUser.department,
+            manager: "Board of Directors",
+            annualLeaveTotal: 25,
+            annualLeaveUsed: 7,
+          }}
+          assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
+          personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
+          onRequestLeave={() => {
+            if (persona === "employee") {
+              setCurrentView("my_leave");
+            } else {
+              setShowLeaveModalDirectly(true);
+              setCurrentView("time_and_leave");
+            }
+          }}
+          onReportIssue={() => setCurrentView("helpdesk")}
+          onOpenPayslip={() => setIsPayslipModalOpen(true)}
+          onNavigate={setCurrentView}
+        />
+      )}
 
-          {currentView === "command_centre" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="command_centre"
-                requiredScope="workforce:read"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <CommandCentreView
-                employees={employees}
-                assets={assets}
-                cycles={cycles}
-                stats={{
-                  totalEmployees: employees.length,
-                  activeCycles: cycles.length,
-                  totalAssets: assets.length,
-                  pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
-                  openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
-                  activeProjects: projects.length,
-                }}
-                onNavigate={setCurrentView}
-              />
-            )
-          )}
+      {currentView === "reports_analytics" && (
+        <ReportsAnalyticsView persona={persona} />
+      )}
 
-          {currentView === "reports_analytics" && (
-            <ReportsAnalyticsView />
-          )}
+      {currentView === "workforce_directory" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="workforce_directory"
+            requiredScope="employees:read"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <WorkforceDirectoryView
+            employees={employees}
+            assets={assets}
+            selectedInitialEmployee={selectedDirectoryEmployee}
+            onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
+            onNavigateToSettings={() => setCurrentView("employee_settings")}
+            onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+          />
+        )
+      )}
 
-          {currentView === "workforce_directory" && (
-            <WorkforceDirectoryView
-              employees={employees}
-              assets={assets}
-              selectedInitialEmployee={selectedDirectoryEmployee}
-              onEmployeeCreated={(newEmp) => setEmployees((prev) => [newEmp, ...prev])}
-              onNavigateToSettings={() => setCurrentView("employee_settings")}
-              onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
-            />
-          )}
+      {currentView === "performance_pms" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="performance_pms"
+            requiredScope="appraisals:evaluate"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <PerformanceManagementView
+            cycles={cycles}
+            onCycleCreated={(newCycle) => setCycles((prev) => [newCycle, ...prev])}
+          />
+        )
+      )}
 
-          {currentView === "performance_pms" && (
-            <PerformanceManagementView
-              cycles={cycles}
-              onCycleCreated={(newCycle) => setCycles((prev) => [newCycle, ...prev])}
-            />
-          )}
+      {currentView === "skills_marketplace" && (
+        <SkillsMarketplaceView />
+      )}
 
-          {currentView === "skills_marketplace" && (
-            <SkillsMarketplaceView />
-          )}
+      {currentView === "admin_nerve_center" && (
+        persona === "employee" || persona === "line_manager" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="admin_nerve_center"
+            requiredScope="payroll:read"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <AdminNerveCenterView />
+        )
+      )}
 
-          {currentView === "admin_nerve_center" && (
-            persona === "employee" || persona === "line_manager" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="admin_nerve_center"
-                requiredScope="payroll:read"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <AdminNerveCenterView />
-            )
-          )}
+      {currentView === "lifecycle_portals" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="lifecycle_portals"
+            requiredScope="workforce:lifecycle"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <LifecyclePortalView />
+        )
+      )}
 
-          {currentView === "lifecycle_portals" && (
-            <LifecyclePortalView />
-          )}
+      {currentView === "asset_management" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="asset_management"
+            requiredScope="assets:write"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <AssetManagementView assets={assets} employees={employees} />
+        )
+      )}
 
-          {currentView === "asset_management" && (
-            <AssetManagementView assets={assets} employees={employees} />
-          )}
+      {(currentView === "command_centre" || currentView === "dashboard") && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="command_centre"
+            requiredScope="analytics:view"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : activeContext.experience === "MSS" ? (
+          <TeamDashboardView
+            activeContext={activeContext}
+            managerEmployeeId={activeContext.scopeId ?? "1"}
+            onNavigate={setCurrentView}
+          />
+        ) : (
+          <CommandCentreView
+            employees={employees}
+            assets={assets}
+            cycles={cycles}
+            stats={{
+              totalEmployees: employees.length,
+              activeCycles: cycles.length,
+              totalAssets: assets.length,
+              pendingLeaves: leaves.filter((l) => l.status === "PENDING").length,
+              openTickets: tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS").length,
+              activeProjects: projects.length,
+            }}
+            onNavigate={setCurrentView}
+          />
+        )
+      )}
 
-          {currentView === "dashboard" && <DashboardScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
 
-          {currentView === "assets" && <AssetsScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "performance_setup" && (
+        persona === "employee" || persona === "line_manager" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="performance_setup"
+            requiredScope="cycles:manage"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <PerformanceSetupScreen user={currentUser} realSession={!!initialUser} />
+        )
+      )}
 
-          {currentView === "objectives" && <ObjectivesScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "company_setup" && (
+        persona === "employee" || persona === "line_manager" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="company_setup"
+            requiredScope="roles:manage"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <CompanySetupScreen user={currentUser} realSession={!!initialUser} />
+        )
+      )}
 
-          {currentView === "time_and_leave" && SHELL_MODE === "plain" && <LeaveScreen user={currentUser} realSession={!!initialUser} />}
-          {currentView === "time_and_leave" && SHELL_MODE !== "plain" && (
-            <TimeAndLeaveView
-              initialLeaves={leaves}
-              showNewLeaveModal={showLeaveModalDirectly}
-              onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
-            />
-          )}
+      {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "payslips" && <PayslipsScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "document_centre" && (
+        <DocumentCentreScreen
+          user={currentUser}
+          realSession={!!initialUser}
+          onNavigateToPolicies={() => setCurrentView("policies_handbook")}
+        />
+      )}
+      {currentView === "my_performance" && <MyPerformanceScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "my_leave" && (
+        <MyLeaveScreen user={currentUser} realSession={!!initialUser} initialSubTab={leaveSubTab} />
+      )}
+      {currentView === "celebrations" && <CelebrationsView mode="ess" />}
+      {currentView === "team_celebrations" && <CelebrationsView mode="mss" />}
 
-          {currentView === "helpdesk" && (
-            <HelpdeskView initialTickets={tickets} />
-          )}
+      {currentView === "objectives" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="objectives"
+            requiredScope="objectives:corporate"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <ObjectivesScreen user={currentUser} realSession={!!initialUser} />
+        )
+      )}
 
-          {currentView === "projects" && (
-            <ProjectPortfolioView initialProjects={projects} />
-          )}
+      {currentView === "time_and_leave" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="time_and_leave"
+            requiredScope="leaves:approve"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <TimeAndLeaveView
+            initialLeaves={leaves}
+            showNewLeaveModal={showLeaveModalDirectly}
+            onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
+            onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+            userName={currentUser.name}
+            userRole={currentUser.role}
+          />
+        )
+      )}
 
-          {currentView === "employee_settings" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="employee_settings"
-                requiredScope="settings:write"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <EmployeeSettingsView />
-            )
-          )}
+      {currentView === "helpdesk" && (
+        <HelpdeskView initialTickets={tickets} />
+      )}
 
-          {currentView === "governance_import" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="governance_import"
-                requiredScope="compliance:audit"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <GovernanceView />
-            )
-          )}
+      {currentView === "projects" && (
+        <ProjectPortfolioView initialProjects={projects} />
+      )}
 
-          {currentView === "approval_workflows" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="approval_workflows"
-                requiredScope="settings:write"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <ApprovalWorkflowsView onNavigateToView={(view) => setCurrentView(view as ModuleViewKey)} />
-            )
-          )}
+      {currentView === "employee_settings" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="employee_settings"
+            requiredScope="settings:write"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <EmployeeSettingsView />
+        )
+      )}
 
-          {currentView === "disciplinary" && (
-            persona === "employee" ? (
-              <RbacGuard
-                currentPersona={persona}
-                targetView="disciplinary"
-                requiredScope="compliance:audit"
-                onNavigate={setCurrentView}
-                onSwitchPersona={setPersona}
-              />
-            ) : (
-              <DisciplinaryManagementView />
-            )
-          )}
+      {currentView === "governance_import" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="governance_import"
+            requiredScope="compliance:audit"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <GovernanceView />
+        )
+      )}
 
-          {currentView === "policies_handbook" && <PoliciesHandbookView />}
+      {currentView === "approval_workflows" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="approval_workflows"
+            requiredScope="settings:write"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <ApprovalWorkflowsView onNavigateToView={(view) => setCurrentView(view as ModuleViewKey)} />
+        )
+      )}
+
+      {currentView === "disciplinary" && (
+        persona === "employee" ? (
+          <RbacGuard
+            currentPersona={persona}
+            targetView="disciplinary"
+            requiredScope="compliance:audit"
+            onNavigate={setCurrentView}
+            onSwitchPersona={setPersona}
+          />
+        ) : (
+          <DisciplinaryManagementView />
+        )
+      )}
+
+      {currentView === "policies_handbook" && (
+        <PoliciesHandbookView isHr={persona === "hr_admin" || persona === "hr_director"} />
+      )}
+      {currentView === "organogram" && <OrganogramView />}
     </>
   );
 
-  if (SHELL_MODE === "plain") {
+  if (effectiveShellMode === "plain") {
     return (
-      <PlainShell user={currentUser} currentView={currentView} onNavigate={setCurrentView} onSignOut={handleSignOut}>
-        {viewContent}
-      </PlainShell>
+      <>
+        <PlainShell
+          user={currentUser}
+          persona={persona}
+          onSelectPersona={handleSelectPersona}
+          availableContexts={userContexts}
+          activeContext={activeContext}
+          onSelectContext={handleSelectContext}
+          contextNotice={contextNotice}
+          onDismissContextNotice={() => setContextNotice(null)}
+          pendingApprovalsCount={leaves.filter((l) => l.status === "PENDING").length}
+          showName={!!initialUser}
+          currentView={currentView}
+          onNavigate={(v, sub) => {
+            setLeaveSubTab(sub);
+            setCurrentView(v);
+          }}
+          onSignOut={handleSignOut}
+          onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
+          onOpenSearch={() => setIsCommandPaletteOpen(true)}
+        >
+          {viewContent}
+        </PlainShell>
+        <DedeWidget />
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onSelectView={setCurrentView}
+          employees={employees}
+          onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
+          onOpenPayslip={() => setIsPayslipModalOpen(true)}
+          onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
+          onQuickAction={handleQuickAction}
+        />
+      </>
     );
   }
 
@@ -533,29 +916,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         photoUrl={photoUrl}
         onUploadPhoto={handleUploadPhoto}
         onNavigate={setCurrentView}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen(true);
-        }}
-        onStartFollowPrompt={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen(true);
-        }}
-      />
-
-      {/* Unified Dede AI & Follow the Prompt Floating Sidebar */}
-      <OmniAgentDrawer
-        isOpen={isOmniAgentOpen}
-        onClose={() => setIsOmniAgentOpen(false)}
-        onOpen={(tab) => {
-          setOmniInitialTab(tab || "prompts");
-          setIsOmniAgentOpen(true);
-        }}
-        initialTab={omniInitialTab}
-        persona={persona}
-        currentView={currentView}
-        onNavigate={setCurrentView}
-        onExecuteWorkflow={handleOmniWorkflow}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
+        onStartFollowPrompt={() => window.dispatchEvent(new Event("dede:open"))}
       />
 
       {/* Interactive Official Payslip Modal (Triggered via Cmd+K 'Payslip', ESS or Header) */}
@@ -574,10 +936,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         employees={employees}
         onSelectEmployee={(emp) => setSelectedDirectoryEmployee(emp)}
         onOpenPayslip={() => setIsPayslipModalOpen(true)}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("chat");
-          setIsOmniAgentOpen(true);
-        }}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
+        onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
         onQuickAction={handleQuickAction}
       />
 
@@ -586,11 +946,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         currentView={currentView}
         onSelectView={setCurrentView}
         persona={persona}
-        onSelectPersona={setPersona}
-        onOpenOmniAgent={() => {
-          setOmniInitialTab("prompts");
-          setIsOmniAgentOpen((prev) => !prev);
-        }}
+        onSelectPersona={handleSelectPersona}
+        onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
+        onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
         currentUser={currentUser}
         photoUrl={photoUrl}
         onSignOut={handleSignOut}
@@ -609,8 +967,13 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         <AppHeader
           breadcrumb={getBreadcrumb()}
           apiOnline={apiOnline}
+          persona={persona}
+          onSelectPersona={handleSelectPersona}
+          availableContexts={userContexts}
+          activeContext={activeContext}
+          onSelectContext={handleSelectContext}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenOmniAgent={() => setIsOmniAgentOpen((prev) => !prev)}
+          onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
           onQuickAction={handleQuickAction}
           onOpenPayslip={() => setIsPayslipModalOpen(true)}
           user={currentUser}
@@ -622,9 +985,15 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         />
 
         <main style={{ flex: 1 }}>
+          {contextNotice && (
+            <ContextNotice message={contextNotice} onDismiss={() => setContextNotice(null)} />
+          )}
           {viewContent}
         </main>
       </div>
+
+      {/* Floating Dede AI Assistant Launcher & Chat Panel */}
+      <DedeWidget />
     </div>
   );
 };

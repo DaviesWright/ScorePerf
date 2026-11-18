@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
+import { ProjectsMiniDashboard } from "./ProjectsMiniDashboard";
 
 export interface ProjectRecord {
   id: number;
@@ -21,6 +22,7 @@ export const ProjectPortfolioView: React.FC<ProjectPortfolioViewProps> = ({ init
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("ACTIVE");
+  const listRef = useRef<HTMLDivElement>(null);
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +66,10 @@ export const ProjectPortfolioView: React.FC<ProjectPortfolioViewProps> = ({ init
         </Button>
       </div>
 
+      <ProjectsMiniDashboard projects={projects} onOpenFull={() => listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+
       {/* Projects Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
+      <div ref={listRef} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.25rem" }}>
         {projects.map((p, idx) => {
           const progress = idx === 0 ? 75 : idx === 1 ? 40 : 85;
           return (

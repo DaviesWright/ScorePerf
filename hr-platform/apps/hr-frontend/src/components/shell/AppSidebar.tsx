@@ -13,7 +13,14 @@ export type ModuleViewKey =
   | "dashboard"
   | "assets"
   | "performance_pms"
+  | "performance_setup"
+  | "company_setup"
   | "objectives"
+  | "my_profile"
+  | "payslips"
+  | "document_centre"
+  | "my_performance"
+  | "my_leave"
   | "skills_marketplace"
   | "admin_nerve_center"
   | "lifecycle_portals"
@@ -24,7 +31,10 @@ export type ModuleViewKey =
   | "governance_import"
   | "approval_workflows"
   | "disciplinary"
-  | "policies_handbook";
+  | "policies_handbook"
+  | "organogram"
+  | "celebrations"
+  | "team_celebrations";
 
 export type UserPersona = "hr_director" | "hr_admin" | "line_manager" | "employee";
 
@@ -33,7 +43,8 @@ interface AppSidebarProps {
   onSelectView: (view: ModuleViewKey) => void;
   persona: UserPersona;
   onSelectPersona: (p: UserPersona) => void;
-  onOpenOmniAgent: () => void;
+  onOpenDede?: () => void;
+  onOpenOmniAgent?: () => void;
   currentUser?: { name: string; email: string; avatarText: string } | null;
   photoUrl?: string | null;
   onSignOut?: () => void;
@@ -52,6 +63,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   onSelectView,
   persona,
   onSelectPersona,
+  onOpenDede,
   onOpenOmniAgent,
   currentUser,
   photoUrl,
@@ -110,137 +122,347 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   }, [isPinned]);
 
   const personaLabels: Record<UserPersona, { title: string; badge: string }> = {
-    hr_director: { title: "HR Director", badge: "Executive" },
-    hr_admin: { title: "HR Administrator", badge: "Operations" },
-    line_manager: { title: "Line Manager", badge: "People Lead" },
-    employee: { title: "Employee (ESS)", badge: "Self-Service" },
+    hr_director: { title: "Executive / HR", badge: "HR" },
+    hr_admin: { title: "HR Governance", badge: "HR" },
+    line_manager: { title: "My Team", badge: "Team" },
+    employee: { title: "My Work", badge: "Self" },
   };
 
-  const navSections = [
-    {
-      group: "MY WORKSPACE",
-      items: [
+  const getNavSections = () => {
+    // 1. ESS — EMPLOYEE SELF-SERVICE (/ess) — TC-ARCH-01: No directory route in ESS
+    if (persona === "employee") {
+      return [
         {
-          key: "self_service" as ModuleViewKey,
-          label: "My Self-Service",
-          icon: Icons.Users,
-          badge: "ESS",
-          badgeType: "peach" as const,
+          group: "MY WORK",
+          items: [
+            {
+              key: "self_service" as ModuleViewKey,
+              label: "My Profile & Requests",
+              icon: Icons.Users,
+              badge: "ESS",
+              badgeType: "peach" as const,
+            },
+            {
+              key: "my_leave" as ModuleViewKey,
+              label: "My Leave",
+              icon: Icons.Calendar,
+              badge: "Balances & Plan",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "celebrations" as ModuleViewKey,
+              label: "Celebrations",
+              icon: Icons.Cake,
+              badge: "Milestones",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Goals & Review",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "skills_marketplace" as ModuleViewKey,
+              label: "My Skills & Gig Fit",
+              icon: Icons.Compass,
+              badge: "20 Skills",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "document_centre" as ModuleViewKey,
+              label: "My Documents",
+              icon: Icons.BookOpen,
+              badge: "Payslips & Docs",
+              badgeType: "neutral" as const,
+            },
+            {
+              key: "policies_handbook" as ModuleViewKey,
+              label: "My Policies & Handbooks",
+              icon: Icons.BookOpen,
+            },
+            {
+              key: "helpdesk" as ModuleViewKey,
+              label: "My Support Requests",
+              icon: Icons.LifeBuoy,
+              badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+              badgeType: "emerald" as const,
+            },
+          ],
         },
-      ],
-    },
-    {
-      group: "WORKFORCE INTELLIGENCE",
-      items: [
-        { key: "command_centre" as ModuleViewKey, label: "Command Centre", icon: Icons.CommandCentre },
+      ];
+    }
+
+    // 2. MSS — MANAGER SELF-SERVICE (/mss) + ESS Secondary Context
+    if (persona === "line_manager") {
+      return [
         {
-          key: "reports_analytics" as ModuleViewKey,
-          label: "Strategic Reports & AI",
-          icon: Icons.BarChart,
-          badge: "60 Reports",
-          badgeType: "indigo" as const,
+          group: "MY TEAM",
+          items: [
+            {
+              key: "workforce_directory" as ModuleViewKey,
+              label: "Team Roster",
+              icon: Icons.Users,
+              badge: "Subtree",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "team_celebrations" as ModuleViewKey,
+              label: "Team Celebrations",
+              icon: Icons.Cake,
+              badge: "Milestones",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "time_and_leave" as ModuleViewKey,
+              label: "Leave Approvals & Coverage",
+              icon: Icons.Calendar,
+              badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
+              badgeType: "peach" as const,
+            },
+            {
+              key: "objectives" as ModuleViewKey,
+              label: "Team Goals & Alignment",
+              icon: Icons.Target,
+              badge: "Subtree",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "performance_pms" as ModuleViewKey,
+              label: "Report Reviews",
+              icon: Icons.Target,
+              badge: `${counts.cycles}`,
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "skills_marketplace" as ModuleViewKey,
+              label: "Team Skills & Heatmap",
+              icon: Icons.Compass,
+              badge: "20 Skills",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "projects" as ModuleViewKey,
+              label: "Team Analytics & Projects",
+              icon: Icons.Briefcase,
+              badge: `${counts.projects}`,
+              badgeType: "indigo" as const,
+            },
+          ],
         },
         {
-          key: "workforce_directory" as ModuleViewKey,
-          label: "Workforce Directory",
-          icon: Icons.Users,
-          badge: `${counts.employees}`,
-          badgeType: "emerald" as const,
+          group: "MY WORK",
+          items: [
+            {
+              key: "self_service" as ModuleViewKey,
+              label: "My Profile & Requests",
+              icon: Icons.Users,
+              badge: "ESS",
+              badgeType: "peach" as const,
+            },
+            {
+              key: "my_leave" as ModuleViewKey,
+              label: "My Leave",
+              icon: Icons.Calendar,
+              badge: "Self",
+              badgeType: "emerald" as const,
+            },
+            {
+              key: "my_performance" as ModuleViewKey,
+              label: "My Performance",
+              icon: Icons.Target,
+              badge: "Self",
+              badgeType: "indigo" as const,
+            },
+            {
+              key: "document_centre" as ModuleViewKey,
+              label: "My Documents",
+              icon: Icons.BookOpen,
+            },
+          ],
         },
-        {
-          key: "projects" as ModuleViewKey,
-          label: "Client Engagements",
-          icon: Icons.Briefcase,
-          badge: `${counts.projects}`,
-          badgeType: "neutral" as const,
-        },
-      ],
-    },
-    {
-      group: "TALENT & CAREER",
-      items: [
-        {
-          key: "performance_pms" as ModuleViewKey,
-          label: "Appraisals (PMS)",
-          icon: Icons.Target,
-          badge: `${counts.cycles}`,
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "skills_marketplace" as ModuleViewKey,
-          label: "Skills & Gig Board",
-          icon: Icons.Compass,
-          badge: "AI",
-          badgeType: "emerald" as const,
-        },
-      ],
-    },
-    {
-      group: "AUTOMATION & REWARDS",
-      items: [
-        {
-          key: "admin_nerve_center" as ModuleViewKey,
-          label: "Nerve Center & Wallet",
-          icon: Icons.Wallet,
-          badge: "Wallet",
-          badgeType: "peach" as const,
-        },
-        {
-          key: "lifecycle_portals" as ModuleViewKey,
-          label: "Onboarding & Exit",
-          icon: Icons.Plane,
-        },
-      ],
-    },
-    {
-      group: "TIME & OPERATIONS",
-      items: [
-        {
-          key: "time_and_leave" as ModuleViewKey,
-          label: "Leaves & Shifts",
-          icon: Icons.Calendar,
-          badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
-          badgeType: "peach" as const,
-        },
-        {
-          key: "asset_management" as ModuleViewKey,
-          label: "Hardware and Fleet",
-          icon: Icons.Laptop,
-          badge: `${counts.assets}`,
-          badgeType: "neutral" as const,
-        },
-        {
-          key: "helpdesk" as ModuleViewKey,
-          label: "IT Helpdesk",
-          icon: Icons.LifeBuoy,
-          badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
-          badgeType: "emerald" as const,
-        },
-      ],
-    },
-    {
-      group: "GOVERNANCE & DATA",
-      items: [
-        {
-          key: "employee_settings" as ModuleViewKey,
-          label: "Employee Settings",
-          icon: Icons.Settings,
-          badge: "Config",
-          badgeType: "indigo" as const,
-        },
-        {
-          key: "approval_workflows" as ModuleViewKey,
-          label: "Approval Workflows",
-          icon: Icons.FileCheck,
-          badge: "Maker-Checker",
-          badgeType: "emerald" as const,
-        },
-        { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
-        { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
-        { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },
-      ],
-    },
-  ];
+      ];
+    }
+
+    // 3. HR ADMIN / HR DIRECTOR (HR CONSOLE)
+    return [
+      {
+        group: "MY WORKSPACE (ESS)",
+        items: [
+          {
+            key: "self_service" as ModuleViewKey,
+            label: "My Self-Service",
+            icon: Icons.Users,
+            badge: "ESS",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "my_performance" as ModuleViewKey,
+            label: "My Performance",
+            icon: Icons.Target,
+            badge: "Appraisals",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "my_leave" as ModuleViewKey,
+            label: "My Leave",
+            icon: Icons.Calendar,
+            badge: "Leave Portal",
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "document_centre" as ModuleViewKey,
+            label: "Document Centre",
+            icon: Icons.BookOpen,
+            badge: "Policies & Docs",
+            badgeType: "neutral" as const,
+          },
+        ],
+      },
+      {
+        group: "WORKFORCE INTELLIGENCE",
+        items: [
+          {
+            key: "command_centre" as ModuleViewKey,
+            label: "ScoReview Console",
+            icon: Icons.CommandCentre,
+            badge: "Live Intel",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "reports_analytics" as ModuleViewKey,
+            label: "Strategic Reports & AI",
+            icon: Icons.BarChart,
+            badge: "60 Reports",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "workforce_directory" as ModuleViewKey,
+            label: "Workforce Directory",
+            icon: Icons.Users,
+            badge: `${counts.employees}`,
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "projects" as ModuleViewKey,
+            label: "Client Engagements",
+            icon: Icons.Briefcase,
+            badge: `${counts.projects}`,
+            badgeType: "neutral" as const,
+          },
+        ],
+      },
+      {
+        group: "TALENT & CAREER",
+        items: [
+          {
+            key: "performance_pms" as ModuleViewKey,
+            label: "Appraisals (PMS)",
+            icon: Icons.Target,
+            badge: `${counts.cycles}`,
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "objectives" as ModuleViewKey,
+            label: "OKR & BSC Objectives",
+            icon: Icons.Target,
+            badge: "Strategy",
+            badgeType: "emerald" as const,
+          },
+          {
+            key: "performance_setup" as ModuleViewKey,
+            label: "Performance Setup",
+            icon: Icons.Settings,
+            badge: "Cycles & Scales",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "skills_marketplace" as ModuleViewKey,
+            label: "Skills & Gig Board",
+            icon: Icons.Compass,
+            badge: "AI",
+            badgeType: "emerald" as const,
+          },
+        ],
+      },
+      {
+        group: "OPERATIONS & AUTOMATION",
+        items: [
+          {
+            key: "admin_nerve_center" as ModuleViewKey,
+            label: "Operations Nerve Center",
+            icon: Icons.ShieldCheck,
+            badge: "Approvals",
+            badgeType: "peach" as const,
+          },
+          {
+            key: "lifecycle_portals" as ModuleViewKey,
+            label: "Onboarding & Exit",
+            icon: Icons.Plane,
+          },
+        ],
+      },
+      {
+        group: "TIME & ASSETS",
+        items: [
+          {
+            key: "time_and_leave" as ModuleViewKey,
+            label: "Leaves & Shifts",
+            icon: Icons.Calendar,
+            badge: counts.leaves > 0 ? `${counts.leaves}` : undefined,
+            badgeType: "peach" as const,
+          },
+          {
+            key: "asset_management" as ModuleViewKey,
+            label: "Hardware & Fleet",
+            icon: Icons.Laptop,
+            badge: `${counts.assets}`,
+            badgeType: "neutral" as const,
+          },
+          {
+            key: "helpdesk" as ModuleViewKey,
+            label: "IT Helpdesk",
+            icon: Icons.LifeBuoy,
+            badge: counts.tickets > 0 ? `${counts.tickets}` : undefined,
+            badgeType: "emerald" as const,
+          },
+        ],
+      },
+      {
+        group: "GOVERNANCE & DATA",
+        items: [
+          {
+            key: "employee_settings" as ModuleViewKey,
+            label: "Employee Settings",
+            icon: Icons.Settings,
+            badge: "Config",
+            badgeType: "indigo" as const,
+          },
+          {
+            key: "approval_workflows" as ModuleViewKey,
+            label: "Approval Workflows",
+            icon: Icons.FileCheck,
+            badge: "Maker-Checker",
+            badgeType: "emerald" as const,
+          },
+          { key: "company_setup" as ModuleViewKey, label: "Company Setup", icon: Icons.Settings },
+          {
+            key: "organogram" as ModuleViewKey,
+            label: "Organogram",
+            icon: Icons.GitBranch,
+            badge: "Hierarchy",
+            badgeType: "emerald" as const,
+          },
+          { key: "governance_import" as ModuleViewKey, label: "Data Governance", icon: Icons.ShieldCheck },
+          { key: "disciplinary" as ModuleViewKey, label: "Disciplinary Management", icon: Icons.AlertTriangle },
+          { key: "policies_handbook" as ModuleViewKey, label: "Policies & Handbooks", icon: Icons.BookOpen },
+        ],
+      },
+    ];
+  };
+
+  const navSections = getNavSections();
 
   // Disabled modules are hidden (not removed); groups left empty disappear with them.
   const visibleNavSections = navSections
@@ -290,7 +512,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {/* Brand & Organization Header */}
         <div
           style={{
-            padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 1.1rem",
+            padding: isEffectiveCollapsed ? "1rem 0.5rem" : "1.1rem 0.85rem",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",
@@ -378,7 +600,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   gap: "0.3rem",
                   fontSize: "10px",
                   fontWeight: 700,
-                  transition: "all 0.15s ease",
+                  transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
                 }}
               >
                 {isPinned ? <Icons.Pin size={12} color={colors.emeraldAction} /> : <Icons.PinOff size={12} color="#94a3b8" />}
@@ -413,94 +635,102 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
         {/* Role / Persona Switcher Bar */}
         {!isEffectiveCollapsed && (
-          <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)", position: "relative" }}>
-            <button
-              onClick={() => setShowPersonaMenu(!showPersonaMenu)}
-              style={{
-                width: "100%",
-                padding: "0.45rem 0.65rem",
-                borderRadius: radii.md,
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: "pointer",
-                fontSize: "11px",
-                textAlign: "left",
-              }}
-            >
-              <div>
-                <div style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Viewing As</div>
-                <div style={{ fontWeight: 600, color: "#ffffff", marginTop: "1px" }}>{personaLabels[persona].title}</div>
-              </div>
-              <Icons.ChevronDown size={14} color="#94a3b8" />
-            </button>
-
-            {showPersonaMenu && (
-              <div
+          <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.35rem" }}>
+              <span style={{ color: "#94a3b8", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Active Platform Role
+              </span>
+              <span
                 style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: "0.85rem",
-                  right: "0.85rem",
-                  backgroundColor: colors.indigoDark,
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: radii.md,
-                  boxShadow: "0 8px 18px rgba(0,0,0,0.45)",
-                  zIndex: 35,
-                  marginTop: "4px",
-                  overflow: "hidden",
+                  fontSize: "9px",
+                  padding: "0.05rem 0.35rem",
+                  borderRadius: radii.sm,
+                  backgroundColor: persona === "employee" ? "rgba(16, 185, 129, 0.2)" : persona === "line_manager" ? "rgba(99, 102, 241, 0.25)" : "rgba(15, 92, 77, 0.4)",
+                  color: persona === "employee" ? "#6ee7b7" : persona === "line_manager" ? "#c7d2fe" : "#a7f3d0",
+                  fontWeight: 600,
                 }}
               >
-                {(Object.keys(personaLabels) as UserPersona[]).map((pKey) => (
-                  <div
-                    key={pKey}
-                    onClick={() => {
-                      onSelectPersona(pKey);
-                      setShowPersonaMenu(false);
-                      if (pKey === "employee") onSelectView("self_service");
-                      if (pKey === "hr_director") onSelectView("command_centre");
-                      if (pKey === "hr_admin") onSelectView("workforce_directory");
-                      if (pKey === "line_manager") onSelectView("time_and_leave");
-                    }}
-                    style={{
-                      padding: "0.55rem 0.75rem",
-                      cursor: "pointer",
-                      fontSize: "11px",
-                      color: persona === pKey ? "#ffffff" : "#cbd5e1",
-                      backgroundColor: persona === pKey ? colors.indigoAction : "transparent",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (persona !== pKey) e.currentTarget.style.backgroundColor = "transparent";
-                    }}
-                  >
-                    <span style={{ fontWeight: persona === pKey ? 600 : 400 }}>{personaLabels[pKey].title}</span>
-                    <span style={{ fontSize: "9px", color: persona === pKey ? "#ffffff" : "#94a3b8" }}>{personaLabels[pKey].badge}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+                {persona === "employee" ? "ESS Mode" : persona === "line_manager" ? "Lead Mode" : "Admin Mode"}
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "3px", backgroundColor: "rgba(0, 0, 0, 0.25)", padding: "2px", borderRadius: radii.md }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("employee");
+                  onSelectView("self_service");
+                }}
+                title="Switch to Employee self-service"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "employee" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "employee" ? "#10b981" : "transparent",
+                  color: persona === "employee" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Employee
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("line_manager");
+                }}
+                title="Switch to Supervisor (Line Manager)"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "line_manager" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "line_manager" ? "#4f46e5" : "transparent",
+                  color: persona === "line_manager" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Supervisor
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectPersona("hr_admin");
+                }}
+                title="Switch to Admin (HR Administrator)"
+                style={{
+                  padding: "0.3rem 0.2rem",
+                  fontSize: "10px",
+                  fontWeight: persona === "hr_admin" || persona === "hr_director" ? 700 : 500,
+                  borderRadius: radii.sm,
+                  border: "none",
+                  backgroundColor: persona === "hr_admin" || persona === "hr_director" ? "#0f5c4d" : "transparent",
+                  color: persona === "hr_admin" || persona === "hr_director" ? "#ffffff" : "#94a3b8",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                Admin
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Omni-Agent AI Copilot Trigger */}
+        {/* Dede AI Assistant Trigger */}
         <div style={{ padding: isEffectiveCollapsed ? "0.6rem 0.4rem 0" : "0.6rem 0.85rem 0" }}>
           <button
-            onClick={onOpenOmniAgent}
+            type="button"
+            onClick={onOpenDede || onOpenOmniAgent || (() => window.dispatchEvent(new Event("dede:open")))}
             style={{
               width: "100%",
               padding: "0.5rem 0.65rem",
               borderRadius: radii.md,
-              background: `linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)`,
-              border: "1px solid rgba(168, 85, 247, 0.4)",
+              background: `linear-gradient(135deg, rgba(79, 70, 229, 0.35) 0%, rgba(99, 102, 241, 0.35) 100%)`,
+              border: "1px solid rgba(129, 140, 248, 0.45)",
               color: "#ffffff",
               display: "flex",
               alignItems: "center",
@@ -508,15 +738,19 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               cursor: "pointer",
               fontSize: "11px",
               fontWeight: 600,
-              transition: "all 0.15s ease",
+              transition: "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease",
             }}
-            title="Open Omni-Agent Copilot (⌘J)"
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.8)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(168, 85, 247, 0.4)")}
+            title="Ask Dede, AI Assistant (⌘J)"
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(165, 180, 252, 0.85)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(129, 140, 248, 0.45)")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Icons.Sparkles size={14} color="#c084fc" />
-              {!collapsed && <span>Omni-Agent AI</span>}
+              <img
+                src="/dede/dede-avatar-light-32.png"
+                alt="Dede"
+                style={{ width: "18px", height: "18px", borderRadius: "50%", objectFit: "cover", flex: "none" }}
+              />
+              {!collapsed && <span>Ask Dede AI</span>}
             </div>
             {!isEffectiveCollapsed && (
               <span style={{ fontSize: "10px", padding: "0.1rem 0.35rem", borderRadius: radii.sm, backgroundColor: "rgba(255,255,255,0.15)" }}>
@@ -527,7 +761,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         </div>
 
         {/* Navigation Sections */}
-        <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem 0.65rem", overflowY: "auto" }}>
+        <nav style={{ flex: 1, padding: isEffectiveCollapsed ? "0.85rem 0.35rem" : "0.85rem", overflowY: "auto" }}>
           {visibleNavSections.map((section, sIdx) => (
             <div key={sIdx} style={{ marginBottom: "1.15rem" }}>
               {!isEffectiveCollapsed && (
@@ -537,7 +771,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                     color: "#64748b",
-                    padding: "0.25rem 0.65rem 0.35rem",
+                    padding: "0.25rem 0.5rem 0.35rem",
                     textTransform: "uppercase",
                   }}
                 >
@@ -567,7 +801,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "0.65rem",
-                          padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem 0.65rem",
+                          padding: isEffectiveCollapsed ? "0.65rem 0" : "0.5rem",
                           justifyContent: isEffectiveCollapsed ? "center" : "space-between",
                           backgroundColor: isActive
                             ? "rgba(79, 70, 229, 0.22)"
@@ -581,7 +815,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                           fontWeight: isActive ? 600 : 400,
                           fontSize: typography.sizes.sm,
                           textAlign: "left",
-                          transition: "all 0.12s ease",
+                          transition: "background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease",
                           borderLeft: isActive && !isEffectiveCollapsed ? `3px solid ${colors.indigoAction}` : "3px solid transparent",
                         }}
                       >
@@ -682,7 +916,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {/* User Session Bar */}
         <div
           style={{
-            padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 1rem",
+            padding: isEffectiveCollapsed ? "0.85rem 0.5rem" : "0.85rem 0.85rem",
             borderTop: "1px solid rgba(255, 255, 255, 0.08)",
             display: "flex",
             alignItems: "center",

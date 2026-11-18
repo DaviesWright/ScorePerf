@@ -4,19 +4,25 @@ import type { ModuleViewKey } from "../components/shell/AppSidebar";
 // Nothing is deleted when a module is off: its component, data and API routes stay, and the navigation,
 // the route guard in the shell and every cross-link (palette, quick menu, welcome brief) consult this file.
 //
-//   NEXT_PUBLIC_ENABLED_MODULES   comma list of view keys or aliases, or "all". Default: leave,performance.
+//   NEXT_PUBLIC_ENABLED_MODULES   comma list of view keys or aliases, or "all". Default: all.
 //   NEXT_PUBLIC_ENABLED_FEATURES  comma list of features, or "all". Default: none.
 //
 // Both are inlined at build time, so changing them needs a rebuild or a dev-server restart.
 
 /** Every view, in the order the default landing page is chosen from. Must list every ModuleViewKey. */
 export const ALL_VIEWS: readonly ModuleViewKey[] = [
+  "command_centre",
   "dashboard",
   "assets",
-  "command_centre",
   "time_and_leave",
+  "my_leave",
   "performance_pms",
+  "performance_setup",
   "objectives",
+  "my_performance",
+  "my_profile",
+  "payslips",
+  "document_centre",
   "self_service",
   "reports_analytics",
   "workforce_directory",
@@ -28,15 +34,35 @@ export const ALL_VIEWS: readonly ModuleViewKey[] = [
   "helpdesk",
   "employee_settings",
   "approval_workflows",
+  "company_setup",
+  "organogram",
   "governance_import",
   "disciplinary",
   "policies_handbook",
+  "celebrations",
+  "team_celebrations",
 ];
 
 export type FeatureKey = "ai_assistant" | "payslip";
 export const ALL_FEATURES: readonly FeatureKey[] = ["ai_assistant", "payslip"];
 
-export const DEFAULT_VIEWS: readonly ModuleViewKey[] = ["dashboard", "time_and_leave", "performance_pms", "objectives", "assets"];
+export const DEFAULT_VIEWS: readonly ModuleViewKey[] = [
+  "command_centre",
+  "dashboard",
+  "self_service",
+  "my_leave",
+  "time_and_leave",
+  "performance_pms",
+  "performance_setup",
+  "objectives",
+  "my_performance",
+  "my_profile",
+  "payslips",
+  "document_centre",
+  "assets",
+  "celebrations",
+  "team_celebrations",
+];
 
 const VIEW_ALIASES: Record<string, ModuleViewKey> = {
   leave: "time_and_leave",
@@ -56,7 +82,7 @@ export function parseEnabledViews(raw: string | undefined): Set<ModuleViewKey> {
     const key = VIEW_ALIASES[t] ?? ALL_VIEWS.find((v) => v === t);
     if (key) found.add(key);
   }
-  return found.size > 0 ? found : new Set(DEFAULT_VIEWS);
+  return found.size > 0 ? found : new Set(ALL_VIEWS);
 }
 
 export function parseEnabledFeatures(raw: string | undefined): Set<FeatureKey> {
@@ -65,14 +91,25 @@ export function parseEnabledFeatures(raw: string | undefined): Set<FeatureKey> {
   return new Set(ALL_FEATURES.filter((f) => list.includes(f)));
 }
 
-/** NEXT_PUBLIC_SHELL: "plain" (default) uses PlainShell; "full" keeps the original decorated frame. */
-export const parseShellMode = (raw: string | undefined): "plain" | "full" => (raw?.trim().toLowerCase() === "full" ? "full" : "plain");
+/** NEXT_PUBLIC_SHELL: "plain" uses PlainShell (staging dark teal); "full" keeps the original decorated frame. */
+export const parseShellMode = (raw: string | undefined): "plain" | "full" => {
+  if (raw?.trim().toLowerCase() === "plain") return "plain";
+  if (raw?.trim().toLowerCase() === "full") return "full";
+  // The dark teal shell ("plain") is meant exclusively for the staging environment.
+  // Production (hr.bscscoreview.com) maintains its original full colors.
+  if (typeof window !== "undefined" && window.location.hostname.includes("staging")) {
+    return "plain";
+  }
+  return "full";
+};
 export const SHELL_MODE = parseShellMode(process.env.NEXT_PUBLIC_SHELL);
 
 const enabledViews = parseEnabledViews(process.env.NEXT_PUBLIC_ENABLED_MODULES);
 const enabledFeatures = parseEnabledFeatures(process.env.NEXT_PUBLIC_ENABLED_FEATURES);
 
-export const isViewEnabled = (view: ModuleViewKey): boolean => enabledViews.has(view);
+// Payslips belong to the payroll module. The view stays hidden until the payslip feature is switched on.
+export const isViewEnabled = (view: ModuleViewKey): boolean =>
+  enabledViews.has(view) && (view !== "payslips" || enabledFeatures.has("payslip"));
 export const isFeatureEnabled = (feature: FeatureKey): boolean => enabledFeatures.has(feature);
 
 /** The view to open at start: the first enabled one in ALL_VIEWS order. */

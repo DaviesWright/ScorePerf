@@ -29,6 +29,16 @@ test("writes to cycles, KPIs and scores are limited to HR roles in the RBAC midd
   assert.match(src, /role !== "hr_admin" && role !== "hr_director"/);
 });
 
+test("POST /api/v1/employees refuses non-HR callers before it inserts", () => {
+  // The route creates employees. A signed-in employee must get 403 before any INSERT runs.
+  const route = /app\.post\("\/api\/v1\/employees",[\s\S]*?\n\}\);/.exec(src)?.[0] ?? "";
+  assert.ok(route, "POST /api/v1/employees not found");
+  const guard = route.indexOf("if (!isHrRole(role))");
+  const insert = route.indexOf("INSERT INTO employees");
+  assert.notEqual(guard, -1, "POST /api/v1/employees has no HR-role check");
+  assert.ok(insert === -1 || guard < insert, "HR-role check comes after the insert");
+});
+
 test("GET /api/v1/leaves limits non-approvers to their own requests", () => {
   const route = /app\.get\("\/api\/v1\/leaves"[\s\S]*?\n\}\);/.exec(src)?.[0] ?? "";
   assert.match(route, /isDecider\(role\)/);

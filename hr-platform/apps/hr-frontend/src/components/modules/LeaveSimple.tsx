@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { countWorkingDays, isDecider, type AccessRole } from "@hr-platform/shared";
 import { createMemoryLeaveApi, httpLeaveApi, type LeaveApi, type LeaveBalance, type LeaveRequestView } from "../../lib/leaveApi";
+import { formatDate } from "../../utils/date";
+import { LeaveLoadStrip } from "./LeaveLoadStrip";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 
 // Plain Leave screens: My leave, Request leave, Approvals, Team calendar. Standard controls, text status
 // labels, no decoration. Visual language matches PlainShell.
@@ -43,8 +46,7 @@ function Status({ value }: { value: string }) {
   );
 }
 
-const fmt = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+const fmt = (iso: string) => formatDate(iso);
 const range = (r: { startDate: string; endDate: string }) => (r.startDate === r.endDate ? fmt(r.startDate) : `${fmt(r.startDate)} to ${fmt(r.endDate)}`);
 
 function useLoad<T>(load: () => Promise<T>, deps: React.DependencyList) {
@@ -102,6 +104,7 @@ export const LeaveSimple: React.FC<LeaveSimpleProps> = ({ api, user }) => {
   return (
     <div style={S.page}>
       <h1 style={S.h1}>Leave</h1>
+      <LeaveMiniDashboard api={api} onOpenFull={() => setTab("mine")} />
       <div role="tablist" aria-label="Leave sections" style={S.tabs}>
         {tabs.map((t) => (
           <button
@@ -276,6 +279,7 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
   const [half, setHalf] = useState(false);
   const [halfPeriod, setHalfPeriod] = useState<"morning" | "afternoon">("morning");
   const [reason, setReason] = useState("");
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -298,6 +302,18 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
       reason: reason.trim(),
       ...(half ? { halfDay: halfPeriod } : {}),
     });
+    if (r.ok && attachmentFile && r.id) {
+      const up = await fetch(`/api/leave/requests/${r.id}/evidence`, {
+        method: "POST",
+        headers: { "Content-Type": attachmentFile.type },
+        body: attachmentFile,
+      });
+      if (!up.ok) {
+        setSubmitting(false);
+        setFormError("Leave request created, but attachment upload failed. You can retry from My leave.");
+        return;
+      }
+    }
     setSubmitting(false);
     if (r.ok) onDone();
     else setFormError(r.error);
@@ -353,6 +369,20 @@ function RequestForm({ api, onDone }: { api: LeaveApi; onDone: () => void }) {
           <label style={S.field}>
             Reason (optional)
             <textarea value={reason} maxLength={500} rows={3} onChange={(e) => setReason(e.target.value)} style={{ ...S.input, minHeight: "80px" }} />
+          </label>
+          <label style={S.field}>
+            Supporting document — doctor&apos;s note or handover document (JPEG, PNG or PDF, up to 5 MB)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={(e) => setAttachmentFile(e.target.files?.[0] ?? null)}
+              style={{ fontSize: "14px" }}
+            />
+            {attachmentFile && (
+              <span style={{ fontSize: "13px", color: C.ok }}>
+                Attached: {attachmentFile.name} ({Math.max(1, Math.round(attachmentFile.size / 1024))} KB)
+              </span>
+            )}
           </label>
           {formError && <p role="alert" style={{ color: C.danger, fontWeight: 600 }}>{formError}</p>}
           <button type="submit" style={S.primary} disabled={submitting}>{submitting ? "Submitting…" : "Submit request"}</button>
@@ -987,7 +1017,7 @@ function BalanceAdjust() {
               <tbody>
                 {history.map((h) => (
                   <tr key={h.id}>
-                    <td style={S.td}>{new Date(h.createdAt).toLocaleDateString("en-GB")}</td>
+                    <td style={S.td}>{formatDate(h.createdAt)}</td>
                     <td style={S.td}>{h.leaveType}</td>
                     <td style={S.td}>{h.year}</td>
                     <td style={S.td}>{h.days > 0 ? `+${h.days}` : h.days}</td>
@@ -1177,6 +1207,14 @@ function LeaveRoster({ scope, from, to }: { scope: "team" | "company"; from: str
       {error && <p role="alert" style={{ color: C.danger }}>{error}</p>}
       {rows === null && !error && <p role="status">Loading…</p>}
       {rows && rows.length === 0 && <p style={S.note}>No leave in this period.</p>}
+      {rows && rows.length > 0 && (
+        <LeaveLoadStrip
+          rows={rows}
+          from={from}
+          to={to}
+          caption={scope === "team" ? "Team leave load by day: darker means more people off" : "Company leave load by day: darker means more people off"}
+        />
+      )}
       {rows && rows.length > 0 && (
         <table style={S.table}>
           <caption style={{ textAlign: "left", position: "absolute", left: "-9999px" }}>{scope === "team" ? "My team leave" : "Company leave"}</caption>
