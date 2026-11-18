@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -71,7 +71,7 @@ interface MyPerformanceScreenProps {
   realSession?: boolean;
 }
 
-export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
+export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSession = false }) => {
   const [activeTab, setActiveTab] = useState<
     "self_review" | "my_skills" | "objectives" | "my_cascade" | "assigned_reviews" | "aligned_tasks" | "history"
   >("self_review");
@@ -107,6 +107,47 @@ export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = () => {
   );
   const [selfSubmitted, setSelfSubmitted] = useState<boolean>(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [liveGoalsSynced, setLiveGoalsSynced] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!realSession) return;
+    let cancelled = false;
+    fetch("/api/hr/performance/goals?mine=1", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { results?: Array<Record<string, unknown>> } | null) => {
+        if (cancelled || !data?.results) return;
+        setLiveGoalsSynced(true);
+        if (data.results.length > 0) {
+          setObjectives(
+            data.results.map((g, idx) => ({
+              id: idx + 1,
+              title: String(g.title ?? "Untitled Goal"),
+              framework: (g.framework === "OKR" ? "OKR" : "BSC") as "BSC" | "OKR",
+              perspective: (g.perspective_code === "FINANCIAL"
+                ? "Financial"
+                : g.perspective_code === "CUSTOMER"
+                ? "Customer"
+                : g.perspective_code === "LEARNING_GROWTH"
+                ? "Learning & Growth"
+                : "Internal Process") as MyObjective["perspective"],
+              weight: Number(g.weight_pct ?? 25),
+              target: String(g.description ?? "Cycle target"),
+              progress: Number(g.progress_pct ?? 0),
+              status:
+                g.status === "ACTIVE" || g.status === "COMPLETED"
+                  ? "Approved"
+                  : g.status === "PENDING_APPROVAL"
+                  ? "In Review"
+                  : "Draft",
+            })),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [realSession]);
 
   // Objectives State
   const [objectives, setObjectives] = useState<MyObjective[]>([

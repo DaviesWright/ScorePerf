@@ -36,6 +36,7 @@ import { createAuthRoutes } from "./auth-routes";
 import { createReviewerRoutes } from "./reviewer-routes";
 import { createAssetRoutes, openRecoveryTask, overdueAssets } from "./assets-routes";
 import { createOrgRoutes } from "./org-routes";
+import { createPerformanceRoutes } from "./performance-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2970,6 +2971,9 @@ app.route("/", createAssetRoutes(getSql));
 
 // Organogram: generated tree and HR job-title entry. See org-routes.ts.
 app.route("/", createOrgRoutes(getSql));
+
+// Canonical Performance Core: goals, measures, alignment, check-ins, scoring snapshots & calibration. See performance-routes.ts.
+app.route("/", createPerformanceRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {

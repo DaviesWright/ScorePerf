@@ -900,6 +900,32 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     };
   }, [objectiveRequests]);
 
+  const [livePerformanceStats, setLivePerformanceStats] = useState<{
+    goalsCount: number;
+    assessmentsCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/hr/performance/goals", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/hr/performance/assessments", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([gData, aData]: [{ results?: unknown[] } | null, { results?: unknown[] } | null]) => {
+        if (cancelled) return;
+        if (gData?.results || aData?.results) {
+          setLivePerformanceStats({
+            goalsCount: gData?.results?.length ?? 0,
+            assessmentsCount: aData?.results?.length ?? 0,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
       {/* Platform Header & Navigation Tabs */}
@@ -910,6 +936,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <span style={{ fontSize: typography.sizes.xs, fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Enterprise Performance Suite
               </span>
+              {livePerformanceStats && (
+                <Badge variant="success" size="sm">
+                  Live DB · {livePerformanceStats.goalsCount} Goals · {livePerformanceStats.assessmentsCount} Assessments
+                </Badge>
+              )}
             </div>
             <h1
               style={{
