@@ -9,7 +9,7 @@
 //   - 54 Performance Appraisal Records & 162 Goals across 3 Cycles
 // ==============================================================================
 
-import type { ArchitecturalRoleCode, ExperienceContext, ScopeType } from "../domain/orgCore";
+import type { ArchitecturalRoleCode, EmploymentEdge, ExperienceContext, ScopeType } from "../domain/orgCore";
 
 export interface SeedDepartment {
   id: string;
@@ -54,6 +54,8 @@ export interface SeedEmployee {
   isActive: boolean;
   // Task 3: Three-Experience Architecture assignment
   architecturalRole: ArchitecturalRoleCode;
+  architecturalRoles?: ArchitecturalRoleCode[];
+  assignedHrUnits?: { unitId: string; unitName: string }[];
   experiences: ExperienceContext[];
   defaultExperience: ExperienceContext;
   scopeType: ScopeType;
@@ -520,3 +522,15 @@ export const SEEDED_PERFORMANCE_RECORDS: SeedPerformanceRecord[] = SEEDED_EMPLOY
     };
   }
 );
+
+export const SEEDED_EMPLOYMENT_EDGES: EmploymentEdge[] = SEEDED_EMPLOYEES.map((emp) => ({
+  id: `SEED-EDGE-${emp.id}`,
+  companyId: "COMP-SENRAB-GH",
+  employeeId: String(emp.id),
+  positionId: emp.positionId,
+  orgUnitId: emp.departmentId,
+  managerEmployeeId: emp.managerId ? String(emp.managerId) : null,
+  startDate: emp.joinDate,
+  endDate: null,
+  changeReason: "Seeded Org Hierarchy",
+}));

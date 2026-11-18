@@ -37,7 +37,7 @@ import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementVie
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
 import { OrganogramView } from "../modules/OrganogramView";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
-import { SEEDED_EMPLOYEES, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
+import { SEEDED_EMPLOYEES, SEEDED_EMPLOYMENT_EDGES, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 import {
   ArchitecturalRoleCode,
   availableContexts,
@@ -226,27 +226,25 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         )
       : undefined;
 
+    // Base held roles come from the user's record (or demo login role), NOT the currently active persona,
+    // so switching to ESS does not drop MSS/HRMS from the ContextSwitcher.
+    const demoBasePersona = initialUser?.persona ?? "hr_director";
     const roles: ArchitecturalRoleCode[] = matchedSeed
-      ? [matchedSeed.architecturalRole]
-      : persona === "employee"
+      ? matchedSeed.architecturalRoles ?? [matchedSeed.architecturalRole]
+      : demoBasePersona === "employee"
       ? ["EMPLOYEE"]
-      : persona === "line_manager"
+      : demoBasePersona === "line_manager"
       ? ["DEPARTMENT_HEAD"]
-      : persona === "hr_admin"
-      ? ["HR_MANAGER"]
-      : ["SUPER_ADMIN"];
-
-    // Demo HR Director / Super Admin holds ESS + MSS + HRMS when using demo login
-    if (!matchedSeed && (persona === "hr_director" || persona === "hr_admin")) {
-      if (!roles.includes("HR_MANAGER")) roles.push("HR_MANAGER");
-    }
+      : ["SUPER_ADMIN", "HR_MANAGER"];
 
     return availableContexts({
       employeeId: String(matchedSeed?.id ?? "EMP-PKB-001"),
       roles,
       departmentName: matchedSeed?.departmentName ?? currentUser?.department ?? "Platform & Edge Engineering",
+      assignedHrUnits: matchedSeed?.assignedHrUnits,
+      edges: matchedSeed ? SEEDED_EMPLOYMENT_EDGES : undefined,
     });
-  }, [currentUser, persona]);
+  }, [currentUser, initialUser]);
 
   const activeContext: UserContextTuple = React.useMemo(() => {
     if (activeContextId) {
