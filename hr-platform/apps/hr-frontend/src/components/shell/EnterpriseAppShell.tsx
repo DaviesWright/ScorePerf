@@ -775,6 +775,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             showNewLeaveModal={showLeaveModalDirectly}
             onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
             onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+            userName={currentUser.name}
+            userRole={currentUser.role}
           />
         )
       )}

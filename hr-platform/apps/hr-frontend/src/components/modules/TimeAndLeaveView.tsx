@@ -14,6 +14,7 @@ import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
 import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
 import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 import { MyLeaveScreen } from "./MyLeaveScreen";
+import { SEEDED_DEPARTMENTS, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 
 export type LeavePrincipalExperience =
   | "ess"
@@ -85,6 +86,8 @@ interface TimeAndLeaveViewProps {
   showNewLeaveModal?: boolean;
   onCloseNewLeaveModal?: () => void;
   onNavigateToWorkflows?: () => void;
+  userName?: string;
+  userRole?: string;
 }
 
 export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
@@ -92,7 +95,43 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   showNewLeaveModal = false,
   onCloseNewLeaveModal,
   onNavigateToWorkflows,
+  userName = "Paa Kwesi Barnes",
+  userRole = "HR Manager",
 }) => {
+  // Addendum v1.1 (CON-001..CON-010): Role Console vs My ESS mode, Scope Selector & "As at" timestamp
+  const [consoleMode, setConsoleMode] = useState<"role" | "ess">(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "ess") {
+      return "ess";
+    }
+    return "role";
+  });
+  const [scopeDept, setScopeDept] = useState<string>("COMPANY");
+  const [asAtTime, setAsAtTime] = useState<string>(() =>
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+    ", " +
+    new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+  );
+  const [onLeaveSearch, setOnLeaveSearch] = useState<string>("");
+
+  const greetingPrefix = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  })();
+
+  const handleModeSwitch = (nextMode: "role" | "ess") => {
+    setConsoleMode(nextMode);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("mode", nextMode);
+      window.history.replaceState(null, "", url.toString());
+    }
+    void fetch("/api/hr/leave/dashboard/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: nextMode, roleContext: userRole }),
+    }).catch(() => {});
+  };
+
   // 5 Principal Experiences State
   const [activeExperience, setActiveExperience] = useState<LeavePrincipalExperience>("manager_workspace");
   const [showAllSubTabs, setShowAllSubTabs] = useState<boolean>(false);
@@ -116,7 +155,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     | "blocked_days"
     | "allowances"
     | "settings"
-  >("requests");
+  >("dashboard");
 
   // Relief Officer & Coverage Matrix State (Experience 2: Manager Workspace)
   const [reliefAssignments, setReliefAssignments] = useState([
@@ -502,8 +541,183 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     return leaves.filter((l) => l.status === "PENDING").length;
   }, [leaves]);
 
+  const currentlyOnLeaveRows = useMemo(() => {
+    const approved = SEEDED_LEAVE_REQUESTS.filter((r) => r.status === "APPROVED");
+    return approved
+      .filter((r) => (scopeDept === "COMPANY" ? true : r.department === scopeDept))
+      .filter((r) => {
+        if (!onLeaveSearch.trim()) return true;
+        const q = onLeaveSearch.toLowerCase();
+        return (
+          `${r.firstName} ${r.lastName}`.toLowerCase().includes(q) ||
+          r.staffId.toLowerCase().includes(q) ||
+          r.department.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 16)
+      .map((r, idx) => ({
+        ...r,
+        reliefManager: idx % 5 === 0 ? "Unassigned" : r.reliefOfficerName,
+        resumptionDate: r.endDate,
+        liveStatus: idx % 5 === 0 ? "Relief Gap" : "On Leave",
+      }));
+  }, [scopeDept, onLeaveSearch]);
+
+  const reliefGapCount = useMemo(
+    () => currentlyOnLeaveRows.filter((r) => r.reliefManager === "Unassigned").length,
+    [currentlyOnLeaveRows],
+  );
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
+      {/* Addendum v1.1 Role-Aware Welcome Header (CON-006, CON-007, CON-009, A.2.2) */}
+      <div
+        style={{
+          backgroundColor: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: radii.lg,
+          padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "1rem",
+          boxShadow: shadows.xs,
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.2rem" }}>
+            <h1 style={{ margin: 0, fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary }}>
+              {greetingPrefix}, {userName}
+            </h1>
+            <Badge variant={consoleMode === "ess" ? "success" : "info"} size="sm">
+              {consoleMode === "ess" ? "Employee (ESS)" : userRole}
+            </Badge>
+          </div>
+          <div style={{ fontSize: "11px", color: colors.textMuted, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span>As at {asAtTime}</span>
+            <button
+              type="button"
+              onClick={() =>
+                setAsAtTime(
+                  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
+                    ", " +
+                    new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+                )
+              }
+              style={{ border: "none", background: "none", color: colors.indigoAction, fontSize: "11px", fontWeight: 600, cursor: "pointer", padding: 0 }}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          {consoleMode === "role" && (
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: typography.sizes.xs, fontWeight: 600, color: colors.textSecondary }}>
+              <span>Scope:</span>
+              <select
+                aria-label="Scope selector"
+                value={scopeDept}
+                onChange={(e) => setScopeDept(e.target.value)}
+                style={{
+                  padding: "0.35rem 0.65rem",
+                  borderRadius: radii.md,
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: colors.surface,
+                  fontSize: typography.sizes.xs,
+                  fontWeight: 600,
+                }}
+              >
+                <option value="COMPANY">Company-wide (All Departments)</option>
+                {SEEDED_DEPARTMENTS.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    Department: {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          <div
+            role="group"
+            aria-label="Console Mode Switcher"
+            style={{
+              display: "inline-flex",
+              padding: "2px",
+              borderRadius: radii.md,
+              border: `1px solid ${colors.border}`,
+              backgroundColor: colors.bgApp,
+            }}
+          >
+            <button
+              type="button"
+              aria-pressed={consoleMode === "role"}
+              onClick={() => handleModeSwitch("role")}
+              style={{
+                padding: "0.32rem 0.75rem",
+                borderRadius: radii.sm,
+                border: "none",
+                fontSize: typography.sizes.xs,
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: consoleMode === "role" ? colors.indigoAction : "transparent",
+                color: consoleMode === "role" ? "#ffffff" : colors.textSecondary,
+              }}
+            >
+              HR Console
+            </button>
+            <button
+              type="button"
+              aria-pressed={consoleMode === "ess"}
+              onClick={() => handleModeSwitch("ess")}
+              style={{
+                padding: "0.32rem 0.75rem",
+                borderRadius: radii.sm,
+                border: "none",
+                fontSize: typography.sizes.xs,
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: consoleMode === "ess" ? colors.emeraldDark : "transparent",
+                color: consoleMode === "ess" ? "#ffffff" : colors.textSecondary,
+              }}
+            >
+              My ESS
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* CON-004 & CON-005: In ESS mode, render ONLY the logged-in employee's own leave data + role shortcut */}
+      {consoleMode === "ess" ? (
+        <div>
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem 1rem",
+              borderRadius: radii.md,
+              backgroundColor: colors.emeraldSubtle,
+              border: `1px solid ${colors.emeraldBorder}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.5rem",
+              fontSize: typography.sizes.xs,
+              color: colors.emeraldDark,
+              fontWeight: 600,
+            }}
+          >
+            <span>ESS Self-Service View — showing your personal leave balances, applications, and history only.</span>
+            <Button variant="outline" size="sm" onClick={() => handleModeSwitch("role")}>
+              Return to HR Console →
+            </Button>
+          </div>
+          <MyLeaveScreen />
+        </div>
+      ) : (
+        <>
       {/* Header & Sub-Navigation */}
       <div style={{ marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
@@ -780,6 +994,97 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
               setActiveTab("requests");
             }}
           />
+
+          {/* CON-001 & CON-002: Employees Currently on Leave (Department-wise & Company-wide) */}
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.lg,
+              padding: "1.25rem",
+              marginBottom: "1.5rem",
+              boxShadow: shadows.xs,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "0.85rem" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 800, color: colors.textPrimary }}>
+                  Employees Currently on Leave ({currentlyOnLeaveRows.length})
+                </h2>
+                <p style={{ margin: "0.15rem 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
+                  Scope: {scopeDept === "COMPANY" ? "Company-wide" : `Department · ${scopeDept}`} · Includes relief manager &amp; expected resumption.
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {reliefGapCount > 0 && (
+                  <Badge variant="warning" size="sm">
+                    {reliefGapCount} Relief Coverage Gap{reliefGapCount === 1 ? "" : "s"}
+                  </Badge>
+                )}
+                <input
+                  type="text"
+                  placeholder="Search employee or ID..."
+                  value={onLeaveSearch}
+                  onChange={(e) => setOnLeaveSearch(e.target.value)}
+                  style={{
+                    padding: "0.35rem 0.65rem",
+                    borderRadius: radii.md,
+                    border: `1px solid ${colors.border}`,
+                    fontSize: typography.sizes.xs,
+                    width: "190px",
+                  }}
+                />
+              </div>
+            </div>
+
+            {currentlyOnLeaveRows.length === 0 ? (
+              <p style={{ margin: 0, fontSize: typography.sizes.sm, color: colors.textMuted }}>
+                No employees are currently on leave in {scopeDept === "COMPANY" ? "Company-wide scope" : scopeDept}.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: typography.sizes.xs }}>
+                  <thead>
+                    <tr style={{ backgroundColor: colors.bgApp, borderBottom: `1px solid ${colors.border}`, textAlign: "left" }}>
+                      {["Employee", "ID", "Department", "Leave Type", "Start Date", "End Date", "Expected Resumption", "Days", "Relief Manager", "Status"].map((h) => (
+                        <th key={h} style={{ padding: "0.55rem 0.65rem", fontWeight: 700, color: colors.textSecondary, whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentlyOnLeaveRows.map((row) => (
+                      <tr key={row.id} style={{ borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                        <td style={{ padding: "0.55rem 0.65rem", fontWeight: 700, color: colors.textPrimary }}>
+                          {row.firstName} {row.lastName}
+                        </td>
+                        <td style={{ padding: "0.55rem 0.65rem", color: colors.textMuted }}>{row.staffId}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", color: colors.textSecondary }}>{row.department}</td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>{row.leaveType}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.startDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.endDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", whiteSpace: "nowrap" }}>{formatDate(row.resumptionDate)}</td>
+                        <td style={{ padding: "0.55rem 0.65rem", fontWeight: 700 }}>{row.requestedDays}d</td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>
+                          {row.reliefManager === "Unassigned" ? (
+                            <Badge variant="warning" size="sm">Unassigned</Badge>
+                          ) : (
+                            <span style={{ fontWeight: 600, color: colors.indigoPrimary }}>{row.reliefManager}</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "0.55rem 0.65rem" }}>
+                          <Badge variant={row.liveStatus === "Relief Gap" ? "warning" : "success"} size="sm">
+                            {row.liveStatus}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           {/* Top Metric Tiles (Vibrant Colors & Left Accent Lines) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
             {/* Card 1: On Leave Today */}
@@ -2959,6 +3264,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );
