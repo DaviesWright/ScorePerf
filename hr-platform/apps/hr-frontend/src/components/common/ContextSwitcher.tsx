@@ -128,13 +128,19 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
           style={{
             fontSize: "10px",
             fontWeight: 700,
-            color: colors.textMuted,
-            padding: "0.05rem 0.3rem",
-            borderRadius: radii.sm,
-            backgroundColor: colors.surfaceSubtle,
+            color: accentColor,
+            padding: "0.08rem 0.4rem",
+            borderRadius: radii.full,
+            backgroundColor:
+              activeContext.experience === "ESS"
+                ? colors.emeraldSubtle
+                : activeContext.experience === "MSS"
+                ? colors.indigoSubtle
+                : colors.surfaceSubtle,
           }}
         >
           {activeContext.experience}
+          {activeContext.experience !== "ESS" ? ` · ${activeContext.scopeLabel}` : ""}
         </span>
         <Icons.ChevronDown size={13} color={colors.textMuted} />
       </button>

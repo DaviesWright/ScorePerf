@@ -3,7 +3,7 @@ import { colors, typography, radii, shadows, surfaceAccent, SurfaceKind } from "
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
-import { ContextSwitcher, ContextBadge } from "../common/ContextSwitcher";
+import { ContextSwitcher } from "../common/ContextSwitcher";
 import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
 import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 import {
@@ -184,14 +184,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       {/* Right: Experience Context Switcher & Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", position: "relative" }}>
         {activeContext && onSelectContext ? (
-          <>
-            <ContextSwitcher
-              contexts={availableContexts}
-              activeContext={activeContext}
-              onSelectContext={onSelectContext}
-            />
-            <ContextBadge activeContext={activeContext} />
-          </>
+          <ContextSwitcher
+            contexts={availableContexts}
+            activeContext={activeContext}
+            onSelectContext={onSelectContext}
+          />
         ) : null}
         {/* Unified Dede AI & Assistant Trigger */}
         <Button

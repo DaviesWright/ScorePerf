@@ -5,7 +5,7 @@ import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
 import { Icons } from "../../design-system/Icons";
 import type { UserContextTuple } from "../../domain/orgCore";
-import { ContextBadge, ContextNotice, ContextSwitcher } from "../common/ContextSwitcher";
+import { ContextNotice, ContextSwitcher } from "../common/ContextSwitcher";
 
 // Plain application frame: header, text-only navigation, content. No icons, badges, gradients, shadows,
 // animation, command palette, AI drawer or persona switcher. Neutral greys with one accent colour.
@@ -219,6 +219,7 @@ export const PlainShell: React.FC<PlainShellProps> = ({
   const isOpen = (label: string) => openState[label] ?? true;
   const roleTitle = ROLE_TITLES[persona] ?? ROLE_TITLES[user.role] ?? user.role;
   const initials = (showName ? user.name : roleTitle)
+    .replace(/[^A-Za-z\s]/g, " ")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -246,15 +247,12 @@ export const PlainShell: React.FC<PlainShellProps> = ({
         )}
         <div className="ps-header-actions">
           {activeContext && onSelectContext && (
-            <>
-              <ContextSwitcher
-                contexts={availableContexts}
-                activeContext={activeContext}
-                onSelectContext={onSelectContext}
-                compact
-              />
-              <ContextBadge activeContext={activeContext} />
-            </>
+            <ContextSwitcher
+              contexts={availableContexts}
+              activeContext={activeContext}
+              onSelectContext={onSelectContext}
+              compact
+            />
           )}
           {onOpenDede && (
             <button type="button" className="ps-ask" onClick={onOpenDede}>
