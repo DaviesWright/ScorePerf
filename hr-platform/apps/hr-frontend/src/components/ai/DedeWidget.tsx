@@ -27,6 +27,52 @@ export function DedeWidget() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [pos, setPos] = useState<{ right: number; bottom: number }>(() => {
+    if (typeof window === "undefined") return { right: 24, bottom: 24 };
+    try {
+      const saved = localStorage.getItem("scoreview_dede_pos");
+      if (saved) return JSON.parse(saved) as { right: number; bottom: number };
+    } catch { }
+    return { right: 24, bottom: 24 };
+  });
+  const dragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number; moved: boolean } | null>(null);
+
+  const startDrag = (e: React.PointerEvent) => {
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startRight: pos.right,
+      startBottom: pos.bottom,
+      moved: false,
+    };
+    const onMove = (ev: PointerEvent) => {
+      if (!dragRef.current) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      const dy = ev.clientY - dragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragRef.current.moved = true;
+      const maxRight = Math.max(24, window.innerWidth - 180);
+      const maxBottom = Math.max(24, window.innerHeight - 80);
+      const next = {
+        right: Math.min(maxRight, Math.max(12, dragRef.current.startRight - dx)),
+        bottom: Math.min(maxBottom, Math.max(12, dragRef.current.startBottom - dy)),
+      };
+      setPos(next);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (dragRef.current?.moved) {
+        try {
+          localStorage.setItem("scoreview_dede_pos", JSON.stringify(pos));
+        } catch { }
+      }
+      setTimeout(() => {
+        dragRef.current = null;
+      }, 0);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
   const accent = isStaging ? "#0f5c4d" : "#4f46e5";
@@ -89,12 +135,17 @@ export function DedeWidget() {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open Dede, the ScoReview assistant"
+        onPointerDown={startDrag}
+        onClick={() => {
+          if (dragRef.current?.moved) return;
+          setOpen(true);
+        }}
+        title="Click to ask Dede, or drag to move anywhere on the page"
+        aria-label="Open Dede, the ScoReview assistant (draggable)"
         style={{
-          position: "fixed", right: "24px", bottom: "24px", zIndex: 60, display: "flex", alignItems: "center", gap: "10px",
+          position: "fixed", right: `${pos.right}px`, bottom: `${pos.bottom}px`, zIndex: 60, display: "flex", alignItems: "center", gap: "10px",
           padding: "6px 16px 6px 6px", border: `1px solid ${accentBorder}`, borderRadius: "999px", background: accent, color: "#ffffff",
-          font: "600 14px/1 Inter, sans-serif", cursor: "pointer", boxShadow: accentShadow,
+          font: "600 14px/1 Inter, sans-serif", cursor: "grab", boxShadow: accentShadow, touchAction: "none", userSelect: "none",
         }}
       >
         {avatar(32)}
@@ -108,12 +159,16 @@ export function DedeWidget() {
     <section
       aria-label="Dede, ScoReview assistant"
       style={{
-        position: "fixed", right: "24px", bottom: "24px", zIndex: 60, width: "min(380px, calc(100vw - 32px))", height: "min(520px, calc(100vh - 48px))",
+        position: "fixed", right: `${pos.right}px`, bottom: `${pos.bottom}px`, zIndex: 60, width: "min(380px, calc(100vw - 32px))", height: "min(520px, calc(100vh - 48px))",
         display: "flex", flexDirection: "column", background: C.surface, color: C.text, border: `1px solid ${C.border}`,
         borderRadius: "14px", boxShadow: "0 16px 40px rgba(28, 27, 25, 0.16)", overflow: "hidden", font: "400 14px/1.45 Inter, sans-serif",
       }}
     >
-      <header style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+      <header
+        onPointerDown={startDrag}
+        title="Drag to move Dede window"
+        style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", borderBottom: `1px solid ${C.border}`, cursor: "grab", touchAction: "none" }}
+      >
         {avatar(40)}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: "15px" }}>Dede</div>

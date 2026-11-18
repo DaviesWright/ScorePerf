@@ -169,7 +169,7 @@ function getContextualNav(
           label: "My Records & Reports",
           icon: Icons.FileText,
           items: [
-            { id: "ess-bank", label: "Bank & Tax Details", view: "my_profile" },
+            { id: "ess-bank", label: "My Profile & Bank/Tax", view: "my_profile" },
             { id: "ess-docs", label: "Document Centre", view: "document_centre" },
             { id: "ess-payslips", label: "Payslips", view: "payslips" },
             { id: "ess-reports", label: "My Reports", view: "reports_analytics" },
@@ -547,7 +547,7 @@ export const PlainShell: React.FC<PlainShellProps> = ({
                       cursor: "pointer",
                     }}
                   >
-                    My Profile &amp; Bank Details
+                    My Profile &amp; Bank/Tax Details
                   </button>
                   <button
                     type="button"
@@ -739,6 +739,30 @@ export const PlainShell: React.FC<PlainShellProps> = ({
               );
             })}
           </ul>
+
+          {onOpenDede && (
+            <div style={{ marginTop: "auto", paddingTop: "0.85rem", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
+              <button
+                type="button"
+                className="ps-nav-btn"
+                title="Ask Dede AI Assistant"
+                onClick={() => {
+                  setMobileOpen(false);
+                  onOpenDede();
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  justifyContent: collapsed ? "center" : "flex-start",
+                }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Icons.Sparkles size={15} color={accentColor} />
+                  {!collapsed && <span style={{ fontWeight: 600 }}>Ask Dede</span>}
+                </span>
+              </button>
+            </div>
+          )}
         </nav>
         <main id="ps-content" className="ps-main" tabIndex={-1}>
           {children}

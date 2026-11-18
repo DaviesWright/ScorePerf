@@ -78,7 +78,10 @@ const PendingRow: React.FC<{ request: ChangeRequest; onDecided: () => void }> = 
   );
 };
 
-export const ProfileChangesScreen: React.FC<{ user: { id: string; persona: string }; realSession: boolean }> = ({ user }) => {
+export const ProfileChangesScreen: React.FC<{
+  user: { id: string; persona: string; name?: string; email?: string; role?: string; department?: string; location?: string };
+  realSession: boolean;
+}> = ({ user }) => {
   const hr = isHr(user.persona);
   const details = useLoad<DetailsResponse>("/api/hr/profile/details");
   const pending = useLoad<{ results: ChangeRequest[] }>(hr ? "/api/hr/profile/changes/pending" : null);
@@ -122,8 +125,21 @@ export const ProfileChangesScreen: React.FC<{ user: { id: string; persona: strin
 
   return (
     <div style={{ padding: "1.5rem", maxWidth: 960 }}>
-      <h1 style={{ fontSize: 22, margin: "0 0 0.25rem" }}>Bank and tax details</h1>
-      <Muted>To change any of these, ask HR here. Your change is saved only after HR approves it.</Muted>
+      <h1 style={{ fontSize: 22, margin: "0 0 0.25rem" }}>My Profile &amp; Bank / Tax Details</h1>
+      <Muted>Your personal employee profile and payroll bank/tax details on one page. Sensitive bank/tax changes require HR approval.</Muted>
+
+      <section style={card} aria-labelledby="personal-profile-heading">
+        <h2 id="personal-profile-heading" style={{ fontSize: 18, margin: "0 0 0.65rem" }}>
+          Personal Profile
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", fontSize: 14 }}>
+          <div><div style={{ fontSize: 11, color: C.muted }}>Full Name</div><strong>{user.name || "Employee"}</strong></div>
+          <div><div style={{ fontSize: 11, color: C.muted }}>Email</div><strong>{user.email || "—"}</strong></div>
+          <div><div style={{ fontSize: 11, color: C.muted }}>Role / Title</div><strong>{user.role || user.persona}</strong></div>
+          <div><div style={{ fontSize: 11, color: C.muted }}>Department</div><strong>{user.department || "General"}</strong></div>
+          <div><div style={{ fontSize: 11, color: C.muted }}>Office / Location</div><strong>{user.location || "Accra HQ"}</strong></div>
+        </div>
+      </section>
 
       <section style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
         <div>
