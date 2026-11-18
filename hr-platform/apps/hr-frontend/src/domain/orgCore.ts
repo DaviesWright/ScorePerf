@@ -576,3 +576,252 @@ export const INITIAL_ARCH_AUDIT_LOG: ScopedAuditEntry[] = [
     timestamp: "2026-11-17T14:22:00Z",
   },
 ];
+
+// ==============================================================================
+// Context Switching & Multi-Role Experience Model (FR-CTX-001..016, VAL-CTX-001..008)
+// ==============================================================================
+export interface UserContextTuple {
+  contextId: string;
+  experience: ExperienceContext;
+  role: ArchitecturalRoleCode;
+  scopeType: ScopeType;
+  scopeId: string | null;
+  scopeLabel: string;
+  subLabel: string;
+  permissions: string[];
+  isReadOnly?: boolean;
+  subtreeCount?: number;
+}
+
+export interface ContextToken {
+  userId: string;
+  employeeId: string;
+  contextId: string;
+  context: ExperienceContext;
+  role: ArchitecturalRoleCode;
+  scopeType: ScopeType;
+  scopeId: string | null;
+  permissions: string[];
+  issuedAt: string;
+  expiresAt: string;
+}
+
+export interface ContextSwitchAuditEntry {
+  id: string;
+  event: "context_switch";
+  actor: string;
+  fromContext: ExperienceContext | null;
+  toContext: ExperienceContext;
+  contextId: string;
+  scopeType: ScopeType;
+  scopeId: string | null;
+  scopeLabel: string;
+  timestamp: string;
+}
+
+const MSS_ROLES: ArchitecturalRoleCode[] = [
+  "SUPERVISOR",
+  "DEPARTMENT_HEAD",
+  "DIVISION_HEAD",
+  "HR_MANAGER",
+  "SUPER_ADMIN",
+];
+
+const HRMS_ROLES: ArchitecturalRoleCode[] = [
+  "HR_OFFICER",
+  "HR_MANAGER",
+  "EXECUTIVE",
+  "SUPER_ADMIN",
+];
+
+const MSS_ROLE_ORDER: Record<string, number> = {
+  DIVISION_HEAD: 1,
+  DEPARTMENT_HEAD: 2,
+  SUPERVISOR: 3,
+  HR_MANAGER: 4,
+  SUPER_ADMIN: 5,
+};
+
+const HRMS_ROLE_ORDER: Record<string, number> = {
+  SUPER_ADMIN: 1,
+  EXECUTIVE: 2,
+  HR_MANAGER: 3,
+  HR_OFFICER: 4,
+};
+
+/**
+ * FR-CTX-001..004: Compute a user's available contexts from role assignments and the org graph.
+ * Ordered: ESS first, then MSS (by org level), then HRMS (by role level).
+ */
+export const availableContexts = (params: {
+  employeeId: string;
+  roles: ArchitecturalRoleCode[];
+  departmentName?: string;
+  assignedHrUnits?: { unitId: string; unitName: string }[];
+  asOfDate?: string;
+  edges?: EmploymentEdge[];
+}): UserContextTuple[] => {
+  const {
+    employeeId,
+    roles,
+    departmentName = "Engineering Dept",
+    assignedHrUnits = [{ unitId: "OU-DIV-TECH", unitName: "Unit A" }],
+    asOfDate = "2026-11-17",
+    edges = EMPLOYMENT_GRAPH_EDGES,
+  } = params;
+
+  const contexts: UserContextTuple[] = [];
+
+  // 1. ESS is always present for every user (FR-CTX-002)
+  contexts.push({
+    contextId: `ctx:ESS:EMPLOYEE:${employeeId}`,
+    experience: "ESS",
+    role: "EMPLOYEE",
+    scopeType: "SELF",
+    scopeId: employeeId,
+    scopeLabel: "Personal",
+    subLabel: "Self-Service",
+    permissions: ROLE_EXPERIENCE_MATRIX.EMPLOYEE.permissions.filter((p) => p.startsWith("ess.")),
+  });
+
+  // 2. MSS appears only if user holds an MSS-granting role AND has >= 1 active report as of today (FR-CTX-003)
+  const heldMssRoles = roles
+    .filter((r) => MSS_ROLES.includes(r))
+    .sort((a, b) => (MSS_ROLE_ORDER[a] ?? 99) - (MSS_ROLE_ORDER[b] ?? 99));
+
+  if (heldMssRoles.length > 0) {
+    const scope = resolveScope(employeeId, asOfDate, edges);
+    if (scope.subtree.length > 0) {
+      const primaryMssRole = heldMssRoles[0];
+      const spec = ROLE_EXPERIENCE_MATRIX[primaryMssRole];
+      contexts.push({
+        contextId: `ctx:MSS:${primaryMssRole}:${departmentName.replace(/\s+/g, "_")}`,
+        experience: "MSS",
+        role: primaryMssRole,
+        scopeType: spec.scopeType,
+        scopeId: spec.assignedOrgUnitIds?.[0] ?? employeeId,
+        scopeLabel: departmentName,
+        subLabel: `${departmentName} (${scope.subtree.length} ${scope.subtree.length === 1 ? "report" : "reports"})`,
+        permissions: spec.permissions.filter((p) => p.startsWith("mss.") || p === "*"),
+        subtreeCount: scope.subtree.length,
+      });
+    }
+  }
+
+  // 3. HRMS appears per HR role assignment, with scope derived from role / assigned units (FR-CTX-004)
+  const heldHrmsRoles = roles
+    .filter((r) => HRMS_ROLES.includes(r))
+    .sort((a, b) => (HRMS_ROLE_ORDER[a] ?? 99) - (HRMS_ROLE_ORDER[b] ?? 99));
+
+  for (const hRole of heldHrmsRoles) {
+    const spec = ROLE_EXPERIENCE_MATRIX[hRole];
+    if (hRole === "HR_OFFICER") {
+      for (const unit of assignedHrUnits) {
+        contexts.push({
+          contextId: `ctx:HRMS:HR_OFFICER:${unit.unitId}`,
+          experience: "HRMS",
+          role: "HR_OFFICER",
+          scopeType: "ORG_UNIT",
+          scopeId: unit.unitId,
+          scopeLabel: `HR Officer · ${unit.unitName}`,
+          subLabel: `HR Officer · ${unit.unitName}`,
+          permissions: spec.permissions.filter((p) => p.startsWith("hrms.")),
+        });
+      }
+    } else {
+      const scopeLabel =
+        hRole === "EXECUTIVE"
+          ? "Executive · Read-Only"
+          : hRole === "SUPER_ADMIN"
+          ? "Super Admin · Company"
+          : "HR Manager · Company";
+      contexts.push({
+        contextId: `ctx:HRMS:${hRole}:COMPANY`,
+        experience: "HRMS",
+        role: hRole,
+        scopeType: "COMPANY",
+        scopeId: null,
+        scopeLabel,
+        subLabel: scopeLabel,
+        isReadOnly: spec.readOnlyInHrms,
+        permissions: spec.permissions.filter((p) => p.startsWith("hrms.") || p === "*"),
+      });
+    }
+  }
+
+  return contexts;
+};
+
+/**
+ * FR-CTX-006..010, VAL-CTX-001..004: Validate requested context_id against user's held contexts,
+ * issue a short-lived (30 min) scoped ContextToken, and emit an immutable audit entry.
+ */
+export const switchContext = (params: {
+  available: UserContextTuple[];
+  requestedContextId: string;
+  userId: string;
+  employeeId: string;
+  fromContext: ExperienceContext | null;
+}):
+  | {
+      ok: true;
+      context: UserContextTuple;
+      token: ContextToken;
+      audit: ContextSwitchAuditEntry;
+    }
+  | {
+      ok: false;
+      status: 403;
+      code: "VAL-CTX-001" | "VAL-CTX-004";
+      reason: string;
+    } => {
+  const match = params.available.find((c) => c.contextId === params.requestedContextId);
+  if (!match) {
+    return {
+      ok: false,
+      status: 403,
+      code: "VAL-CTX-001",
+      reason: `Context "${params.requestedContextId}" is not held by employee ${params.employeeId}. Arbitrary context claims are rejected (403).`,
+    };
+  }
+
+  const now = new Date();
+  const expires = new Date(now.getTime() + 30 * 60 * 1000);
+  const token: ContextToken = {
+    userId: params.userId,
+    employeeId: params.employeeId,
+    contextId: match.contextId,
+    context: match.experience,
+    role: match.role,
+    scopeType: match.scopeType,
+    scopeId: match.scopeId,
+    permissions: match.permissions,
+    issuedAt: now.toISOString(),
+    expiresAt: expires.toISOString(),
+  };
+
+  const audit: ContextSwitchAuditEntry = {
+    id: `AUD-CTX-${Date.now()}`,
+    event: "context_switch",
+    actor: params.userId,
+    fromContext: params.fromContext,
+    toContext: match.experience,
+    contextId: match.contextId,
+    scopeType: match.scopeType,
+    scopeId: match.scopeId,
+    scopeLabel: match.scopeLabel,
+    timestamp: now.toISOString(),
+  };
+
+  return { ok: true, context: match, token, audit };
+};
+
+export const contextToPersona = (
+  experience: ExperienceContext,
+  role?: ArchitecturalRoleCode,
+): "employee" | "line_manager" | "hr_admin" | "hr_director" => {
+  if (experience === "ESS") return "employee";
+  if (experience === "MSS") return "line_manager";
+  if (role === "EXECUTIVE" || role === "SUPER_ADMIN") return "hr_director";
+  return "hr_admin";
+};

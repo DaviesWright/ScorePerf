@@ -12,6 +12,7 @@ import { formatDate, formatDateRange } from "../../utils/date";
 import { AttendanceTimeZonesPanel } from "./AttendanceTimeZonesPanel";
 import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
 import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
+import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 import { MyLeaveScreen } from "./MyLeaveScreen";
 
 export type LeavePrincipalExperience =
@@ -773,6 +774,12 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === "dashboard" && (
         <div>
+          <LeaveMiniDashboard
+            onFilterPending={() => {
+              setRequestFilter("PENDING");
+              setActiveTab("requests");
+            }}
+          />
           {/* Top Metric Tiles (Vibrant Colors & Left Accent Lines) */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
             {/* Card 1: On Leave Today */}

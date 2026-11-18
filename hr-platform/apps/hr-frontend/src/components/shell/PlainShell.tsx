@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import type { ModuleViewKey } from "./AppSidebar";
+import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 import { ALL_VIEWS, isViewEnabled } from "../../config/modules";
 import { Icons } from "../../design-system/Icons";
+import type { UserContextTuple } from "../../domain/orgCore";
+import { ContextBadge, ContextNotice, ContextSwitcher } from "../common/ContextSwitcher";
 
 // Plain application frame: header, text-only navigation, content. No icons, badges, gradients, shadows,
 // animation, command palette, AI drawer or persona switcher. Neutral greys with one accent colour.
@@ -43,7 +45,7 @@ const LABELS: Record<ModuleViewKey, string> = {
 // Major sidebar sections and the views under each. Views not listed here fall into "Other", so none disappear.
 const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
   { label: "Dashboard", views: ["command_centre", "dashboard"] },
-  { label: "My Self-Service", views: ["self_service", "my_leave", "my_performance", "document_centre"] },
+  { label: "My Self-Service", views: ["self_service", "my_leave", "my_performance", "my_profile", "document_centre"] },
   { label: "People", views: ["workforce_directory", "lifecycle_portals", "disciplinary", "approval_workflows"] },
   { label: "Time & Performance", views: ["time_and_leave", "performance_pms", "performance_setup", "objectives"] },
   { label: "Assets & IT", views: ["assets", "asset_management", "helpdesk"] },
@@ -51,6 +53,28 @@ const GROUPS: { label: string; views: ModuleViewKey[] }[] = [
   { label: "Reports & Governance", views: ["reports_analytics", "governance_import", "policies_handbook", "admin_nerve_center"] },
   { label: "Company Admin", views: ["company_setup", "organogram", "employee_settings"] },
 ];
+
+const ESS_ALLOWED_VIEWS = new Set<ModuleViewKey>([
+  "self_service",
+  "my_leave",
+  "my_performance",
+  "my_profile",
+  "document_centre",
+  "assets",
+  "helpdesk",
+  "projects",
+  "skills_marketplace",
+  "policies_handbook",
+  "organogram",
+]);
+
+const MSS_BLOCKED_VIEWS = new Set<ModuleViewKey>([
+  "company_setup",
+  "performance_setup",
+  "admin_nerve_center",
+  "governance_import",
+  "employee_settings",
+]);
 
 const C = {
   text: "#1c1b19",
@@ -148,6 +172,13 @@ const ROLE_TITLES: Record<string, string> = {
 
 interface PlainShellProps {
   user: { name: string; email: string; role: string };
+  persona?: UserPersona;
+  onSelectPersona?: (persona: UserPersona) => void;
+  availableContexts?: UserContextTuple[];
+  activeContext?: UserContextTuple;
+  onSelectContext?: (contextId: string) => void;
+  contextNotice?: string | null;
+  onDismissContextNotice?: () => void;
   showName?: boolean;
   currentView: ModuleViewKey;
   onNavigate: (view: ModuleViewKey) => void;
@@ -157,16 +188,36 @@ interface PlainShellProps {
   children: React.ReactNode;
 }
 
-export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, currentView, onNavigate, onSignOut, onOpenDede, onOpenSearch, children }) => {
+export const PlainShell: React.FC<PlainShellProps> = ({
+  user,
+  persona = "hr_director",
+  availableContexts = [],
+  activeContext,
+  onSelectContext,
+  contextNotice,
+  onDismissContextNotice,
+  showName = true,
+  currentView,
+  onNavigate,
+  onSignOut,
+  onOpenDede,
+  onOpenSearch,
+  children,
+}) => {
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
-  const enabled = ALL_VIEWS.filter((v) => isViewEnabled(v));
+  const enabled = ALL_VIEWS.filter((v) => {
+    if (!isViewEnabled(v)) return false;
+    if (persona === "employee") return ESS_ALLOWED_VIEWS.has(v);
+    if (persona === "line_manager") return !MSS_BLOCKED_VIEWS.has(v);
+    return true;
+  });
   const grouped = GROUPS.map((g) => ({ label: g.label, views: g.views.filter((v) => enabled.includes(v)) })).filter((g) => g.views.length > 0);
   const placed = new Set<ModuleViewKey>(GROUPS.flatMap((g) => g.views));
   const other = enabled.filter((v) => !placed.has(v));
   if (other.length > 0) grouped.push({ label: "Other", views: other });
   // Every section starts open so each page is visible in the sidebar; the user can collapse any section.
   const isOpen = (label: string) => openState[label] ?? true;
-  const roleTitle = ROLE_TITLES[user.role] ?? user.role;
+  const roleTitle = ROLE_TITLES[persona] ?? ROLE_TITLES[user.role] ?? user.role;
   const initials = (showName ? user.name : roleTitle)
     .split(/\s+/)
     .filter(Boolean)
@@ -174,19 +225,37 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+  const headerAccent =
+    activeContext?.experience === "MSS"
+      ? `3px solid ${C.accent}`
+      : activeContext?.experience === "HRMS"
+      ? `3px solid ${C.text}`
+      : "none";
+
   return (
     <div className="ps-root">
       <style>{CSS}</style>
       <a className="ps-skip" href="#ps-content">
         Skip to content
       </a>
-      <header className="ps-header">
+      <header className="ps-header" style={{ borderTop: headerAccent }}>
         {onOpenSearch && (
           <button type="button" className="ps-search" onClick={onOpenSearch}>
             Search people, pages and reports
           </button>
         )}
         <div className="ps-header-actions">
+          {activeContext && onSelectContext && (
+            <>
+              <ContextSwitcher
+                contexts={availableContexts}
+                activeContext={activeContext}
+                onSelectContext={onSelectContext}
+                compact
+              />
+              <ContextBadge activeContext={activeContext} />
+            </>
+          )}
           {onOpenDede && (
             <button type="button" className="ps-ask" onClick={onOpenDede}>
               Ask Dede
@@ -204,6 +273,9 @@ export const PlainShell: React.FC<PlainShellProps> = ({ user, showName = true, c
           </button>
         </div>
       </header>
+      {contextNotice && onDismissContextNotice && (
+        <ContextNotice message={contextNotice} onDismiss={onDismissContextNotice} />
+      )}
       <div className="ps-body">
         <nav className="ps-nav" aria-label="Main">
           <div className="ps-rail-brand">

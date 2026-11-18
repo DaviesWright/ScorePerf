@@ -11,6 +11,7 @@ import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { PerformanceConfigurationStudio } from "./PerformanceConfigurationStudio";
 import { GeneralAppraisalSettingsView } from "./GeneralAppraisalSettingsView";
+import { PerformanceMiniDashboard } from "./PerformanceMiniDashboard";
 
 export interface CycleRecord {
   id: number;
@@ -1050,6 +1051,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "dashboard" && (
         <div>
+          <PerformanceMiniDashboard onOpenInsights={() => setActiveMainTab("insights")} />
           {/* Top Appraisal Cycle Selector Bar (Screenshot 3) */}
           <div
             style={{

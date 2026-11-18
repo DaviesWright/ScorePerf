@@ -37,6 +37,16 @@ import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementVie
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
 import { OrganogramView } from "../modules/OrganogramView";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
+import { SEEDED_EMPLOYEES, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
+import {
+  ArchitecturalRoleCode,
+  availableContexts,
+  ContextSwitchAuditEntry,
+  contextToPersona,
+  switchContext,
+  UserContextTuple,
+} from "../../domain/orgCore";
+import { ContextNotice } from "../common/ContextSwitcher";
 import { SHELL_MODE, firstEnabledView, isViewEnabled } from "../../config/modules";
 import { PlainShell } from "./PlainShell";
 import { clearHeadshot, loadHeadshot, processHeadshot, saveHeadshot } from "../../utils/headshot";
@@ -97,7 +107,23 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [cycles, setCycles] = useState<CycleRecord[]>(initialCycles);
   // The API sends nothing until the frontend has a login, so the demo registry stands in.
   const [assets, setAssets] = useState<AssetRecord[]>(initialAssets.length > 0 || initialUser ? initialAssets : DEMO_ASSETS);
-  const [leaves, setLeaves] = useState<LeaveRecord[]>(initialLeaves);
+  const [leaves, setLeaves] = useState<LeaveRecord[]>(() => {
+    if (initialLeaves.length >= 50 || initialUser) return initialLeaves;
+    return SEEDED_LEAVE_REQUESTS.map((r) => ({
+      id: r.id,
+      first_name: r.firstName,
+      last_name: r.lastName,
+      staff_id: r.staffId,
+      department: r.department,
+      leave_type_name: r.leaveType,
+      start_date: r.startDate,
+      end_date: r.endDate,
+      requested_days: String(r.requestedDays),
+      status: r.status,
+      reason: r.reason,
+      approver: r.approverName,
+    }));
+  });
   const [tickets, setTickets] = useState<TicketRecord[]>(initialTickets);
   const [projects] = useState<ProjectRecord[]>(initialProjects.length > 0 || initialUser ? initialProjects : DEMO_PROJECTS);
 
@@ -105,6 +131,16 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [isPayslipModalOpen, setIsPayslipModalOpen] = useState(false);
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
+  const [contextNotice, setContextNotice] = useState<string | null>(null);
+  const [contextAuditLog, setContextAuditLog] = useState<ContextSwitchAuditEntry[]>([]);
+  const [activeContextId, setActiveContextId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem("scoreview_last_context_id");
+    } catch {
+      return null;
+    }
+  });
 
   // Authentication & Session State
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
@@ -177,6 +213,79 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         currentView === "reports_analytics")
     ) {
       setCurrentView("self_service");
+    }
+  };
+
+  // Compute available contexts for the signed-in user (FR-CTX-001..004)
+  const userContexts: UserContextTuple[] = React.useMemo(() => {
+    const matchedSeed = currentUser
+      ? SEEDED_EMPLOYEES.find(
+          (e) =>
+            e.email.toLowerCase() === currentUser.email.toLowerCase() ||
+            e.staffId === currentUser.id,
+        )
+      : undefined;
+
+    const roles: ArchitecturalRoleCode[] = matchedSeed
+      ? [matchedSeed.architecturalRole]
+      : persona === "employee"
+      ? ["EMPLOYEE"]
+      : persona === "line_manager"
+      ? ["DEPARTMENT_HEAD"]
+      : persona === "hr_admin"
+      ? ["HR_MANAGER"]
+      : ["SUPER_ADMIN"];
+
+    // Demo HR Director / Super Admin holds ESS + MSS + HRMS when using demo login
+    if (!matchedSeed && (persona === "hr_director" || persona === "hr_admin")) {
+      if (!roles.includes("HR_MANAGER")) roles.push("HR_MANAGER");
+    }
+
+    return availableContexts({
+      employeeId: String(matchedSeed?.id ?? "EMP-PKB-001"),
+      roles,
+      departmentName: matchedSeed?.departmentName ?? currentUser?.department ?? "Platform & Edge Engineering",
+    });
+  }, [currentUser, persona]);
+
+  const activeContext: UserContextTuple = React.useMemo(() => {
+    if (activeContextId) {
+      const found = userContexts.find((c) => c.contextId === activeContextId);
+      if (found) return found;
+    }
+    const desiredExp = persona === "employee" ? "ESS" : persona === "line_manager" ? "MSS" : "HRMS";
+    return userContexts.find((c) => c.experience === desiredExp) ?? userContexts[0];
+  }, [activeContextId, userContexts, persona]);
+
+  const handleSelectContext = (requestedContextId: string) => {
+    const result = switchContext({
+      available: userContexts,
+      requestedContextId,
+      userId: currentUser?.id ?? "EMP-PKB-001",
+      employeeId: currentUser?.id ?? "EMP-PKB-001",
+      fromContext: activeContext.experience,
+    });
+    if (!result.ok) {
+      setContextNotice("That context is no longer available. You've been returned to My Work.");
+      const ess = userContexts[0];
+      setActiveContextId(ess.contextId);
+      handleSelectPersona("employee");
+      setCurrentView("self_service");
+      return;
+    }
+    setContextAuditLog((prev) => [result.audit, ...prev.slice(0, 49)]);
+    setActiveContextId(result.context.contextId);
+    try {
+      localStorage.setItem("scoreview_last_context_id", result.context.contextId);
+    } catch { }
+    const nextPersona = contextToPersona(result.context.experience, result.context.role);
+    handleSelectPersona(nextPersona);
+    if (result.context.experience === "ESS") {
+      setCurrentView("self_service");
+    } else if (result.context.experience === "MSS") {
+      setCurrentView("command_centre");
+    } else {
+      setCurrentView("command_centre");
     }
   };
 
@@ -312,6 +421,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         setCurrentView("asset_management");
         break;
       case "request_leave":
+        if (persona === "employee") {
+          setCurrentView("my_leave");
+          break;
+        }
         if (!isViewEnabled("time_and_leave")) break;
         setShowLeaveModalDirectly(true);
         setCurrentView("time_and_leave");
@@ -399,8 +512,12 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
           personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
           onRequestLeave={() => {
-            setShowLeaveModalDirectly(true);
-            setCurrentView("time_and_leave");
+            if (persona === "employee") {
+              setCurrentView("my_leave");
+            } else {
+              setShowLeaveModalDirectly(true);
+              setCurrentView("time_and_leave");
+            }
           }}
           onReportIssue={() => setCurrentView("helpdesk")}
           onOpenPayslip={() => setIsPayslipModalOpen(true)}
@@ -564,6 +681,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       )}
 
       {currentView === "my_profile" && <ProfileChangesScreen user={currentUser} realSession={!!initialUser} />}
+      {currentView === "payslips" && <PayslipsScreen user={currentUser} realSession={!!initialUser} />}
       {currentView === "document_centre" && (
         <DocumentCentreScreen
           user={currentUser}
@@ -597,8 +715,6 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             onNavigate={setCurrentView}
             onSwitchPersona={setPersona}
           />
-        ) : effectiveShellMode === "plain" ? (
-          <LeaveScreen user={currentUser} realSession={!!initialUser} />
         ) : (
           <TimeAndLeaveView
             initialLeaves={leaves}
@@ -683,6 +799,13 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       <>
         <PlainShell
           user={currentUser}
+          persona={persona}
+          onSelectPersona={handleSelectPersona}
+          availableContexts={userContexts}
+          activeContext={activeContext}
+          onSelectContext={handleSelectContext}
+          contextNotice={contextNotice}
+          onDismissContextNotice={() => setContextNotice(null)}
           showName={!!initialUser}
           currentView={currentView}
           onNavigate={setCurrentView}
@@ -777,6 +900,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           apiOnline={apiOnline}
           persona={persona}
           onSelectPersona={handleSelectPersona}
+          availableContexts={userContexts}
+          activeContext={activeContext}
+          onSelectContext={handleSelectContext}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onOpenOmniAgent={() => window.dispatchEvent(new Event("dede:open"))}
           onQuickAction={handleQuickAction}
@@ -790,6 +916,9 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         />
 
         <main style={{ flex: 1 }}>
+          {contextNotice && (
+            <ContextNotice message={contextNotice} onDismiss={() => setContextNotice(null)} />
+          )}
           {viewContent}
         </main>
       </div>

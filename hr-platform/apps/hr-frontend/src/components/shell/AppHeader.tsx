@@ -3,15 +3,13 @@ import { colors, typography, radii, shadows, surfaceAccent, SurfaceKind } from "
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
+import { ContextSwitcher, ContextBadge } from "../common/ContextSwitcher";
 import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
 import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 import {
   EXPERIENCE_META,
   ExperienceContext,
-  INITIAL_ARCH_AUDIT_LOG,
-  resolveApproverFromGraph,
-  resolveCycleManagerAsOf,
-  resolveScope,
+  UserContextTuple,
 } from "../../domain/orgCore";
 
 interface AppHeaderProps {
@@ -19,6 +17,9 @@ interface AppHeaderProps {
   apiOnline: boolean;
   persona?: UserPersona;
   onSelectPersona?: (persona: UserPersona) => void;
+  availableContexts?: UserContextTuple[];
+  activeContext?: UserContextTuple;
+  onSelectContext?: (contextId: string) => void;
   onOpenCommandPalette: () => void;
   onOpenOmniAgent: () => void;
   onQuickAction?: (action: string) => void;
@@ -43,6 +44,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   apiOnline,
   persona,
   onSelectPersona,
+  availableContexts = [],
+  activeContext,
+  onSelectContext,
   onOpenCommandPalette,
   onOpenOmniAgent,
   onQuickAction,
@@ -62,7 +66,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenFollowPromptDrawer,
 }) => {
   const [showQuickMenu, setShowQuickMenu] = useState(false);
-  const [showScopeInspector, setShowScopeInspector] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [internalSandbox, setInternalSandbox] = useState(false);
   const [internalLocale, setInternalLocale] = useState<"en" | "fr">("en");
 
@@ -89,12 +93,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     persona === "employee" ? "ess" : persona === "line_manager" ? "manager" : "hr";
 
   const activeExperience: ExperienceContext =
-    persona === "employee" ? "ESS" : persona === "line_manager" ? "MSS" : "HRMS";
+    activeContext?.experience ?? (persona === "employee" ? "ESS" : persona === "line_manager" ? "MSS" : "HRMS");
   const expMeta = EXPERIENCE_META[activeExperience];
-  const liveScope = resolveScope("EMP-PKB-001", "2026-11-17");
-  const cycleStartOwner = resolveCycleManagerAsOf("EMP-AO-006", "2026-04-01");
-  const currentOwner = resolveCycleManagerAsOf("EMP-AO-006", "2026-11-17");
-  const escalationDemo = resolveApproverFromGraph("EMP-AO-006", "2026-11-17");
+  const headerAccentBorder =
+    activeExperience === "ESS"
+      ? "none"
+      : activeExperience === "MSS"
+      ? `4px solid ${colors.indigoAction}`
+      : `4px solid ${colors.textPrimary}`;
 
   return (
     <header
@@ -102,7 +108,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       style={{
         backgroundColor: colors.surface,
         borderBottom: `1px solid ${colors.border}`,
-        borderLeft: surfaceAccent[surfaceKind],
+        borderLeft: headerAccentBorder === "none" ? surfaceAccent[surfaceKind] : headerAccentBorder,
         padding: "0.65rem 1.5rem",
         display: "flex",
         alignItems: "center",
@@ -175,70 +181,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </span>
       </div>
 
-      {/* Right: Experience Switcher & Actions */}
+      {/* Right: Experience Context Switcher & Actions */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", position: "relative" }}>
-        <div
-          role="group"
-          aria-label="Workspace Switcher"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            backgroundColor: colors.surfaceSubtle,
-            border: `1px solid ${colors.border}`,
-            borderRadius: radii.md,
-            padding: "2px",
-            gap: "2px",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => onSelectPersona?.("employee")}
-            style={{
-              padding: "0.24rem 0.6rem",
-              borderRadius: radii.sm,
-              border: "none",
-              fontSize: "11px",
-              fontWeight: persona === "employee" ? 700 : 500,
-              backgroundColor: persona === "employee" ? colors.emeraldDark : "transparent",
-              color: persona === "employee" ? "#ffffff" : colors.textSecondary,
-              cursor: "pointer",
-            }}
-          >
-            My Work
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectPersona?.("line_manager")}
-            style={{
-              padding: "0.24rem 0.6rem",
-              borderRadius: radii.sm,
-              border: "none",
-              fontSize: "11px",
-              fontWeight: persona === "line_manager" ? 700 : 500,
-              backgroundColor: persona === "line_manager" ? colors.indigoAction : "transparent",
-              color: persona === "line_manager" ? "#ffffff" : colors.textSecondary,
-              cursor: "pointer",
-            }}
-          >
-            My Team
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectPersona?.("hr_admin")}
-            style={{
-              padding: "0.24rem 0.6rem",
-              borderRadius: radii.sm,
-              border: "none",
-              fontSize: "11px",
-              fontWeight: persona === "hr_admin" || persona === "hr_director" ? 700 : 500,
-              backgroundColor: persona === "hr_admin" || persona === "hr_director" ? colors.textPrimary : "transparent",
-              color: persona === "hr_admin" || persona === "hr_director" ? "#ffffff" : colors.textSecondary,
-              cursor: "pointer",
-            }}
-          >
-            HR
-          </button>
-        </div>
+        {activeContext && onSelectContext ? (
+          <>
+            <ContextSwitcher
+              contexts={availableContexts}
+              activeContext={activeContext}
+              onSelectContext={onSelectContext}
+            />
+            <ContextBadge activeContext={activeContext} />
+          </>
+        ) : null}
         {/* Unified Dede AI & Assistant Trigger */}
         <Button
           variant="outline"
@@ -311,38 +265,90 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           />
           <span>{currentSandbox ? "Sandbox" : "Live"}</span>
         </button>
-        {/* Notifications Icon Button */}
-        <button
-          title="Notifications"
-          style={{
-            position: "relative",
-            background: "transparent",
-            border: `1px solid ${colors.border}`,
-            borderRadius: radii.md,
-            width: "32px",
-            height: "32px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: colors.textSecondary,
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceSubtle)}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-        >
-          <Icons.Bell size={15} />
-          <span
+        {/* Notifications Icon Button & Dropdown */}
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            title="Notifications"
+            aria-expanded={showNotifications}
+            onClick={() => setShowNotifications((v) => !v)}
             style={{
-              position: "absolute",
-              top: "6px",
-              right: "6px",
-              width: "6px",
-              height: "6px",
-              borderRadius: "50%",
-              backgroundColor: colors.peachAction,
+              position: "relative",
+              background: "transparent",
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: colors.textSecondary,
             }}
-          />
-        </button>
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceSubtle)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+          >
+            <Icons.Bell size={15} />
+            <span
+              style={{
+                position: "absolute",
+                top: "6px",
+                right: "6px",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: colors.peachAction,
+              }}
+            />
+          </button>
+          {showNotifications && (
+            <div
+              role="menu"
+              style={{
+                position: "absolute",
+                top: "120%",
+                right: 0,
+                width: "290px",
+                backgroundColor: colors.surface,
+                border: `1px solid ${colors.border}`,
+                borderRadius: radii.md,
+                boxShadow: shadows.md,
+                zIndex: 40,
+                padding: "0.5rem 0",
+              }}
+            >
+              <div style={{ padding: "0.4rem 0.85rem", fontSize: "11px", fontWeight: 700, color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>
+                Notifications (3)
+              </div>
+              {[
+                { label: "4 leave requests awaiting review", view: (persona === "employee" ? "my_leave" : "time_and_leave") as ModuleViewKey },
+                { label: "2026 Performance cycle check-in open", view: (persona === "employee" ? "my_performance" : "performance_pms") as ModuleViewKey },
+                { label: "Updated HR handbook ready for sign-off", view: "document_centre" as ModuleViewKey },
+              ].map((n) => (
+                <button
+                  key={n.label}
+                  type="button"
+                  onClick={() => {
+                    setShowNotifications(false);
+                    onNavigate?.(n.view);
+                  }}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "0.55rem 0.85rem",
+                    border: "none",
+                    background: "transparent",
+                    fontSize: typography.sizes.xs,
+                    color: colors.textPrimary,
+                    cursor: "pointer",
+                  }}
+                >
+                  {n.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Quick Action Button with dropdown */}
         <div style={{ position: "relative" }}>
@@ -430,6 +436,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {user && onUploadPhoto && onRemovePhoto && onNavigate && onSignOut && (
           <ProfileMenu
             user={user}
+            persona={persona}
             photoUrl={photoUrl}
             onUploadPhoto={onUploadPhoto}
             onRemovePhoto={onRemovePhoto}
