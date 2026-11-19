@@ -9,6 +9,9 @@ import type { Env } from "./index";
 
 type Sql = ReturnType<typeof postgres>;
 
+const REVIEWER_LIMIT_PER_WINDOW = 5;
+const REVIEWER_WINDOW_SECONDS = 600; // also KV's minimum expirationTtl is 60, so 600 is valid
+
 const ReviewerBody = z.object({
   email: z.string().trim().email().max(254),
   fullName: z.string().trim().min(2).max(120),
@@ -28,6 +31,16 @@ export function createReviewerRoutes(getSql: (env: Env) => Sql) {
 
   // Creates the reviewer on first visit, updates their details and counts repeat visits.
   routes.post("/reviewer-access", zValidator("json", ReviewerBody), async (c) => {
+    // Public and unauthenticated, so throttle per client IP before any write. KV is eventually
+    // consistent, so the count is best-effort; it still stops a single-source flood.
+    const ip = c.req.header("cf-connecting-ip") ?? "unknown";
+    const throttleKey = `rl:reviewer:${ip}`;
+    const hits = Number((await c.env.SESSIONS.get(throttleKey)) ?? "0");
+    if (hits >= REVIEWER_LIMIT_PER_WINDOW) {
+      return c.json({ error: "Too many requests. Try again later." }, 429);
+    }
+    await c.env.SESSIONS.put(throttleKey, String(hits + 1), { expirationTtl: REVIEWER_WINDOW_SECONDS });
+
     const body = c.req.valid("json");
     const email = body.email.toLowerCase();
     await getSql(c.env)`

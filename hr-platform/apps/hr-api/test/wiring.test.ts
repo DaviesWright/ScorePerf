@@ -14,14 +14,11 @@ test("authenticate is mounted above every /api/v1 route", () => {
   assert.ok(auth < firstRoute.index, `authenticate is mounted after the route at offset ${firstRoute.index}`);
 });
 
-test("every SESSIONS access in index.ts uses the sess: prefix", () => {
-  // SESSIONS also holds sign-in links (ml:, mlr:). An unprefixed session key would let any caller
-  // plant a forged link entry through POST /api/v1/session and redeem it as another user.
-  const calls = [...src.matchAll(/SESSIONS\.(get|put|delete|list)\(\s*([^,)]*)/g)];
-  assert.ok(calls.length > 0, "no SESSIONS calls found");
-  for (const [, method, firstArg] of calls) {
-    assert.match(firstArg, /^`sess:/, `SESSIONS.${method}(${firstArg}) is not prefixed with sess:`);
-  }
+test("no route reads or writes SESSIONS directly", () => {
+  // SESSIONS also holds sign-in links (ml:, mlr:). A route that exposes raw KV access would let a
+  // caller plant or read those entries, so SESSIONS stays behind the magic-link code only.
+  assert.doesNotMatch(src, /SESSIONS\.(get|put|delete|list)\(/, "a route accesses SESSIONS directly");
+  assert.doesNotMatch(src, /\/api\/v1\/session/, "the raw KV session endpoint is back");
 });
 
 test("writes to cycles, KPIs and scores are limited to HR roles in the RBAC middleware", () => {

@@ -9,7 +9,6 @@ import {
   CreateCycleSchema,
   CreateAppraisalSchema,
   CreateKpiSchema,
-  CreateSessionSchema,
   TransitionCycleSchema,
   CalculateScoreSchema,
   JobMessage,
@@ -112,13 +111,14 @@ const app = new Hono<{
 }>();
 
 app.use("*", logger());
-app.use(
-  "*",
+// Only the frontend origin may call this API from a browser. Fails closed: with FRONTEND_URL unset,
+// no origin matches. Auth is a bearer token, so no cookie is sent cross-origin either way.
+app.use("*", async (c, next) =>
   cors({
-    origin: "*",
+    origin: c.env.FRONTEND_URL || "",
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  })
+  })(c, next)
 );
 
 // Root welcome & API Directory
@@ -170,22 +170,6 @@ app.route("/auth", createReviewerRoutes(getSql));
 // (test/wiring.test.ts enforces it).
 app.use("/api/v1/*", authenticate);
 
-// KV Sessions (Auth & State). The SESSIONS namespace also holds sign-in links (`ml:`, `mlr:`), so every
-// session key is prefixed `sess:`; otherwise a caller could plant a forged `ml:` entry through this
-// endpoint and redeem it to sign in as another user (test/wiring.test.ts enforces the prefix).
-app.post("/api/v1/session", zValidator("json", CreateSessionSchema), async (c) => {
-  const { sessionId, session, ttlSeconds } = c.req.valid("json");
-  await c.env.SESSIONS.put(`sess:${sessionId}`, JSON.stringify(session), {
-    expirationTtl: ttlSeconds,
-  });
-  return c.json({ success: true, sessionId });
-});
-
-app.get("/api/v1/session/:id", async (c) => {
-  const raw = await c.env.SESSIONS.get(`sess:${c.req.param("id")}`);
-  if (!raw) return c.json({ error: "Session not found" }, 404);
-  return c.json({ sessionId: c.req.param("id"), session: JSON.parse(raw) });
-});
 
 // RBAC for protected routes (runs after `authenticate`, which is mounted above the first /api/v1 route).
 app.use("/api/v1/*", async (c, next) => {
