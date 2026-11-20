@@ -975,5 +975,60 @@ export function createPerformanceOrgRoutes(getSql: (env: Env) => any) {
     return c.json({ id, status: "REVOKED" });
   });
 
+  app.post(
+    "/api/v1/performance/org/conflicts/:id/resolve",
+    zValidator("json", z.object({ resolution: z.enum(["RESOLVED_HRIS", "RESOLVED_LOCAL", "DISMISSED"]) })),
+    async (c) => {
+      const { companyId, userId, role } = c.get("tenant");
+      if (!isHrOrAdmin(role)) {
+        return c.json({ error: "Only HR Manager can resolve sync conflicts.", code: "PERF_FORBIDDEN" }, 403);
+      }
+      const tenantId = String(companyId);
+      const id = c.req.param("id");
+      const { resolution } = c.req.valid("json");
+      const sql = getSql(c.env);
+
+      const rows = await sql`
+        SELECT * FROM performance_org_sync_conflicts
+        WHERE id = ${id} AND (tenant_id = ${tenantId} OR tenant_id = 'default')
+        LIMIT 1
+      `;
+      if (!rows[0]) {
+        return c.json({ error: "Conflict not found.", code: "ORG_SYNC_CONFLICT" }, 404);
+      }
+      const conflict = rows[0];
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (resolution === "RESOLVED_HRIS") {
+        await sql`
+          UPDATE performance_org_edges
+          SET effective_to = ${today}::date, status = 'CLOSED'
+          WHERE (tenant_id = ${tenantId} OR tenant_id = 'default')
+            AND subject_employee_id = ${conflict.subject_employee_id}
+            AND type = 'PRIMARY_MANAGER'
+            AND status = 'ACTIVE'
+        `;
+        const newEdgeId = `edge-sync-res-${Date.now()}`;
+        await sql`
+          INSERT INTO performance_org_edges (
+            id, tenant_id, subject_employee_id, object_employee_id, type, scope,
+            effective_from, source, status, reason, created_by
+          ) VALUES (
+            ${newEdgeId}, ${tenantId}, ${conflict.subject_employee_id}, ${conflict.hris_manager_id},
+            'PRIMARY_MANAGER', 'ALL', ${today}::date, 'HRIS', 'ACTIVE', 'Resolved HRIS sync conflict', ${String(userId)}
+          )
+        `;
+      }
+
+      await sql`
+        UPDATE performance_org_sync_conflicts
+        SET status = ${resolution}, resolved_by = ${String(userId)}, resolved_at = NOW()
+        WHERE id = ${id}
+      `;
+
+      return c.json({ id, status: resolution });
+    }
+  );
+
   return app;
 }
