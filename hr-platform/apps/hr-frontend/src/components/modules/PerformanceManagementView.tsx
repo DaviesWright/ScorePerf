@@ -19,6 +19,11 @@ import {
   TalentMatrixGrid,
 } from "./PerformanceP3toP6Panels";
 import { PerformanceThreeLensesPanel } from "./PerformanceBuildCorePanels";
+import {
+  DemoAppraisalWorkspacePanel,
+  ManagerAssessmentQueuePanel,
+  ObjectiveVolumeChip,
+} from "./PerformanceV12Panels";
 
 export interface CycleRecord {
   id: number;
@@ -3483,6 +3488,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "objectives_setup" && (
         <div>
+          <div style={{ marginBottom: "1rem" }}>
+            <ObjectiveVolumeChip />
+          </div>
           <MboAndMultiReviewerPanel />
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
@@ -4047,6 +4055,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "appraisals" && (
         <div>
+          <div style={{ display: "grid", gap: "1.25rem", marginBottom: "1.5rem" }}>
+            <ObjectiveVolumeChip />
+            <ManagerAssessmentQueuePanel />
+            <DemoAppraisalWorkspacePanel />
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
             <div>
               <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>

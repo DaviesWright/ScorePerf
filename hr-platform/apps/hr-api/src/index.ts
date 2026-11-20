@@ -42,6 +42,7 @@ import { createReportRoutes } from "./report-routes";
 import { createCelebrationsRoutes } from "./celebrations-routes";
 import { createAnalyticsRoutes } from "./analytics-routes";
 import { createPerformanceCoreRoutes } from "./performance-core-routes";
+import { createPerformanceV12Routes } from "./performance-v12-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2977,6 +2978,8 @@ app.route("/", createCelebrationsRoutes(getSql));
 app.route("/", createAnalyticsRoutes(getSql));
 // Performance BUILD.md v1.0: Unified /performance/items, Scoring & Explain, Acyclic Alignment, Presets & 6 Insight Cards.
 app.route("/", createPerformanceCoreRoutes(getSql));
+// Performance BUILD.md v1.1 & v1.2: Objective Volume Policy (8-10), Demo Appraisal Workspace, Manager Appraisal Queue & Delegation.
+app.route("/", createPerformanceV12Routes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {
