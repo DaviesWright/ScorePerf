@@ -15,6 +15,7 @@ interface CommandCentreViewProps {
   employees: EmployeeRecord[];
   assets: AssetRecord[];
   cycles: CycleRecord[];
+  currentUserName?: string;
   stats: {
     totalEmployees: number;
     activeCycles: number;
@@ -79,6 +80,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   employees,
   assets,
   cycles,
+  currentUserName,
   stats,
   onNavigate,
 }) => {
@@ -299,7 +301,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.45rem" }}>
             <span style={{ fontSize: "11px", fontWeight: 700, color: colors.indigoAction, textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
               <Icons.Sparkles size={14} color={colors.indigoAction} />
-              <span>Dede — AI Daily Brief • {formatDate(new Date())}</span>
+              <span>Dede — AI Daily Brief • {currentUserName ? `Welcome, ${currentUserName.split(" ")[0]} • ` : ""}{formatDate(new Date())}</span>
             </span>
             <button
               type="button"

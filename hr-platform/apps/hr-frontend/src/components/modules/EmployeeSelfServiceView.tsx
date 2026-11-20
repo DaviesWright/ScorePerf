@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -77,17 +77,92 @@ export const EmployeeSelfServiceView: React.FC<EmployeeSelfServiceViewProps> = (
   const [gigSubmitted, setGigSubmitted] = useState(false);
   const [synthesisViewed, setSynthesisViewed] = useState(false);
 
+  const PERSONA_PROFILES: Record<
+    string,
+    {
+      phone: string;
+      personalEmail: string;
+      residentialAddress: string;
+      emergencyContactName: string;
+      emergencyContactPhone: string;
+      emergencyRelationship: string;
+      bio: string;
+      skills: string[];
+    }
+  > = {
+    "paa.barnes@bscscoreview.com": {
+      phone: "+233 24 419 8820",
+      personalEmail: "paa.barnes@senrab.com",
+      residentialAddress: "Plot 14, East Legon Hills, Accra, Ghana",
+      emergencyContactName: "Akosua Barnes",
+      emergencyContactPhone: "+233 50 123 4567",
+      emergencyRelationship: "Spouse",
+      bio: "Managing Principal leading enterprise digital transformation and cloud edge infrastructure across EMEA and West Africa.",
+      skills: ["Cloud Architecture", "PostgreSQL", "Balanced Scorecard", "Change Management", "TypeScript"],
+    },
+    "benedicta.agbesi@bscscoreview.com": {
+      phone: "+44 7700 900142",
+      personalEmail: "benedicta.agbesi@outlook.com",
+      residentialAddress: "24 Canary Wharf Walk, London E14 5AB, UK",
+      emergencyContactName: "Kofi Agbesi",
+      emergencyContactPhone: "+44 7700 900811",
+      emergencyRelationship: "Brother",
+      bio: "Lead Software Engineer architecting multi-tenant SaaS platforms, distributed edge workers, and CI/CD automation.",
+      skills: ["TypeScript", "Next.js", "Cloudflare Workers", "PostgreSQL", "System Design"],
+    },
+    "jemima.richards@bscscoreview.com": {
+      phone: "+233 20 812 4490",
+      personalEmail: "jemima.richards@gmail.com",
+      residentialAddress: "18 Cantonments Crescent, Accra, Ghana",
+      emergencyContactName: "Daniel Richards",
+      emergencyContactPhone: "+233 24 555 0192",
+      emergencyRelationship: "Spouse",
+      bio: "Head of Human Resources governing talent strategy, statutory compliance, and cross-border people operations.",
+      skills: ["HR Governance", "Labour Law", "Compensation & Benefits", "Talent Strategy", "OKR Coaching"],
+    },
+    "adjoa.bediako@bscscoreview.com": {
+      phone: "+233 54 330 7721",
+      personalEmail: "adjoa.bediako@gmail.com",
+      residentialAddress: "7 Airport West Link, Accra, Ghana",
+      emergencyContactName: "Efua Bediako",
+      emergencyContactPhone: "+233 24 770 1122",
+      emergencyRelationship: "Mother",
+      bio: "HR Analytics Specialist building workforce intelligence dashboards, attrition models, and people metrics.",
+      skills: ["People Analytics", "SQL", "Data Visualization", "Attrition Modeling", "Excel"],
+    },
+    "philip.aryee@bscscoreview.com": {
+      phone: "+264 81 412 9087",
+      personalEmail: "philip.aryee@proton.me",
+      residentialAddress: "12 Klein Windhoek Road, Windhoek, Namibia",
+      emergencyContactName: "Nii Aryee",
+      emergencyContactPhone: "+233 24 600 4412",
+      emergencyRelationship: "Father",
+      bio: "Cloud Engineer focused on edge reliability, observability, and automated infrastructure deployments.",
+      skills: ["Cloudflare Edge", "Terraform", "Docker", "Linux", "Observability"],
+    },
+  };
+
+  const resolveProfileForEmployee = () => {
+    const byEmail = PERSONA_PROFILES[currentEmployee.email.toLowerCase()];
+    if (byEmail) return byEmail;
+    return {
+      phone: "+233 24 000 0000",
+      personalEmail: currentEmployee.email,
+      residentialAddress: `${currentEmployee.department} Practice Office`,
+      emergencyContactName: `Next of Kin (${currentEmployee.name.split(" ")[0]})`,
+      emergencyContactPhone: "+233 20 000 0000",
+      emergencyRelationship: "Family",
+      bio: `${currentEmployee.role} in ${currentEmployee.department}.`,
+      skills: ["Domain Delivery", "Collaboration", "Continuous Improvement"],
+    };
+  };
+
   // User Profile & HR Admin Approval Workflow
-  const [profileData, setProfileData] = useState({
-    phone: "+233 24 419 8820",
-    personalEmail: "paa.barnes@senrab.com",
-    residentialAddress: "Plot 14, East Legon Hills, Accra, Ghana",
-    emergencyContactName: "Akosua Barnes",
-    emergencyContactPhone: "+233 50 123 4567",
-    emergencyRelationship: "Spouse",
-    bio: "Senior Strategy & Systems Consultant leading enterprise digital transformation and cloud edge infrastructure across EMEA and West Africa.",
-    skills: ["Cloud Architecture", "PostgreSQL", "Balanced Scorecard", "Change Management", "TypeScript"],
-  });
+  const [profileData, setProfileData] = useState(resolveProfileForEmployee);
+
+  useEffect(() => {
+    setProfileData(resolveProfileForEmployee());
+  }, [currentEmployee.email, currentEmployee.id]);
 
   const [pendingProfileUpdate, setPendingProfileUpdate] = useState<{
     submittedAt: string;

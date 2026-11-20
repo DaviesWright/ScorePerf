@@ -647,33 +647,56 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         </div>
       )}
       {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
-      {currentView === "self_service" && !initialUser && (
-        <EmployeeSelfServiceView
-          currentEmployee={{
-            id: 1,
-            name: currentUser.name,
-            email: currentUser.email,
-            role: currentUser.role,
-            department: currentUser.department,
-            manager: "Board of Directors",
-            annualLeaveTotal: 25,
-            annualLeaveUsed: 7,
-          }}
-          assignedAsset={assets.find((a) => a.employee_id === 1) || assets[0]}
-          personalLeaves={leaves.filter((l) => l.first_name === "Paa" || l.id % 2 === 0).slice(0, 3)}
-          onRequestLeave={() => {
-            if (persona === "employee") {
-              setCurrentView("my_leave");
-            } else {
-              setShowLeaveModalDirectly(true);
-              setCurrentView("time_and_leave");
-            }
-          }}
-          onReportIssue={() => setCurrentView("helpdesk")}
-          onOpenPayslip={() => setIsPayslipModalOpen(true)}
-          onNavigate={setCurrentView}
-        />
-      )}
+      {currentView === "self_service" && !initialUser && (() => {
+        const matchedSeed =
+          SEEDED_EMPLOYEES.find(
+            (e) =>
+              e.email.toLowerCase() === currentUser.email.toLowerCase() ||
+              e.name.toLowerCase() === currentUser.name.toLowerCase()
+          ) ?? SEEDED_EMPLOYEES[0];
+        const matchedDir =
+          employees.find(
+            (e) =>
+              e.email?.toLowerCase() === currentUser.email.toLowerCase() ||
+              `${e.first_name} ${e.last_name}`.toLowerCase() === currentUser.name.toLowerCase()
+          );
+        const resolvedId = matchedDir?.id ?? matchedSeed?.id ?? 1;
+        const firstName = currentUser.name.split(" ")[0].toLowerCase();
+        const lastName = (currentUser.name.split(" ").slice(1).join(" ") || "").toLowerCase();
+        const myLeaves = leaves.filter(
+          (l) =>
+            l.first_name?.toLowerCase() === firstName &&
+            (!lastName || !l.last_name || l.last_name.toLowerCase() === lastName)
+        );
+        return (
+          <EmployeeSelfServiceView
+            key={currentUser.email}
+            currentEmployee={{
+              id: resolvedId,
+              name: currentUser.name,
+              email: currentUser.email,
+              role: currentUser.role,
+              department: currentUser.department,
+              manager: matchedSeed?.managerName || "Executive Leadership",
+              annualLeaveTotal: matchedSeed?.annualEntitlement ?? 21,
+              annualLeaveUsed: matchedSeed?.annualUsed ?? 5,
+            }}
+            assignedAsset={assets.find((a) => a.employee_id === resolvedId) || null}
+            personalLeaves={myLeaves.slice(0, 5)}
+            onRequestLeave={() => {
+              if (persona === "employee") {
+                setCurrentView("my_leave");
+              } else {
+                setShowLeaveModalDirectly(true);
+                setCurrentView("time_and_leave");
+              }
+            }}
+            onReportIssue={() => setCurrentView("helpdesk")}
+            onOpenPayslip={() => setIsPayslipModalOpen(true)}
+            onNavigate={setCurrentView}
+          />
+        );
+      })()}
 
       {currentView === "reports_analytics" && (
         <ReportsAnalyticsView persona={persona} />
@@ -783,6 +806,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             employees={employees}
             assets={assets}
             cycles={cycles}
+            currentUserName={currentUser.name}
             stats={{
               totalEmployees: employees.length,
               activeCycles: cycles.length,
