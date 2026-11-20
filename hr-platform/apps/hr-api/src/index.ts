@@ -41,6 +41,7 @@ import { createLeaveMiniDashboardRoutes } from "./leave-mini-dashboard-routes";
 import { createReportRoutes } from "./report-routes";
 import { createCelebrationsRoutes } from "./celebrations-routes";
 import { createAnalyticsRoutes } from "./analytics-routes";
+import { createPerformanceCoreRoutes } from "./performance-core-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2974,6 +2975,8 @@ app.route("/", createReportRoutes(getSql));
 app.route("/", createCelebrationsRoutes(getSql));
 // Analytics, Heatmaps & Trends Framework v1.0: KPI, Heatmap (dept & job role), Trend, Drilldown, Snapshots.
 app.route("/", createAnalyticsRoutes(getSql));
+// Performance BUILD.md v1.0: Unified /performance/items, Scoring & Explain, Acyclic Alignment, Presets & 6 Insight Cards.
+app.route("/", createPerformanceCoreRoutes(getSql));
 
 // 10. Helpdesk Support Tickets
 app.get("/api/v1/helpdesk/tickets", async (c) => {

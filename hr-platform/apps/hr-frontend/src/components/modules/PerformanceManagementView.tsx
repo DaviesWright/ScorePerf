@@ -18,6 +18,7 @@ import {
   RbacPermissionMatrixPanel,
   TalentMatrixGrid,
 } from "./PerformanceP3toP6Panels";
+import { PerformanceThreeLensesPanel } from "./PerformanceBuildCorePanels";
 
 export interface CycleRecord {
   id: number;
@@ -4143,6 +4144,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "insights" && (
         <div>
+          <PerformanceThreeLensesPanel />
           <div style={{ marginBottom: "1.25rem" }}>
             <h2 style={{ fontSize: typography.sizes.lg, fontWeight: 800, color: colors.indigoPrimary, margin: 0 }}>
               Performance Insights & 9-Box Talent Matrix
