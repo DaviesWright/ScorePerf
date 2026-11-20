@@ -348,18 +348,30 @@ export function createPerformanceV12Routes(getSql: (env: Env) => any) {
   }
 
   async function loadManagerScope(sql: any, companyId: number, tenantId: string, actorUserId: number) {
+    const today = new Date().toISOString().slice(0, 10);
     const reportingRows: ReportingLineRow[] = await sql`
       SELECT employee_id, manager_id
       FROM reporting_lines
       WHERE company_id = ${companyId}
     `;
+    const orgEdgeRows = await sql`
+      SELECT subject_employee_id AS employee_id, object_employee_id AS manager_id
+      FROM performance_org_edges
+      WHERE (tenant_id = ${tenantId} OR tenant_id = 'default')
+        AND status = 'ACTIVE'
+        AND type IN ('PRIMARY_MANAGER', 'MATRIX_MANAGER', 'DOTTED_LINE')
+        AND scope IN ('APPRAISAL', 'ALL')
+        AND effective_from <= ${today}::date
+        AND (effective_to IS NULL OR effective_to >= ${today}::date)
+    `;
+    const combinedReporting: ReportingLineRow[] = [...reportingRows, ...orgEdgeRows];
     const delegationRows: DelegationRow[] = await sql`
       SELECT id, delegator_id, delegate_id, start_date::text AS start_date, end_date::text AS end_date, status
       FROM performance_delegations
       WHERE (tenant_id = ${tenantId} OR tenant_id = 'default')
         AND status = 'ACTIVE'
     `;
-    return resolveManagerScope(actorUserId, reportingRows, delegationRows);
+    return resolveManagerScope(actorUserId, combinedReporting, delegationRows, today);
   }
 
   // ============================================================================

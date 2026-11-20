@@ -77,7 +77,11 @@ interface TeamQueueItem {
   onBehalfOfManagerId: string | null;
 }
 
-export function ManagerAssessmentQueuePanel() {
+export function ManagerAssessmentQueuePanel({
+  onOpenOrgChart,
+}: {
+  onOpenOrgChart?: (employeeId?: string) => void;
+} = {}) {
   const [items, setItems] = useState<TeamQueueItem[]>([]);
   const [summary, setSummary] = useState<{
     total: number;
@@ -356,17 +360,28 @@ export function ManagerAssessmentQueuePanel() {
                   <td className="py-2.5 pr-3">{item.selfRating ?? "—"}</td>
                   <td className="py-2.5 pr-3">{item.managerRating ?? "—"}</td>
                   <td className="py-2.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => void openAssessment(item.assessmentId)}
-                      className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
-                    >
-                      {item.managerSubStatus === "MANAGER_COMPLETE"
-                        ? "View"
-                        : item.managerSubStatus === "MANAGER_DRAFT"
-                          ? "Continue"
-                          : "Assess"}
-                    </button>
+                    <div className="inline-flex items-center gap-1.5">
+                      {onOpenOrgChart && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenOrgChart(item.employeeId)}
+                          className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          Org chart
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void openAssessment(item.assessmentId)}
+                        className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                      >
+                        {item.managerSubStatus === "MANAGER_COMPLETE"
+                          ? "View"
+                          : item.managerSubStatus === "MANAGER_DRAFT"
+                            ? "Continue"
+                            : "Assess"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

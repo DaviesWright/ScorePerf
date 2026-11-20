@@ -24,6 +24,11 @@ import {
   ManagerAssessmentQueuePanel,
   ObjectiveVolumeChip,
 } from "./PerformanceV12Panels";
+import {
+  AdminOrganisationPanel,
+  ContextualOrganogramDrawer,
+  ExecutiveOrgOverlayCard,
+} from "./PerformanceOrgV13Panels";
 
 export interface CycleRecord {
   id: number;
@@ -961,8 +966,21 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
     } catch { }
   };
 
+  const [orgDrawerOpen, setOrgDrawerOpen] = useState(false);
+  const [orgFocusEmployeeId, setOrgFocusEmployeeId] = useState<string | undefined>(undefined);
+  const openOrgDrawer = (employeeId?: string) => {
+    setOrgFocusEmployeeId(employeeId);
+    setOrgDrawerOpen(true);
+  };
+
   return (
     <div style={{ padding: "1.75rem 2rem", maxWidth: "1440px", margin: "0 auto" }}>
+      <ContextualOrganogramDrawer
+        open={orgDrawerOpen}
+        focusEmployeeId={orgFocusEmployeeId}
+        onClose={() => setOrgDrawerOpen(false)}
+        onOpenAdminOrg={() => setActiveMainTab("settings")}
+      />
       {/* Platform Header & Navigation Tabs */}
       <div style={{ marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem", marginBottom: "1rem" }}>
@@ -1129,6 +1147,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {activeMainTab === "dashboard" && (
         <div>
           <PerformanceMiniDashboard onOpenInsights={() => setActiveMainTab("insights")} />
+          <div style={{ marginBottom: "1.25rem" }}>
+            <ExecutiveOrgOverlayCard onOpenDrawer={() => openOrgDrawer()} />
+          </div>
           {/* Top Appraisal Cycle Selector Bar (Screenshot 3) */}
           <div
             style={{
@@ -3488,8 +3509,11 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "objectives_setup" && (
         <div>
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1rem" }}>
             <ObjectiveVolumeChip />
+            <Button variant="secondary" size="sm" onClick={() => openOrgDrawer()}>
+              View in Org Chart
+            </Button>
           </div>
           <MboAndMultiReviewerPanel />
           {/* Header */}
@@ -4057,7 +4081,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
         <div>
           <div style={{ display: "grid", gap: "1.25rem", marginBottom: "1.5rem" }}>
             <ObjectiveVolumeChip />
-            <ManagerAssessmentQueuePanel />
+            <ManagerAssessmentQueuePanel onOpenOrgChart={(empId) => openOrgDrawer(empId)} />
             <DemoAppraisalWorkspacePanel />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
@@ -4255,6 +4279,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "settings" && (
         <div>
+          <div style={{ marginBottom: "1.5rem" }}>
+            <AdminOrganisationPanel />
+          </div>
           <RbacPermissionMatrixPanel isAdmin={isAdmin} />
           {/* Header & Subtitle (Screenshot 1) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
