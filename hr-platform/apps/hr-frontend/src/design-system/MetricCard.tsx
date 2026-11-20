@@ -138,7 +138,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         justifyContent: "space-between",
         boxShadow: shadows.xs,
         position: "relative",
-        overflow: "hidden",
+        minWidth: "200px",
+        overflow: "visible",
       }}
       onMouseEnter={(e) => {
         if (onClick) {
@@ -156,13 +157,14 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         }
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.55rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.55rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
           {icon && (
             <div
               style={{
                 width: "26px",
                 height: "26px",
+                flexShrink: 0,
                 borderRadius: radii.sm,
                 backgroundColor: currentVariant.iconBg,
                 color: currentVariant.iconColor,
@@ -181,12 +183,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
               color: currentVariant.iconColor,
               textTransform: "uppercase",
               letterSpacing: "0.06em",
+              wordBreak: "break-word",
             }}
           >
             {label}
           </span>
         </div>
-        {badge && <div>{badge}</div>}
+        {badge && <div style={{ flexShrink: 0 }}>{badge}</div>}
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.25rem" }}>

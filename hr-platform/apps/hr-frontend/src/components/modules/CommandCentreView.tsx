@@ -116,6 +116,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
   const [liveOnLeave, setLiveOnLeave] = useState<OnLeaveDetail[] | null>(null);
   const [showOnLeaveModal, setShowOnLeaveModal] = useState(false);
   const [selectedOnLeaveEmp, setSelectedOnLeaveEmp] = useState<OnLeaveDetail | null>(null);
+  const [showSentimentInfo, setShowSentimentInfo] = useState(false);
+  const [showFullBrief, setShowFullBrief] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,21 +301,72 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               <Icons.Sparkles size={14} color={colors.indigoAction} />
               <span>Dede — AI Daily Brief • {formatDate(new Date())}</span>
             </span>
-            <Badge variant="success" size="sm">Sentiment +5%</Badge>
+            <button
+              type="button"
+              onClick={() => setShowSentimentInfo((prev) => !prev)}
+              title="Definition: Net Positive Vibe Index (+5% MoM). Source: 10s Voice & Emoji Vibe Checks. Window: Last 7 days vs prior 30-day rolling baseline (94% positive)."
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.25rem",
+              }}
+            >
+              <Badge variant="success" size="sm">Sentiment +5% ⓘ</Badge>
+            </button>
           </div>
+          {showSentimentInfo && (
+            <div
+              role="note"
+              style={{
+                marginBottom: "0.55rem",
+                padding: "0.55rem 0.75rem",
+                borderRadius: radii.md,
+                backgroundColor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                fontSize: "11px",
+                color: "#14532d",
+                lineHeight: 1.45,
+              }}
+            >
+              <strong>Sentiment (+5%):</strong> Share of positive anonymous pulse &amp; voice check-ins this week (94%) minus the prior 30-day rolling average (89%).
+              <br />
+              <strong>Source:</strong> 10s Voice &amp; Emoji Vibe Checks • <strong>Window:</strong> Last 7 days vs. 30-day baseline.
+            </div>
+          )}
           <div style={{ fontSize: typography.sizes.sm, color: colors.textPrimary, lineHeight: 1.5 }}>
-            <div style={{ marginBottom: "0.4rem", fontWeight: 600 }}>Good morning, Paa. Here is your morning briefing:</div>
-            <ul style={{ margin: 0, paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <li>
-                <strong>{stats.pendingLeaves} leave approvals</strong> require your attention.
-              </li>
-              <li>
-                <strong>Benedicta&apos;s Q4 OKR self-review</strong> is in calibration.
-              </li>
-              <li>
-                Your {stats.totalEmployees}-member team&apos;s average sentiment is <strong>94% positive</strong> this week across Accra, London, and Windhoek hubs.
-              </li>
-            </ul>
+            <div style={{ marginBottom: "0.3rem", fontWeight: 600 }}>
+              {stats.pendingLeaves} leave approvals due • {onLeaveList.length} staff currently on leave (50 on duty).
+            </div>
+            {showFullBrief && (
+              <ul style={{ margin: "0.25rem 0 0", paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                <li>
+                  <strong>Benedicta&apos;s Q4 OKR self-review</strong> is in calibration.
+                </li>
+                <li>
+                  Team average sentiment is <strong>94% positive</strong> across Accra, London, and Windhoek hubs.
+                </li>
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowFullBrief((prev) => !prev)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                marginTop: "0.2rem",
+                fontSize: "11px",
+                fontWeight: 700,
+                color: colors.indigoAction,
+                cursor: "pointer",
+              }}
+            >
+              {showFullBrief ? "Hide details ▲" : "Show full brief ▼"}
+            </button>
           </div>
 
           {/* Dynamic Contextual Action Chips */}

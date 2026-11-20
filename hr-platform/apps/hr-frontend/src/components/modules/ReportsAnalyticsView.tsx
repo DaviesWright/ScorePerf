@@ -1192,6 +1192,10 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
   const [promptQuery, setPromptQuery] = useState<string>("");
   const [generatedReport, setGeneratedReport] = useState<ReportItem | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [aiPromptError, setAiPromptError] = useState<{ reason: string; suggestions: string[] } | null>(null);
+  const [failedAiLogs, setFailedAiLogs] = useState<
+    Array<{ id: string; prompt: string; error: string; response: string; timestamp: string }>
+  >([]);
 
   // Filter Reports List
   const filteredReports = useMemo(() => {
@@ -1233,11 +1237,12 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
 
     setIsGenerating(true);
     setPromptQuery(queryText);
+    setAiPromptError(null);
 
     setTimeout(() => {
       setIsGenerating(false);
 
-      if (q.includes("turnover") || q.includes("engineering")) {
+      if (q.includes("turnover") || q.includes("engineering") || q.includes("attrition")) {
         setGeneratedReport({
           id: 991,
           name: "Engineering Turnover & Quarterly Variance Analysis",
@@ -1262,13 +1267,34 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
         setGeneratedReport(ALL_60_REPORTS.find((r) => r.id === 12) || ALL_60_REPORTS[11]);
       } else if (q.includes("dei") || q.includes("gender")) {
         setGeneratedReport(ALL_60_REPORTS.find((r) => r.id === 4) || ALL_60_REPORTS[3]);
-      } else if (q.includes("tcow") || q.includes("cost of workforce")) {
+      } else if (q.includes("tcow") || q.includes("cost of workforce") || q.includes("payroll")) {
         setGeneratedReport(ALL_60_REPORTS.find((r) => r.id === 24) || ALL_60_REPORTS[23]);
-      } else {
-        // Default smart match
+      } else if (q.includes("headcount") || q.includes("fte") || q.includes("staff")) {
+        setGeneratedReport(ALL_60_REPORTS.find((r) => r.id === 2) || ALL_60_REPORTS[1]);
+      } else if (q.includes("performance") || q.includes("okr") || q.includes("bsc") || q.includes("goal")) {
         setGeneratedReport(ALL_60_REPORTS.find((r) => r.id === 51) || ALL_60_REPORTS[0]);
+      } else {
+        // P1.5: Out-of-scope or unrecognized prompt -> log failure & suggest alternatives
+        const reason =
+          "Out of scope or unrecognized metric: AI Report Builder covers Workforce Headcount, Leave Liability, Turnover/Attrition, DEI, Performance/OKRs, and Cost of Workforce (TCOW).";
+        const suggestions = [
+          "Show me the turnover rate for the engineering team compared to last quarter",
+          "What is our total accrued leave financial liability in GBP?",
+          "Headcount and FTE breakdown by department",
+        ];
+        const entry = {
+          id: `FAIL-${Date.now()}`,
+          prompt: queryText.trim(),
+          error: "OUT_OF_SCOPE_OR_UNRECOGNIZED",
+          response: reason,
+          timestamp: new Date().toISOString(),
+        };
+        console.warn("[AI Report Builder Failure Log]", entry);
+        setFailedAiLogs((prev) => [entry, ...prev].slice(0, 10));
+        setGeneratedReport(null);
+        setAiPromptError({ reason, suggestions });
       }
-    }, 450);
+    }, 350);
   };
 
   const handleExport = (format: "PDF" | "CSV" | "JSON", report: ReportItem) => {
@@ -1654,6 +1680,60 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
             </button>
           ))}
         </div>
+
+        {aiPromptError && (
+          <div
+            role="alert"
+            style={{
+              marginTop: "0.85rem",
+              padding: "0.85rem 1rem",
+              borderRadius: radii.md,
+              backgroundColor: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#991b1b",
+              fontSize: 12,
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Unable to generate report for this prompt</div>
+            <div style={{ marginBottom: 8 }}>{aiPromptError.reason}</div>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>Try one of these supported alternatives:</div>
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              {aiPromptError.suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleExecuteAiPrompt(s)}
+                  style={{
+                    padding: "0.2rem 0.55rem",
+                    borderRadius: radii.full,
+                    border: "1px solid #fca5a5",
+                    backgroundColor: "#ffffff",
+                    color: "#991b1b",
+                    fontSize: 11,
+                    cursor: "pointer",
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {failedAiLogs.length > 0 && (
+          <details style={{ marginTop: "0.65rem", fontSize: 11, color: colors.textMuted }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              Failed Report Request Log ({failedAiLogs.length})
+            </summary>
+            <div style={{ marginTop: "0.4rem", display: "grid", gap: "0.35rem" }}>
+              {failedAiLogs.map((log) => (
+                <div key={log.id} style={{ padding: "0.4rem 0.6rem", backgroundColor: "#f8fafc", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
+                  <strong>{new Date(log.timestamp).toLocaleTimeString()}</strong> · Prompt: &ldquo;{log.prompt}&rdquo; · Error: <code>{log.error}</code> · Response: {log.response}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
 
         {/* AI Generated Report Live Card */}
         {generatedReport && (

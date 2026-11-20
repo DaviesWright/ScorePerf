@@ -88,9 +88,31 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [currentView, setCurrentViewRaw] = useState<ModuleViewKey>(() =>
     initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
   );
+  const [viewHistory, setViewHistory] = useState<ModuleViewKey[]>([]);
+  const scrollPositionsRef = React.useRef<Record<string, number>>({});
+
   // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
   const setCurrentView = (requested: ModuleViewKey) => {
-    if (isViewEnabled(requested)) setCurrentViewRaw(requested);
+    if (!isViewEnabled(requested) || requested === currentView) return;
+    if (typeof window !== "undefined") {
+      scrollPositionsRef.current[currentView] = window.scrollY;
+    }
+    setViewHistory((prev) => [...prev.slice(-19), currentView]);
+    setCurrentViewRaw(requested);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+    }
+  };
+
+  const handleGoBack = () => {
+    if (viewHistory.length === 0) return;
+    const prevView = viewHistory[viewHistory.length - 1];
+    setViewHistory((prev) => prev.slice(0, -1));
+    setCurrentViewRaw(prevView);
+    const savedY = scrollPositionsRef.current[prevView] ?? 0;
+    if (typeof window !== "undefined") {
+      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: "instant" as ScrollBehavior }));
+    }
   };
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
@@ -549,9 +571,76 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const isStaging = typeof window !== "undefined" && window.location.hostname.includes("staging");
   const effectiveShellMode = isStaging ? "plain" : (SHELL_MODE === "plain" && !isStaging ? "full" : SHELL_MODE);
 
+  const formatCrumb = (v: ModuleViewKey) =>
+    v
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
   // The module screen itself, shared by both frames.
   const viewContent = (
     <>
+      {viewHistory.length > 0 && (
+        <nav
+          aria-label="Breadcrumb"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.65rem",
+            padding: "0.55rem 1.5rem",
+            backgroundColor: "#f8fafc",
+            borderBottom: "1px solid #e2e8f0",
+            fontSize: "12px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleGoBack}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              padding: "0.25rem 0.65rem",
+              borderRadius: "6px",
+              border: "1px solid #cbd5e1",
+              backgroundColor: "#ffffff",
+              color: "#1e293b",
+              fontWeight: 700,
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            ← Back
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "#64748b", flexWrap: "wrap" }}>
+            {viewHistory.slice(-3).map((v, idx) => (
+              <React.Fragment key={`${v}-${idx}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetIdx = viewHistory.length - Math.min(3, viewHistory.length) + idx;
+                    const target = viewHistory[targetIdx];
+                    setViewHistory((prev) => prev.slice(0, targetIdx));
+                    setCurrentViewRaw(target);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    color: "#4f46e5",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontSize: "12px",
+                  }}
+                >
+                  {formatCrumb(v)}
+                </button>
+                <span>/</span>
+              </React.Fragment>
+            ))}
+            <span style={{ color: "#0f172a", fontWeight: 700 }}>{formatCrumb(currentView)}</span>
+          </div>
+        </nav>
+      )}
       {!isViewEnabled(currentView) && (
         <div role="alert" style={{ padding: "2rem" }}>
           This module is not enabled for this deployment.

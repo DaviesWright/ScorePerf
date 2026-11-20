@@ -14,6 +14,7 @@ import { DepartmentSchedulesRosterView } from "./DepartmentSchedulesRosterView";
 import { LeaveLoadStrip, INDIGO_RAMP, type LoadRow } from "./LeaveLoadStrip";
 import { LeaveMiniDashboard } from "./LeaveMiniDashboard";
 import { LeaveAnalyticsPanel } from "../analytics/AnalyticsPrimitives";
+import { LeaveAdminDrilldowns } from "./LeaveAdminDrilldowns";
 import { MyLeaveScreen } from "./MyLeaveScreen";
 import { SEEDED_DEPARTMENTS, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 
@@ -1000,6 +1001,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
           />
 
           <LeaveAnalyticsPanel />
+
+          <LeaveAdminDrilldowns />
 
           {/* CON-001 & CON-002: Employees Currently on Leave (Department-wise & Company-wide) */}
           <div

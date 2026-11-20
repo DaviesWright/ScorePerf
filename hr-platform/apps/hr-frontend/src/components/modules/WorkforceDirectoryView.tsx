@@ -136,6 +136,23 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   const [newContractType, setNewContractType] = useState("Permanent");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // P1.3: Form New Squad & Squad Member Visibility State
+  const [showFormSquadModal, setShowFormSquadModal] = useState(false);
+  const [newSquadName, setNewSquadName] = useState("");
+  const [newSquadLead, setNewSquadLead] = useState("");
+  const [newSquadMission, setNewSquadMission] = useState("");
+  const [newSquadSprint, setNewSquadSprint] = useState("Sprint 43");
+  const [newSquadMemberIds, setNewSquadMemberIds] = useState<number[]>([]);
+  const [expandedSquadId, setExpandedSquadId] = useState<number | null>(1);
+  const [squadMembersMap, setSquadMembersMap] = useState<Record<number, string[]>>({});
+
+  // P1.3: Initiate Redeployment Modal State
+  const [showRedeployModal, setShowRedeployModal] = useState(false);
+  const [redeployEmpIdx, setRedeployEmpIdx] = useState(0);
+  const [redeployToDept, setRedeployToDept] = useState("Cloud Engineering");
+  const [redeployToRole, setRedeployToRole] = useState("Senior Consultant");
+  const [redeployEffectiveDate, setRedeployEffectiveDate] = useState(() => new Date().toISOString().slice(0, 10));
+
   // Employee Groups & Squads State
   const [squads, setSquads] = useState<EmployeeGroupSquad[]>([
     {
@@ -708,7 +725,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.5 }}>
-                Current workforce headcount stands at <strong>91 staff</strong> across London HQ and Accra Practice. <strong>100% of Ghanaian employees</strong> possess validated Ghana Card PINs and verified SSNIT pension accounts. <strong>2 internal redeployments</strong> are active this quarter, cutting external recruitment costs by <strong>GH₵85,000</strong>.
+                Current workforce headcount stands at <strong>54 staff</strong> across London HQ and Accra Practice. <strong>100% of Ghanaian employees</strong> possess validated Ghana Card PINs and verified SSNIT pension accounts. <strong>{redeployments.length} internal redeployments</strong> are active this quarter, cutting external recruitment costs by <strong>GH₵85,000</strong>.
               </p>
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
                 <button
@@ -1011,7 +1028,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                 Agile delivery squads, practice chapters, and statutory governance committees across the enterprise.
               </p>
             </div>
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="sm" onClick={() => setShowFormSquadModal(true)}>
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <Icons.Plus size={14} />
                 <span>Form New Squad</span>
@@ -1020,34 +1037,179 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-            {squads.map((squad) => (
+            {squads.map((squad) => {
+              const matchedMembers =
+                squadMembersMap[squad.id] ??
+                employees
+                  .filter((e) => (e.team_name || "").toLowerCase() === squad.name.toLowerCase())
+                  .map((e) => `${e.first_name} ${e.last_name}`);
+              const isExpanded = expandedSquadId === squad.id;
+              return (
+                <div
+                  key={squad.id}
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: radii.lg,
+                    border: `1px solid ${colors.border}`,
+                    padding: "1.25rem",
+                    boxShadow: shadows.xs,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
+                      {squad.name}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedSquadId(isExpanded ? null : squad.id)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: colors.indigoAction,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {isExpanded ? "Hide members ▲" : `View members (${matchedMembers.length || squad.memberCount}) ▼`}
+                    </button>
+                  </div>
+                  <div style={{ fontSize: "11px", color: colors.textMuted, marginBottom: "0.75rem" }}>
+                    Lead: <strong>{squad.leadName}</strong> • {matchedMembers.length || squad.memberCount} Team Members
+                  </div>
+                  <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.4 }}>
+                    {squad.currentMission}
+                  </p>
+                  <div style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600 }}>
+                    Active Focus: {squad.activeSprint}
+                  </div>
+                  {isExpanded && (
+                    <div style={{ marginTop: "0.75rem", paddingTop: "0.65rem", borderTop: `1px solid ${colors.borderSubtle}` }}>
+                      <div style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, marginBottom: "0.35rem" }}>
+                        Squad Members (visible to squad):
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+                        {(matchedMembers.length > 0 ? matchedMembers : [squad.leadName]).map((m) => (
+                          <Badge key={m} variant="info" size="sm">{m}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {showFormSquadModal && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              style={{
+                position: "fixed",
+                inset: 0,
+                backgroundColor: "rgba(15, 23, 42, 0.45)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "1rem",
+                zIndex: 1000,
+              }}
+              onClick={() => setShowFormSquadModal(false)}
+            >
               <div
-                key={squad.id}
                 style={{
                   backgroundColor: colors.surface,
                   borderRadius: radii.lg,
                   border: `1px solid ${colors.border}`,
                   padding: "1.25rem",
-                  boxShadow: shadows.xs,
+                  width: "100%",
+                  maxWidth: 520,
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
-                  <h3 style={{ margin: 0, fontSize: typography.sizes.sm, fontWeight: 700, color: colors.textPrimary }}>
-                    {squad.name}
-                  </h3>
+                <h3 style={{ margin: "0 0 0.75rem", fontSize: typography.sizes.lg, color: colors.indigoPrimary }}>
+                  Form New Squad
+                </h3>
+                <div style={{ display: "grid", gap: "0.65rem", fontSize: 13 }}>
+                  <input
+                    type="text"
+                    placeholder="Squad name (e.g., AI Analytics Guild)"
+                    value={newSquadName}
+                    onChange={(e) => setNewSquadName(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Squad lead name"
+                    value={newSquadLead}
+                    onChange={(e) => setNewSquadLead(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Mission / objective"
+                    value={newSquadMission}
+                    onChange={(e) => setNewSquadMission(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                  <div style={{ maxHeight: 140, overflowY: "auto", border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "0.5rem" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, marginBottom: 4 }}>Select Members:</div>
+                    {employees.slice(0, 15).map((emp) => (
+                      <label key={emp.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "2px 0", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={newSquadMemberIds.includes(emp.id)}
+                          onChange={(e) =>
+                            setNewSquadMemberIds((prev) =>
+                              e.target.checked ? [...prev, emp.id] : prev.filter((id) => id !== emp.id)
+                            )
+                          }
+                        />
+                        {emp.first_name} {emp.last_name} ({emp.department_name || "General"})
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ fontSize: "11px", color: colors.textMuted, marginBottom: "0.75rem" }}>
-                  Lead: <strong>{squad.leadName}</strong> • {squad.memberCount} Team Members
-                </div>
-                <p style={{ margin: "0 0 0.75rem 0", fontSize: typography.sizes.xs, color: colors.textSecondary, lineHeight: 1.4 }}>
-                  {squad.currentMission}
-                </p>
-                <div style={{ fontSize: "11px", color: colors.brandBlue, fontWeight: 600 }}>
-                  Active Focus: {squad.activeSprint}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
+                  <Button variant="outline" size="sm" onClick={() => setShowFormSquadModal(false)}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!newSquadName.trim()}
+                    onClick={() => {
+                      const nextId = Math.max(0, ...squads.map((s) => s.id)) + 1;
+                      const pickedNames = employees
+                        .filter((e) => newSquadMemberIds.includes(e.id))
+                        .map((e) => `${e.first_name} ${e.last_name}`);
+                      const lead = newSquadLead.trim() || pickedNames[0] || "Assigned Lead";
+                      setSquads((prev) => [
+                        ...prev,
+                        {
+                          id: nextId,
+                          name: newSquadName.trim(),
+                          type: "CROSS_FUNCTIONAL",
+                          leadName: lead,
+                          memberCount: Math.max(1, pickedNames.length),
+                          currentMission: newSquadMission.trim() || "Cross-functional delivery squad.",
+                          activeSprint: newSquadSprint,
+                        },
+                      ]);
+                      setSquadMembersMap((prev) => ({ ...prev, [nextId]: pickedNames.length > 0 ? pickedNames : [lead] }));
+                      setExpandedSquadId(nextId);
+                      setNewSquadName("");
+                      setNewSquadLead("");
+                      setNewSquadMission("");
+                      setNewSquadMemberIds([]);
+                      setShowFormSquadModal(false);
+                    }}
+                  >
+                    Create Squad
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1212,13 +1374,111 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                 Seamless cross-entity transfers between Ghana Practice and UK Advisory, rotations, and internal promotions.
               </p>
             </div>
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="sm" onClick={() => setShowRedeployModal(true)}>
               <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                 <Icons.Plus size={14} />
                 <span>Initiate Redeployment</span>
               </span>
             </Button>
           </div>
+
+          {showRedeployModal && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              style={{
+                position: "fixed",
+                inset: 0,
+                backgroundColor: "rgba(15, 23, 42, 0.45)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "1rem",
+                zIndex: 1000,
+              }}
+              onClick={() => setShowRedeployModal(false)}
+            >
+              <div
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: radii.lg,
+                  border: `1px solid ${colors.border}`,
+                  padding: "1.25rem",
+                  width: "100%",
+                  maxWidth: 480,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ margin: "0 0 0.75rem", fontSize: typography.sizes.lg, color: colors.indigoPrimary }}>
+                  Initiate Internal Redeployment
+                </h3>
+                <div style={{ display: "grid", gap: "0.65rem", fontSize: 13 }}>
+                  <select
+                    value={redeployEmpIdx}
+                    onChange={(e) => setRedeployEmpIdx(Number(e.target.value))}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  >
+                    {employees.map((emp, idx) => (
+                      <option key={emp.id} value={idx}>
+                        {emp.first_name} {emp.last_name} ({emp.department_name || "General"})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="New Practice / Department"
+                    value={redeployToDept}
+                    onChange={(e) => setRedeployToDept(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="New Role Title"
+                    value={redeployToRole}
+                    onChange={(e) => setRedeployToRole(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                  <input
+                    type="date"
+                    value={redeployEffectiveDate}
+                    onChange={(e) => setRedeployEffectiveDate(e.target.value)}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                  />
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
+                  <Button variant="outline" size="sm" onClick={() => setShowRedeployModal(false)}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      const emp = employees[redeployEmpIdx] ?? employees[0];
+                      if (!emp) return;
+                      const nextId = Math.max(0, ...redeployments.map((r) => r.id)) + 1;
+                      setRedeployments((prev) => [
+                        {
+                          id: nextId,
+                          employeeName: `${emp.first_name} ${emp.last_name}`,
+                          staffId: `SEN/${String(emp.id).padStart(3, "0")}`,
+                          currentDepartment: emp.department_name || "General",
+                          newDepartment: redeployToDept.trim() || "Strategic Advisory",
+                          currentRole: emp.role || "Consultant",
+                          newRole: redeployToRole.trim() || "Senior Consultant",
+                          effectiveDate: redeployEffectiveDate,
+                          type: "CROSS_PRACTICE_ROTATION",
+                          status: "IN_PROGRESS",
+                          approver: "HR Governance",
+                        },
+                        ...prev,
+                      ]);
+                      setShowRedeployModal(false);
+                    }}
+                  >
+                    Submit Redeployment
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div
             style={{

@@ -161,6 +161,9 @@ export const PerformanceConfigurationStudio: React.FC = () => {
   ]);
 
   // 2. Custom Rating Scales
+  const [showAddScaleModal, setShowAddScaleModal] = useState(false);
+  const [newScaleName, setNewScaleName] = useState("");
+  const [newScaleScope, setNewScaleScope] = useState("Company-wide");
   const [ratingScales, setRatingScales] = useState<CustomRatingScaleConfig[]>([
     {
       id: "ops_5pt",
@@ -725,10 +728,70 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                   Define custom numeric, percentage, discrete, or pass/fail anchors and map them to job architectures or divisions.
                 </p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowAddScaleModal(true)}>
                 + Add Custom Scale
               </Button>
             </div>
+
+            {showAddScaleModal && (
+              <div
+                style={{
+                  marginBottom: "1rem",
+                  padding: "1rem",
+                  borderRadius: radii.md,
+                  border: `1px solid ${colors.indigoAction}`,
+                  backgroundColor: "#eef2ff",
+                  display: "grid",
+                  gap: "0.6rem",
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 700, color: colors.indigoPrimary }}>New Custom Rating Scale</div>
+                <input
+                  type="text"
+                  placeholder="Scale Name (e.g., Advisory 4-Point Competency Scale)"
+                  value={newScaleName}
+                  onChange={(e) => setNewScaleName(e.target.value)}
+                  style={{ padding: "0.45rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                />
+                <input
+                  type="text"
+                  placeholder="Department Scope (e.g., Enterprise Advisory)"
+                  value={newScaleScope}
+                  onChange={(e) => setNewScaleScope(e.target.value)}
+                  style={{ padding: "0.45rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                />
+                <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                  <Button variant="outline" size="sm" onClick={() => setShowAddScaleModal(false)}>Cancel</Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={!newScaleName.trim()}
+                    onClick={() => {
+                      setRatingScales((prev) => [
+                        ...prev,
+                        {
+                          id: `custom_${Date.now()}`,
+                          name: newScaleName.trim(),
+                          type: "numeric",
+                          departmentScope: newScaleScope.trim() || "Company-wide",
+                          anchors: [
+                            { score: 4, label: "Exceeds Expectations", color: "#10b981", description: "Consistently surpasses role benchmarks" },
+                            { score: 3, label: "Meets Expectations", color: "#6366f1", description: "Delivers expected outcomes reliably" },
+                            { score: 2, label: "Developing", color: "#f59e0b", description: "Requires targeted coaching" },
+                            { score: 1, label: "Below Standard", color: "#ef4444", description: "Performance remediation required" },
+                          ],
+                        },
+                      ]);
+                      setNewScaleName("");
+                      setNewScaleScope("");
+                      setShowAddScaleModal(false);
+                    }}
+                  >
+                    Save Custom Scale
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
               {ratingScales.map((scale) => (
