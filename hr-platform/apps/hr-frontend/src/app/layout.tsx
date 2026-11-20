@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'ScoReviewHR | Senrab ConsulTech Workforce Management',
-  description: 'Enterprise HRMS, Workforce Intelligence, and Multi-Framework Appraisal Oversight',
+  title: 'ScoReviewHR | a Senrab ConsulTech Multi-Framework Intelligent Appraisal Solution for Enterprise HRMS',
+  description: 'Multi-Framework Intelligent Appraisal Solution for Enterprise HRMS',
   icons: {
     icon: [
       { url: '/dede/dede-avatar-light-32.png', sizes: '32x32', type: 'image/png' },
