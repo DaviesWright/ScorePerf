@@ -33,7 +33,10 @@ interface MyAsset {
   id: number;
   assetCode: string;
   name: string;
+  serialNumber?: string | null;
+  categoryName?: string;
   allocatedDate: string;
+  status?: string;
 }
 interface HistoryRow {
   id: number;
@@ -112,9 +115,24 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
           id: a.id,
           assetCode: a.asset_code,
           name: a.name,
+          serialNumber: a.serial_number,
+          categoryName: a.category_name ?? "IT Equipment",
           allocatedDate: a.purchase_date ?? "2025-01-15",
+          status: a.status,
         }));
-      setMine(myRows.length > 0 ? myRows : mappedAssets.slice(0, 2).map((a) => ({ id: a.id, assetCode: a.asset_code, name: a.name, allocatedDate: "2025-01-15" })));
+      setMine(
+        myRows.length > 0
+          ? myRows
+          : mappedAssets.slice(0, 2).map((a) => ({
+              id: a.id,
+              assetCode: a.asset_code,
+              name: a.name,
+              serialNumber: a.serial_number,
+              categoryName: a.category_name ?? "IT Equipment",
+              allocatedDate: "2025-01-15",
+              status: "allocated",
+            }))
+      );
       setPeople(DEFAULT_EMPLOYEES.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })));
       setLoading(false);
       return;
@@ -178,19 +196,11 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
     setReloadKey((n) => n + 1);
   };
 
-  if (!realSession) {
-    return (
-      <div style={S.page}>
-        <h1 style={{ margin: "0 0 0.5rem", fontSize: "22px" }}>Assets</h1>
-        <p style={S.note}>Sign in to see live assets.</p>
-      </div>
-    );
-  }
-
   return (
     <div style={S.page}>
       <h1 style={{ margin: "0 0 0.25rem", fontSize: "22px", color: "#4338ca" }}>Assets</h1>
       <p style={S.note}>{isHr ? "Register equipment, assign it to people, record returns." : "Equipment assigned to you."}</p>
+      {!realSession && <p style={S.note}>Demo preview mode — sign in for live HRIS inventory actions.</p>}
       {message && <p role="status" style={{ color: "#166534", fontWeight: 600 }}>{message}</p>}
       {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
       {loading && <p role="status">Loading…</p>}
@@ -398,7 +408,9 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
       )}
 
       <ApprovalsPanel refreshKey={reloadKey} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
-      {!isHr && <TeamPanel refreshKey={reloadKey} />}
+      {!isHr && realSession && user.persona !== "employee" && (
+        <TeamPanel refreshKey={reloadKey} onDone={(m) => { setMessage(m); setReloadKey((n) => n + 1); }} />
+      )}
 
       <h2 style={S.h2}>{isHr ? "Assigned to me" : "My assets"}</h2>
       {mine.length === 0 ? (
@@ -408,14 +420,17 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
           <table style={S.table}>
             <Caption>Assets assigned to me</Caption>
             <thead>
-              <tr>{["Code", "Name", "Since"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+              <tr>{["Code / Tag", "Name", "Serial", "Category", "Assigned Date", "Status"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {mine.map((a) => (
                 <tr key={a.id}>
                   <td style={S.td}><strong>{a.assetCode}</strong></td>
                   <td style={S.td}>{a.name}</td>
+                  <td style={S.td}>{a.serialNumber ?? "—"}</td>
+                  <td style={S.td}>{a.categoryName ?? "Uncategorised"}</td>
                   <td style={S.td}>{a.allocatedDate}</td>
+                  <td style={S.td}>{a.status === "allocated" ? "Assigned" : (a.status ?? "Assigned")}</td>
                 </tr>
               ))}
             </tbody>

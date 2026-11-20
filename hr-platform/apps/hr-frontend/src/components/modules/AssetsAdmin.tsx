@@ -113,29 +113,135 @@ interface TeamRow {
   assetId: number;
   assetCode: string;
   name: string;
+  employeeId: number;
   employeeName: string;
   allocatedDate: string;
   daysHeld: number;
 }
 
-/** Manager view, read only: open assets of direct reports. */
-export function TeamPanel({ refreshKey }: { refreshKey: number }) {
+/** Manager view: direct reports' open assets + Assign / Return / Transfer within solid-line reporting. */
+export function TeamPanel({ refreshKey, onDone }: { refreshKey: number; onDone?: (message: string) => void }) {
   const [rows, setRows] = useState<TeamRow[] | null>(null);
+  const [available, setAvailable] = useState<any[]>([]);
+  const [reports, setReports] = useState<{ id: number; name: string; role: string }[]>([]);
+  const [audit, setAudit] = useState<any[]>([]);
+  const [assetId, setAssetId] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
+  const [assignedDate, setAssignedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expectedReturnDate, setExpectedReturnDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [transferAssetId, setTransferAssetId] = useState<number | null>(null);
+  const [transferToId, setTransferToId] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    call<{ results: TeamRow[] }>("GET", "assets/team").then((r) => {
-      if (!cancelled && r.ok) setRows(r.data.results ?? []);
+    Promise.all([
+      call<{ results: TeamRow[] }>("GET", "assets/team"),
+      call<{ results: any[] }>("GET", "assets/available"),
+      call<{ results: { id: number; name: string; role: string }[] }>("GET", "assets/direct-reports"),
+      call<{ results: any[] }>("GET", "assets/audit"),
+    ]).then(([t, a, r, aud]) => {
+      if (cancelled) return;
+      if (t.ok) setRows(t.data.results ?? []);
+      if (a.ok) setAvailable(a.data.results ?? []);
+      if (r.ok) setReports(r.data.results ?? []);
+      if (aud.ok) setAudit(aud.data.results ?? []);
     });
     return () => {
       cancelled = true;
     };
   }, [refreshKey]);
 
+  const handleAssign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assetId || !assigneeId) return;
+    setBusy(true);
+    setErr("");
+    const res = await call("POST", `assets/${assetId}/assign`, {
+      employeeId: Number(assigneeId),
+      condition: "good",
+      assignedDate,
+      expectedReturnDate: expectedReturnDate || null,
+      notes,
+      source: "UI",
+    });
+    setBusy(false);
+    if (!res.ok) return setErr(res.data.error ?? "Could not assign asset.");
+    setAssetId("");
+    setAssigneeId("");
+    setExpectedReturnDate("");
+    setNotes("");
+    onDone?.("Asset assigned to direct report.");
+  };
+
+  const handleReturn = async (id: number) => {
+    setBusy(true);
+    setErr("");
+    const res = await call("POST", `assets/${id}/return`, { condition: "good", notes: "Returned by manager", source: "UI" });
+    setBusy(false);
+    if (!res.ok) return setErr(res.data.error ?? "Could not return asset.");
+    onDone?.("Asset returned to available inventory.");
+  };
+
+  const handleTransfer = async (id: number) => {
+    if (!transferToId) return;
+    setBusy(true);
+    setErr("");
+    const res = await call("POST", `assets/${id}/transfer`, {
+      newEmployeeId: Number(transferToId),
+      condition: "good",
+      notes: "Manager reporting-line transfer",
+      source: "UI",
+    });
+    setBusy(false);
+    if (!res.ok) return setErr(res.data.error ?? "Could not transfer asset.");
+    setTransferAssetId(null);
+    setTransferToId("");
+    onDone?.("Asset transferred within reporting line.");
+  };
+
   return (
     <section style={S.panel} aria-label="Your team's assets">
-      <h2 style={{ ...S.h2, marginTop: 0 }}>Your team&apos;s assets</h2>
-      <p style={S.note}>Read only. Open assignments of your direct reports.</p>
+      <h2 style={{ ...S.h2, marginTop: 0 }}>Your team&apos;s assets (Solid-Line Direct Reports)</h2>
+      <p style={S.note}>View, assign available inventory, return, or transfer assets within your solid-line reporting line.</p>
+      {err && <p role="alert" style={S.error}>{err}</p>}
+
+      {reports.length > 0 && (
+        <form onSubmit={handleAssign} style={{ display: "grid", gap: "0.5rem", maxWidth: "680px", marginBottom: "1rem", padding: "0.75rem", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <h4 style={{ margin: 0 }}>Assign asset to direct report</h4>
+          <div style={{ display: "grid", gap: "0.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+            <label style={S.field}>Available Asset *
+              <select required value={assetId} onChange={(e) => setAssetId(e.target.value)} style={S.input}>
+                <option value="">Choose available asset…</option>
+                {available.map((a) => (
+                  <option key={a.id} value={a.id}>{a.asset_code} — {a.name} ({a.category_name ?? "General"})</option>
+                ))}
+              </select>
+            </label>
+            <label style={S.field}>Direct Report *
+              <select required value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} style={S.input}>
+                <option value="">Choose direct report…</option>
+                {reports.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </label>
+            <label style={S.field}>Assigned Date *
+              <input type="date" required max={new Date().toISOString().slice(0, 10)} value={assignedDate} onChange={(e) => setAssignedDate(e.target.value)} style={S.input} />
+            </label>
+            <label style={S.field}>Expected Return Date
+              <input type="date" min={assignedDate} value={expectedReturnDate} onChange={(e) => setExpectedReturnDate(e.target.value)} style={S.input} />
+            </label>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input type="text" placeholder="Notes (audited)" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...S.input, flex: 1 }} />
+            <button type="submit" style={S.primary} disabled={busy || !assetId || !assigneeId}>{busy ? "Assigning…" : "Assign asset"}</button>
+          </div>
+        </form>
+      )}
+
       {rows === null ? null : rows.length === 0 ? (
         <p style={S.note}>None of your direct reports has an asset assigned.</p>
       ) : (
@@ -143,7 +249,7 @@ export function TeamPanel({ refreshKey }: { refreshKey: number }) {
           <table style={S.table}>
             <Caption>Your team&apos;s assets</Caption>
             <thead>
-              <tr>{["Code", "Name", "Holder", "Assigned", "Days held"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
+              <tr>{["Code", "Name", "Holder", "Assigned", "Days held", "Actions"].map((h) => <th key={h} scope="col" style={S.th}>{h}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map((r) => (
@@ -153,10 +259,40 @@ export function TeamPanel({ refreshKey }: { refreshKey: number }) {
                   <td style={S.td}>{r.employeeName}</td>
                   <td style={S.td}>{r.allocatedDate}</td>
                   <td style={S.td}>{r.daysHeld}</td>
+                  <td style={S.td}>
+                    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                      <button type="button" style={S.btn} disabled={busy} onClick={() => void handleReturn(r.assetId)}>Return</button>
+                      <button type="button" style={S.btn} disabled={busy} onClick={() => { setTransferAssetId(r.assetId); setTransferToId(""); }}>Transfer</button>
+                    </div>
+                    {transferAssetId === r.assetId && (
+                      <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
+                        <select value={transferToId} onChange={(e) => setTransferToId(e.target.value)} style={S.input}>
+                          <option value="">Select report…</option>
+                          {reports.filter((rep) => rep.id !== r.employeeId).map((rep) => (
+                            <option key={rep.id} value={rep.id}>{rep.name}</option>
+                          ))}
+                        </select>
+                        <button type="button" style={S.primary} disabled={busy || !transferToId} onClick={() => void handleTransfer(r.assetId)}>Confirm</button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {audit.length > 0 && (
+        <div style={{ marginTop: "1rem" }}>
+          <h4 style={{ margin: "0 0 0.35rem" }}>Team Asset Audit Trail</h4>
+          <div style={{ maxHeight: "140px", overflowY: "auto", fontSize: "12px", color: "#475569" }}>
+            {audit.slice(0, 10).map((ev) => (
+              <div key={ev.id}>
+                [{ev.action}] {ev.asset_code ?? `Asset #${ev.asset_id}`} · {ev.effective_date} · {ev.reason || "—"}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

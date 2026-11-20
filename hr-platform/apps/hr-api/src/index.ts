@@ -44,6 +44,7 @@ import { createAnalyticsRoutes } from "./analytics-routes";
 import { createPerformanceCoreRoutes } from "./performance-core-routes";
 import { createPerformanceV12Routes } from "./performance-v12-routes";
 import { createPerformanceOrgRoutes } from "./performance-org-routes";
+import { createAssetsP13Routes } from "./assets-p13-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -2775,19 +2776,8 @@ app.get("/api/v1/assets", async (c) => {
   return c.json({ count: assets.length, results: assets });
 });
 
-// Anyone: the assets assigned to me right now.
-app.get("/api/v1/assets/me", async (c) => {
-  const { companyId, userId } = c.get("tenant");
-  const sql = getSql(c.env);
-  const rows = await sql`
-    SELECT ca.id, ca.asset_code, ca.name, aa.allocated_date::text AS allocated_date
-    FROM asset_allocations aa
-    JOIN company_assets ca ON ca.id = aa.asset_id
-    WHERE aa.company_id = ${companyId} AND aa.employee_id = ${userId} AND aa.return_date IS NULL
-    ORDER BY aa.allocated_date
-  `;
-  return c.json({ results: rows.map((r) => ({ id: Number(r.id), assetCode: String(r.asset_code), name: String(r.name), allocatedDate: String(r.allocated_date) })) });
-});
+// P13 Asset Management Addendum: self-service /me, manager assign/return/transfer, solid-line scope, & audit trail.
+app.route("/", createAssetsP13Routes(getSql));
 
 app.post("/api/v1/assets", zValidator("json", AssetCreateBody), async (c) => {
   const { companyId, role } = c.get("tenant");
@@ -2808,61 +2798,6 @@ app.post("/api/v1/assets", zValidator("json", AssetCreateBody), async (c) => {
     if (isSerialViolation(err)) return c.json({ error: "Another asset already has this serial number." }, 409);
     throw err;
   }
-});
-
-app.post("/api/v1/assets/:id/assign", zValidator("json", AssetAssignBody), async (c) => {
-  const { companyId, userId, role } = c.get("tenant");
-  if (!isHrRole(role)) return c.json({ error: "Only HR can assign assets." }, 403);
-  const id = objectiveId(c.req.param("id"));
-  if (id === null) return c.json({ error: "Not found" }, 404);
-  const body = c.req.valid("json");
-  const sql = getSql(c.env);
-  const employee = await sql`SELECT 1 FROM employees WHERE id = ${body.employeeId} AND company_id = ${companyId} AND is_active`;
-  if (employee.length === 0) return c.json({ error: "No active employee with that id." }, 422);
-  try {
-    await sql.begin(async (tx) => {
-      const [asset] = await tx`SELECT status FROM company_assets WHERE id = ${id} AND company_id = ${companyId} FOR UPDATE`;
-      if (!asset) throw new AmendRejected("Not found.", 404);
-      if (asset.status !== "available") throw new AmendRejected(`This asset is ${asset.status}, not available.`, 409);
-      await tx`
-        INSERT INTO asset_allocations (company_id, asset_id, employee_id, allocated_date, condition_on_allocation, assigned_by)
-        VALUES (${companyId}, ${id}, ${body.employeeId}, CURRENT_DATE, ${body.condition}, ${userId})
-      `;
-      await tx`UPDATE company_assets SET status = 'allocated', asset_condition = ${body.condition} WHERE id = ${id}`;
-    });
-  } catch (err) {
-    if (err instanceof AmendRejected) return c.json({ error: err.message }, err.httpStatus);
-    throw err;
-  }
-  return c.json({ id, status: "allocated" }, 201);
-});
-
-// Return: condition decides the next status. new or good goes back to stock; fair or poor goes to maintenance.
-app.post("/api/v1/assets/:id/return", zValidator("json", AssetReturnBody), async (c) => {
-  const { companyId, role } = c.get("tenant");
-  if (!isHrRole(role)) return c.json({ error: "Only HR can record returns." }, 403);
-  const id = objectiveId(c.req.param("id"));
-  if (id === null) return c.json({ error: "Not found" }, 404);
-  const body = c.req.valid("json");
-  const nextStatus = body.condition === "new" || body.condition === "good" ? "available" : "maintenance";
-  const sql = getSql(c.env);
-  try {
-    await sql.begin(async (tx) => {
-      const [asset] = await tx`SELECT status FROM company_assets WHERE id = ${id} AND company_id = ${companyId} FOR UPDATE`;
-      if (!asset) throw new AmendRejected("Not found.", 404);
-      const open = await tx`SELECT id FROM asset_allocations WHERE asset_id = ${id} AND company_id = ${companyId} AND return_date IS NULL FOR UPDATE`;
-      if (open.length === 0) throw new AmendRejected("This asset is not assigned to anyone.", 409);
-      await tx`
-        UPDATE asset_allocations SET return_date = CURRENT_DATE, condition_on_return = ${body.condition}, return_notes = ${body.notes}
-        WHERE id = ${open[0].id}
-      `;
-      await tx`UPDATE company_assets SET status = ${nextStatus}, asset_condition = ${body.condition} WHERE id = ${id}`;
-    });
-  } catch (err) {
-    if (err instanceof AmendRejected) return c.json({ error: err.message }, err.httpStatus);
-    throw err;
-  }
-  return c.json({ id, status: nextStatus });
 });
 
 // HR: open assignments held longer than `days` (default 365). Visibility only; nothing is enforced automatically.
