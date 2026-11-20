@@ -179,7 +179,7 @@ function getContextualNav(
           label: "Projects & Talent",
           icon: Icons.Briefcase,
           items: [
-            { id: "ess-gigs", label: "Skills & Gig Board", view: "skills_marketplace" },
+            { id: "ess-gigs", label: "Skills & Internal Gigs Board", view: "skills_marketplace" },
             { id: "ess-proj", label: "Client Engagements", view: "projects" },
           ],
         },

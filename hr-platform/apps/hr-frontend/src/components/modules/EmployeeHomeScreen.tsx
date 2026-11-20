@@ -110,7 +110,7 @@ export const EmployeeHomeScreen: React.FC<{ onNavigate: (view: ModuleViewKey) =>
           <Link label="Bank & Tax Details" view="my_profile" onNavigate={onNavigate} />
           <Link label="Document Centre" view="document_centre" onNavigate={onNavigate} />
           <Link label="My Performance" view="my_performance" onNavigate={onNavigate} />
-          <Link label="Skills & Internal Job Board" view="skills_marketplace" onNavigate={onNavigate} />
+          <Link label="Skills & Internal Gigs Board" view="skills_marketplace" onNavigate={onNavigate} />
         </div>
       </Panel>
     </div>

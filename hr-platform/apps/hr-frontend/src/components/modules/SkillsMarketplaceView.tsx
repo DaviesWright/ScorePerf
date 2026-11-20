@@ -304,7 +304,7 @@ export const SkillsMarketplaceView: React.FC = () => {
                 margin: 0,
               }}
             >
-              Skills &amp; Gig Board
+              Skills &amp; Internal Gigs Board
             </h1>
             <Badge variant="info" size="sm">
               20 Skills · 5 Categories · 5-Level Scale
