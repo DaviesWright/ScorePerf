@@ -33,7 +33,8 @@ export function OrganogramView() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("ALL");
   const [selectedExperience, setSelectedExperience] = useState<ExperienceContext | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [viewMode, setViewMode] = useState<"tree" | "matrix_table">("tree");
+  const [viewMode, setViewMode] = useState<"tree" | "flowchart" | "matrix_table">("tree");
+  const [orgDepthLevel, setOrgDepthLevel] = useState<2 | 3>(2); // P8: Default to first 2 levels (Company -> Department)
   const [rootFocusId, setRootFocusId] = useState<number>(1); // Default root: #1 Paa Kwesi Barnes
   const [collapsedIds, setCollapsedIds] = useState<Record<number, boolean>>({});
   const [selectedPerson, setSelectedPerson] = useState<SeedEmployee | null>(SEEDED_EMPLOYEES[0]);
@@ -316,6 +317,20 @@ export function OrganogramView() {
             Interactive Hierarchy Tree
           </Button>
           <Button
+            variant={viewMode === "flowchart" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("flowchart")}
+          >
+            Reporting Flowchart
+          </Button>
+          <Button
+            variant={orgDepthLevel === 2 ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setOrgDepthLevel(orgDepthLevel === 2 ? 3 : 2)}
+          >
+            {orgDepthLevel === 2 ? "2 Levels (Default)" : "3 Levels (Co → Dept → Team)"}
+          </Button>
+          <Button
             variant={viewMode === "matrix_table" ? "primary" : "outline"}
             size="sm"
             onClick={() => setViewMode("matrix_table")}
@@ -488,7 +503,47 @@ export function OrganogramView() {
 
       {/* Main Content Split: Tree / Matrix (Left) + Selected Node Inspector (Right) */}
       <div style={{ display: "grid", gridTemplateColumns: "1.65fr 1fr", gap: space[4], alignItems: "start" }}>
-        {viewMode === "tree" ? (
+        {viewMode === "flowchart" ? (
+          <div
+            style={{
+              backgroundColor: colors.surface,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radii.md,
+              padding: space[4],
+              boxShadow: shadows.sm,
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+              <div style={{ display: "inline-block", padding: "0.65rem 1.25rem", borderRadius: radii.md, backgroundColor: colors.indigoPrimary, color: "#ffffff", fontWeight: 700, fontSize: 13 }}>
+                Level 1 · Company: Senrab ConsulTech (54 Active Staff)
+              </div>
+              <div style={{ width: 2, height: 18, backgroundColor: colors.borderStrong, margin: "0 auto" }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "0.85rem" }}>
+              {SEEDED_DEPARTMENTS.map((dept) => {
+                const deptStaff = employees.filter((e) => e.departmentName === dept.name);
+                const teams = Array.from(new Set(deptStaff.map((e) => e.teamName)));
+                return (
+                  <div key={dept.id} style={{ border: `1px solid ${colors.indigoBorder}`, borderTop: `3px solid ${colors.indigoAction}`, borderRadius: radii.md, padding: "0.75rem", backgroundColor: "#f8fafc" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: colors.indigoAction }}>LEVEL 2 · DEPARTMENT</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: colors.textPrimary }}>{dept.name}</div>
+                    <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>Head: {dept.headName} · {deptStaff.length} staff</div>
+                    {orgDepthLevel === 3 && (
+                      <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px dashed ${colors.border}`, display: "grid", gap: 4 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: colors.textMuted }}>LEVEL 3 · TEAMS</div>
+                        {teams.map((tm) => (
+                          <div key={tm} style={{ fontSize: 11, padding: "2px 6px", borderRadius: radii.sm, backgroundColor: "#ffffff", border: `1px solid ${colors.border}` }}>
+                            {tm}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : viewMode === "tree" ? (
           <div
             style={{
               backgroundColor: colors.surface,

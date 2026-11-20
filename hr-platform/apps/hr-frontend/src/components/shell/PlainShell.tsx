@@ -267,7 +267,7 @@ function getContextualNav(
           { id: "hr-pms-setup", label: "Cycle & Framework Setup", view: "performance_setup" },
           { id: "hr-cal", label: "Calibration & Final Ratings", view: "performance_pms" },
           { id: "hr-skills", label: "Skills Taxonomy (20 Skills)", view: "skills_marketplace" },
-          { id: "hr-appeals", label: "Appeals & Grievances", view: "disciplinary" },
+          { id: "hr-appeals", label: "Appeals & Grievances", view: "performance_pms" },
         ],
       },
       {

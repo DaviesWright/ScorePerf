@@ -8,6 +8,12 @@ import { Icons } from "../../design-system/Icons";
 
 export const LifecyclePortalView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"preboarding" | "offboarding">("preboarding");
+  // P9: Exit Initiation & Approvals State
+  const [exitInitiator, setExitInitiator] = useState<"Self-Initiated" | "Manager-Initiated">("Self-Initiated");
+  const [exitEmployee, setExitEmployee] = useState("Kwesi Osei (SEN/009)");
+  const [exitLastDay, setExitLastDay] = useState("2026-12-15");
+  const [exitReason, setExitReason] = useState("Relocation");
+  const [exitApprovalStage, setExitApprovalStage] = useState<"Draft" | "Pending Manager" | "Pending HR" | "Approved">("Pending Manager");
 
   // Pre-boarding State
   const [preboardingSteps, setPreboardingSteps] = useState([
@@ -66,6 +72,53 @@ export const LifecyclePortalView: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {activeTab === "offboarding" && (
+        <div
+          style={{
+            backgroundColor: colors.surface,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radii.lg,
+            padding: "1.25rem",
+            marginBottom: "1.25rem",
+            boxShadow: shadows.xs,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.85rem" }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary }}>
+                Exit Initiation &amp; Clearance Workflow (P9)
+              </h2>
+              <p style={{ margin: "0.15rem 0 0", fontSize: 11, color: colors.textMuted }}>
+                Supports both Self-Initiated and Manager-Initiated exits with approvals, asset/access/handover checklist, and final settlement.
+              </p>
+            </div>
+            <Badge variant={exitApprovalStage === "Approved" ? "success" : "warning"} size="sm">
+              Stage: {exitApprovalStage}
+            </Badge>
+          </div>
+
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center", fontSize: 12 }}>
+            <select value={exitInitiator} onChange={(e) => setExitInitiator(e.target.value as any)} style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
+              <option value="Self-Initiated">Self-Initiated Exit</option>
+              <option value="Manager-Initiated">Manager-Initiated Exit</option>
+            </select>
+            <input type="text" value={exitEmployee} onChange={(e) => setExitEmployee(e.target.value)} style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}` }} />
+            <input type="date" value={exitLastDay} onChange={(e) => setExitLastDay(e.target.value)} style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}` }} />
+            <input type="text" value={exitReason} onChange={(e) => setExitReason(e.target.value)} placeholder="Exit reason..." style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}` }} />
+            {exitApprovalStage === "Pending Manager" && (
+              <Button variant="primary" size="sm" onClick={() => setExitApprovalStage("Pending HR")}>
+                Manager Approve → HR
+              </Button>
+            )}
+            {exitApprovalStage === "Pending HR" && (
+              <Button variant="primary" size="sm" onClick={() => setExitApprovalStage("Approved")}>
+                HR Final Approve
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: Pre-Boarding Portal */}
       {activeTab === "preboarding" && (

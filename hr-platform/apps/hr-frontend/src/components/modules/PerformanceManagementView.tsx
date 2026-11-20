@@ -12,6 +12,12 @@ import { formatDate, formatDateRange } from "../../utils/date";
 import { PerformanceConfigurationStudio } from "./PerformanceConfigurationStudio";
 import { GeneralAppraisalSettingsView } from "./GeneralAppraisalSettingsView";
 import { PerformanceMiniDashboard } from "./PerformanceMiniDashboard";
+import {
+  MboAndMultiReviewerPanel,
+  PipWorkflowPanel,
+  RbacPermissionMatrixPanel,
+  TalentMatrixGrid,
+} from "./PerformanceP3toP6Panels";
 
 export interface CycleRecord {
   id: number;
@@ -27,6 +33,7 @@ export interface CycleRecord {
 interface PerformanceManagementViewProps {
   cycles: CycleRecord[];
   onCycleCreated?: (cycle: CycleRecord) => void;
+  persona?: "hr_director" | "hr_admin" | "line_manager" | "employee";
 }
 
 interface RevieweeEvaluation {
@@ -90,7 +97,11 @@ export interface CascadingObjective {
 export const PerformanceManagementView: React.FC<PerformanceManagementViewProps> = ({
   cycles,
   onCycleCreated,
+  persona = "hr_director",
 }) => {
+  const isAdmin = persona === "hr_director" || persona === "hr_admin";
+  const [selfAssessmentOpened, setSelfAssessmentOpened] = useState<Record<number, boolean>>({});
+  const [viewingSelfAssessmentId, setViewingSelfAssessmentId] = useState<number | null>(null);
   // Navigation tabs matching Enterprise Standard
   const [activeMainTab, setActiveMainTab] = useState<
     | "dashboard"
@@ -1010,7 +1021,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <Button
                 variant="primary"
                 size="sm"
-                disabled={Boolean(activeCycle)}
+                disabled={Boolean(activeCycle) || !isAdmin}
+                title={!isAdmin ? "P3.2: Only HR Admin / Super Admin can launch an appraisal cycle." : undefined}
                 onClick={() => setShowNewCycleModal(true)}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
@@ -1039,7 +1051,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
             { key: "military_chain", label: "Sequential Sign-off", icon: Icons.ShieldCheck },
             { key: "trait_matrix", label: "Core Values Review", icon: Icons.Award },
             { key: "okr_heatmap", label: "OKR Heatmap", icon: Icons.Activity },
-            { key: "nine_box", label: "9-Box Succession", icon: Icons.Users },
+            { key: "nine_box", label: "Talent Matrix", icon: Icons.Users },
             { key: "cycles", label: "Appraisal Cycles", icon: Icons.Calendar },
             { key: "requests", label: "Requests", icon: Icons.FileText },
             { key: "objectives_setup", label: "Objectives Setup", icon: Icons.Target },
@@ -2130,26 +2142,46 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                     </div>
 
                     {isPending && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        style={{ marginTop: "0.5rem" }}
-                        onClick={() => {
-                          setMilitaryChain((prev) =>
-                            prev.map((s) =>
-                              s.id === 3
-                                ? { ...s, status: "LOCKED_AND_SIGNED", timestamp: new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC", digitalStamp: "HOD-SEAL #1104-PASSED" }
-                                : s.id === 4
-                                  ? { ...s, status: "PENDING_ENDORSEMENT" }
-                                  : s
-                            )
-                          );
-                          setStatusMessage({ text: "Tier 3 (HOD) endorsed successfully. Routed to Divisional Director." });
-                        }}
-                      >
-                        <Icons.Check size={13} />
-                        <span>Endorse &amp; Route to Director</span>
-                      </Button>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.4rem", marginTop: "0.5rem" }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelfAssessmentOpened((prev) => ({ ...prev, [step.id]: true }));
+                            setViewingSelfAssessmentId(viewingSelfAssessmentId === step.id ? null : step.id);
+                          }}
+                        >
+                          {selfAssessmentOpened[step.id] ? "Self-Assessment Opened ✓" : "Open Self-Assessment & Evidence"}
+                        </Button>
+                        {viewingSelfAssessmentId === step.id && (
+                          <div style={{ textAlign: "left", padding: "0.5rem 0.65rem", borderRadius: radii.sm, backgroundColor: "#f8fafc", border: `1px solid ${colors.border}`, fontSize: 11, maxWidth: 280 }}>
+                            <strong>Self-Assessment:</strong> Exceeded Q4 cloud migration &amp; SLA targets.
+                            <br />
+                            <strong>Evidence:</strong> <code>Q4_Delivery_Proof.pdf</code>
+                          </div>
+                        )}
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={!selfAssessmentOpened[step.id]}
+                          title={!selfAssessmentOpened[step.id] ? "P6.1: Open employee self-assessment & evidence before endorsing." : undefined}
+                          onClick={() => {
+                            setMilitaryChain((prev) =>
+                              prev.map((s) =>
+                                s.id === 3
+                                  ? { ...s, status: "LOCKED_AND_SIGNED", timestamp: new Date().toISOString().slice(0, 19).replace("T", " ") + " UTC", digitalStamp: "HOD-SEAL #1104-PASSED" }
+                                  : s.id === 4
+                                    ? { ...s, status: "PENDING_ENDORSEMENT" }
+                                    : s
+                              )
+                            );
+                            setStatusMessage({ text: "Tier 3 (HOD) endorsed successfully. Routed to Divisional Director." });
+                          }}
+                        >
+                          <Icons.Check size={13} />
+                          <span>Endorse &amp; Route to Director</span>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -2551,6 +2583,9 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "nine_box" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {/* P4: Performance-Potential Grid (Talent Matrix) */}
+          <TalentMatrixGrid />
+
           {/* Header Banner */}
           <div
             style={{
@@ -3447,6 +3482,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "objectives_setup" && (
         <div>
+          <MboAndMultiReviewerPanel />
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
             <div>
@@ -3910,7 +3946,8 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
               <Button
                 variant="primary"
                 size="sm"
-                disabled={Boolean(activeCycle)}
+                disabled={Boolean(activeCycle) || !isAdmin}
+                title={!isAdmin ? "P3.2: Only HR Admin / Super Admin can launch an appraisal cycle." : undefined}
                 onClick={() => setShowNewCycleModal(true)}
               >
                 <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
@@ -4203,6 +4240,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
       {/* ========================================================================= */}
       {activeMainTab === "settings" && (
         <div>
+          <RbacPermissionMatrixPanel isAdmin={isAdmin} />
           {/* Header & Subtitle (Screenshot 1) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
             <div>
@@ -5114,6 +5152,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
           {/* TAB 6: PIP & GOVERNANCE EXCEPTIONS */}
           {settingsPrimaryTab === "PIP & Governance Exceptions" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <PipWorkflowPanel />
               <div
                 style={{
                   backgroundColor: colors.surface,

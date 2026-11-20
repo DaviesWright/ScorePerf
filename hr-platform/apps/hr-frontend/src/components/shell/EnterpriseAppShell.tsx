@@ -735,6 +735,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         ) : (
           <PerformanceManagementView
             cycles={cycles}
+            persona={persona}
             onCycleCreated={(newCycle) => setCycles((prev) => [newCycle, ...prev])}
           />
         )

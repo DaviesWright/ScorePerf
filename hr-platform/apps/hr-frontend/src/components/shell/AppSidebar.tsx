@@ -165,7 +165,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             },
             {
               key: "skills_marketplace" as ModuleViewKey,
-              label: "My Skills & Gig Fit",
+              label: "My Skills & Internal Job Board",
               icon: Icons.Compass,
               badge: "20 Skills",
               badgeType: "indigo" as const,
@@ -379,7 +379,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           },
           {
             key: "skills_marketplace" as ModuleViewKey,
-            label: "Skills & Gig Board",
+            label: "Skills & Internal Job Board",
             icon: Icons.Compass,
             badge: "AI",
             badgeType: "emerald" as const,

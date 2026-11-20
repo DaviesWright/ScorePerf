@@ -552,7 +552,7 @@ export const ApprovalWorkflowsView: React.FC<ApprovalWorkflowsViewProps> = () =>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             {/* Domain Filter Pills */}
             <div style={{ display: "flex", gap: "0.35rem" }}>
-              {["ALL", "Leave", "Performance", "Recruitment", "Expenses", "Training"].map((d) => {
+              {["ALL", "Leave", "Performance", "Expenses", "Training"].map((d) => {
                 const isSelected = selectedDomain === d;
                 return (
                   <button
@@ -785,12 +785,11 @@ export const ApprovalWorkflowsView: React.FC<ApprovalWorkflowsViewProps> = () =>
                 backgroundColor: colors.surface,
               }}
             >
-              <option value="Leave">Leave & Absence</option>
-              <option value="Performance">Performance & Objectives</option>
-              <option value="Expenses">Expenses & Allowances</option>
-              <option value="Recruitment">Recruitment & Job Requisitions</option>
-              <option value="Training">Training & Certifications</option>
-              <option value="Governance">Data Governance & Compliance</option>
+              <option value="Leave">Leave &amp; Absence (Active Module)</option>
+              <option value="Performance">Performance &amp; Objectives (Active Module)</option>
+              <option value="Expenses">Expenses &amp; Allowances (Functional Placeholder)</option>
+              <option value="Training">Training &amp; Certifications (Functional Placeholder)</option>
+              <option value="Governance">Data Governance &amp; Compliance (Active Module)</option>
             </select>
           </div>
 

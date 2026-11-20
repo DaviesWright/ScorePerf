@@ -9,6 +9,7 @@ import { DataTable, Column } from "../../design-system/DataTable";
 import { SlideOver } from "../../design-system/SlideOver";
 import { formatDate, formatDateRange } from "../../utils/date";
 import { WorkforceMiniDashboard } from "./WorkforceMiniDashboard";
+import { EmployeeBulkUploadPanel, EmployeeFourSectionProfilePanel } from "./EmployeeP7Panels";
 
 export interface EmployeeRecord {
   id: number;
@@ -769,6 +770,8 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       {/* ========================================================================= */}
       {activeTab === "employees" && (
         <div>
+          <EmployeeBulkUploadPanel />
+          <EmployeeFourSectionProfilePanel />
           {/* Filter and Search Bar */}
           <div
             style={{

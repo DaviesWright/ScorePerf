@@ -16,7 +16,11 @@ interface PolicyDoc {
   version: string;
   owner: string;
   effective: string;
-  status: "Published" | "Draft";
+  status: "Published" | "Draft" | "Archived";
+  targetAudience?: string;
+  downloadable?: boolean;
+  viewCount?: number;
+  fileName?: string;
 }
 
 interface HandbookDoc {
@@ -25,7 +29,10 @@ interface HandbookDoc {
   audience: string;
   version: string;
   updated: string;
-  status: "Published" | "Draft";
+  status: "Published" | "Draft" | "Archived";
+  downloadable?: boolean;
+  viewCount?: number;
+  fileName?: string;
 }
 
 const POLICY_CATEGORIES = ["Conduct", "Leave & Attendance", "Information Security", "Health & Safety", "Travel & Expenses"];
@@ -63,12 +70,18 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
   const [category, setCategory] = useState(POLICY_CATEGORIES[0]);
   const [audience, setAudience] = useState("All sites");
   const [owner, setOwner] = useState(DEMO_STAFF[2].name);
+  const [docVersion, setDocVersion] = useState("1.0");
+  const [effectiveDate, setEffectiveDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [targetType, setTargetType] = useState<"All Employees" | "Individual" | "Multiple Individuals" | "Departments" | "Pay Groups">("All Employees");
+  const [downloadable, setDownloadable] = useState(true);
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [feedback, setFeedback] = useState("");
 
   const today = () => new Date().toISOString().slice(0, 10);
   const closeModal = () => {
     setModal(null);
     setTitle("");
+    setUploadedFileName("");
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -76,37 +89,140 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
     const name = title.trim();
     if (!name) return;
     if (modal === "policy") {
-      setPolicies([{ id: Math.max(0, ...policies.map((p) => p.id)) + 1, title: name, category, version: "0.1", owner, effective: today(), status: "Draft" }, ...policies]);
-      setFeedback(`Policy "${name}" added as a draft.`);
+      setPolicies([
+        {
+          id: Math.max(0, ...policies.map((p) => p.id)) + 1,
+          title: name,
+          category,
+          version: docVersion.trim() || "1.0",
+          owner,
+          effective: effectiveDate || today(),
+          status: "Draft",
+          targetAudience: targetType,
+          downloadable,
+          viewCount: 0,
+          fileName: uploadedFileName || `${name.replace(/\s+/g, "_")}.pdf`,
+        },
+        ...policies,
+      ]);
+      setFeedback(`Policy "${name}" added as a draft (${targetType}, ${downloadable ? "Downloadable" : "View-Only"}).`);
     } else {
-      setHandbooks([{ id: Math.max(0, ...handbooks.map((h) => h.id)) + 1, title: name, audience, version: "0.1", updated: today(), status: "Draft" }, ...handbooks]);
+      setHandbooks([
+        {
+          id: Math.max(0, ...handbooks.map((h) => h.id)) + 1,
+          title: name,
+          audience: `${audience} · ${targetType}`,
+          version: docVersion.trim() || "1.0",
+          updated: effectiveDate || today(),
+          status: "Draft",
+          downloadable,
+          viewCount: 0,
+          fileName: uploadedFileName || `${name.replace(/\s+/g, "_")}.pdf`,
+        },
+        ...handbooks,
+      ]);
       setFeedback(`Handbook "${name}" added as a draft.`);
     }
     closeModal();
   };
 
   const publishPolicy = (id: number) => setPolicies(policies.map((p) => (p.id === id ? { ...p, status: "Published" } : p)));
-  const publishHandbook = (id: number) => setHandbooks(handbooks.map((h) => (h.id === id ? { ...h, status: "Published" } : h)));
+  const archivePolicy = (id: number) => setPolicies(policies.map((p) => (p.id === id ? { ...p, status: "Archived" } : p)));
+  const deletePolicy = (id: number, status: PolicyDoc["status"]) => {
+    if (status !== "Draft" && !window.confirm("This policy is published/archived. Confirm permanent deletion?")) return;
+    setPolicies(policies.filter((p) => p.id !== id));
+  };
+  const togglePolicyDownload = (id: number) =>
+    setPolicies(policies.map((p) => (p.id === id ? { ...p, downloadable: p.downloadable === false } : p)));
+  const viewPolicy = (id: number) =>
+    setPolicies(policies.map((p) => (p.id === id ? { ...p, viewCount: (p.viewCount ?? 12) + 1 } : p)));
 
-  const statusBadge = (s: "Published" | "Draft") => <Badge variant={s === "Published" ? "success" : "warning"} size="sm" dot>{s}</Badge>;
+  const publishHandbook = (id: number) => setHandbooks(handbooks.map((h) => (h.id === id ? { ...h, status: "Published" } : h)));
+  const archiveHandbook = (id: number) => setHandbooks(handbooks.map((h) => (h.id === id ? { ...h, status: "Archived" } : h)));
+  const deleteHandbook = (id: number, status: HandbookDoc["status"]) => {
+    if (status !== "Draft" && !window.confirm("Confirm deletion of this handbook?")) return;
+    setHandbooks(handbooks.filter((h) => h.id !== id));
+  };
+
+  const statusBadge = (s: "Published" | "Draft" | "Archived") => (
+    <Badge variant={s === "Published" ? "success" : s === "Archived" ? "neutral" : "warning"} size="sm" dot>
+      {s}
+    </Badge>
+  );
 
   const policyColumns: Column<PolicyDoc>[] = [
-    { header: "Policy", accessor: (p) => <strong style={{ color: colors.textPrimary }}>{p.title}</strong> },
+    {
+      header: "Policy",
+      accessor: (p) => (
+        <div>
+          <strong style={{ color: colors.textPrimary }}>{p.title}</strong>
+          <div style={{ fontSize: 11, color: colors.textMuted }}>
+            Target: {p.targetAudience || "All Employees"} · Views: {p.viewCount ?? 14}
+          </div>
+        </div>
+      ),
+    },
     { header: "Category", accessor: (p) => p.category },
     { header: "Version", accessor: (p) => p.version },
-    { header: "Owner", accessor: (p) => p.owner },
     { header: "Effective", accessor: (p) => p.effective },
+    {
+      header: "Access",
+      accessor: (p) => (
+        <button
+          type="button"
+          onClick={() => isHr && togglePolicyDownload(p.id)}
+          style={{ background: "none", border: "none", padding: 0, cursor: isHr ? "pointer" : "default" }}
+        >
+          <Badge variant={p.downloadable === false ? "warning" : "info"} size="sm">
+            {p.downloadable === false ? "View-Only" : "Downloadable"}
+          </Badge>
+        </button>
+      ),
+    },
     { header: "Status", align: "center", accessor: (p) => statusBadge(p.status) },
-    { header: "", align: "right", accessor: (p) => (p.status === "Draft" ? <Button variant="outline" size="sm" onClick={() => publishPolicy(p.id)}>Publish</Button> : null) },
+    {
+      header: "",
+      align: "right",
+      accessor: (p) => (
+        <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
+          <Button variant="outline" size="sm" onClick={() => { viewPolicy(p.id); setFeedback(`Opened "${p.title}" (${p.downloadable === false ? "View-Only" : "Download enabled"}).`); }}>
+            View
+          </Button>
+          {isHr && p.status === "Draft" && <Button variant="outline" size="sm" onClick={() => publishPolicy(p.id)}>Publish</Button>}
+          {isHr && p.status === "Published" && <Button variant="outline" size="sm" onClick={() => archivePolicy(p.id)}>Archive</Button>}
+          {isHr && <Button variant="outline" size="sm" onClick={() => deletePolicy(p.id, p.status)}>Delete</Button>}
+        </div>
+      ),
+    },
   ];
 
   const handbookColumns: Column<HandbookDoc>[] = [
-    { header: "Handbook", accessor: (h) => <strong style={{ color: colors.textPrimary }}>{h.title}</strong> },
+    {
+      header: "Handbook",
+      accessor: (h) => (
+        <div>
+          <strong style={{ color: colors.textPrimary }}>{h.title}</strong>
+          <div style={{ fontSize: 11, color: colors.textMuted }}>
+            {h.downloadable === false ? "View-Only" : "Downloadable"} · Views: {h.viewCount ?? 18}
+          </div>
+        </div>
+      ),
+    },
     { header: "Audience", accessor: (h) => h.audience },
     { header: "Version", accessor: (h) => h.version },
     { header: "Updated", accessor: (h) => h.updated },
     { header: "Status", align: "center", accessor: (h) => statusBadge(h.status) },
-    { header: "", align: "right", accessor: (h) => (h.status === "Draft" ? <Button variant="outline" size="sm" onClick={() => publishHandbook(h.id)}>Publish</Button> : null) },
+    {
+      header: "",
+      align: "right",
+      accessor: (h) => (
+        <div style={{ display: "flex", gap: "0.35rem", justifyContent: "flex-end" }}>
+          {isHr && h.status === "Draft" && <Button variant="outline" size="sm" onClick={() => publishHandbook(h.id)}>Publish</Button>}
+          {isHr && h.status === "Published" && <Button variant="outline" size="sm" onClick={() => archiveHandbook(h.id)}>Archive</Button>}
+          {isHr && <Button variant="outline" size="sm" onClick={() => deleteHandbook(h.id, h.status)}>Delete</Button>}
+        </div>
+      ),
+    },
   ];
 
   const completenessColumns: Column<DemoStaff>[] = [
@@ -190,8 +306,22 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
         </div>
       )}
 
-      {tab === "policies" && <DataTable columns={policyColumns} data={policies} keyExtractor={(p) => p.id} emptyMessage="No policies yet." />}
-      {tab === "handbooks" && <DataTable columns={handbookColumns} data={handbooks} keyExtractor={(h) => h.id} emptyMessage="No handbooks yet." />}
+      {tab === "policies" && (
+        <DataTable
+          columns={policyColumns}
+          data={isHr ? policies : policies.filter((p) => p.status === "Published")}
+          keyExtractor={(p) => p.id}
+          emptyMessage="No policies yet."
+        />
+      )}
+      {tab === "handbooks" && (
+        <DataTable
+          columns={handbookColumns}
+          data={isHr ? handbooks : handbooks.filter((h) => h.status === "Published")}
+          keyExtractor={(h) => h.id}
+          emptyMessage="No handbooks yet."
+        />
+      )}
       {tab === "completeness" && (
         <>
           <p style={{ margin: "0 0 0.75rem", fontSize: typography.sizes.sm, color: colors.textSecondary }}>
@@ -228,6 +358,35 @@ export const PoliciesHandbookView: React.FC<{ isHr?: boolean }> = ({ isHr = fals
                 </select>
               </label>
             )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+              <label style={label}>Version
+                <input required value={docVersion} onChange={(e) => setDocVersion(e.target.value)} style={field} />
+              </label>
+              <label style={label}>Effective Date
+                <input type="date" required value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} style={field} />
+              </label>
+            </div>
+            <label style={label}>Distribution Target (P10.2)
+              <select value={targetType} onChange={(e) => setTargetType(e.target.value as any)} style={field}>
+                <option value="All Employees">All Employees</option>
+                <option value="Individual">Single Individual</option>
+                <option value="Multiple Individuals">Multiple Selected Individuals</option>
+                <option value="Departments">Departments</option>
+                <option value="Pay Groups">Pay Groups</option>
+              </select>
+            </label>
+            <label style={label}>Document File (PDF / DOCX)
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => setUploadedFileName(e.target.files?.[0]?.name || "")}
+                style={field}
+              />
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: typography.sizes.xs, cursor: "pointer" }}>
+              <input type="checkbox" checked={downloadable} onChange={(e) => setDownloadable(e.target.checked)} />
+              Allow employees to download (uncheck for View-Only)
+            </label>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
               <Button variant="outline" size="sm" type="button" onClick={closeModal}>Cancel</Button>
               <Button variant="primary" size="sm" type="submit">{modal === "policy" ? "Add Policy" : "Add Handbook"}</Button>
