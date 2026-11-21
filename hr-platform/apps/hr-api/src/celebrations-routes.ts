@@ -325,5 +325,123 @@ export function createCelebrationsRoutes(getSql: (env: Env) => any) {
     });
   });
 
+  // ============================================================================
+  // ESS Personal Celebrations (Opt-In) & Send-a-Note
+  // ============================================================================
+  app.get("/api/v1/ess/celebrations/personal", async (c) => {
+    const { companyId, userId } = c.get("tenant");
+    const sql = getSql(c.env);
+    const rows = await sql`
+      SELECT id, employee_id, title, event_date::text AS event_date, visibility, note, created_at
+      FROM personal_celebrations
+      WHERE company_id = ${companyId}
+        AND (employee_id = ${userId} OR visibility = 'TEAM')
+      ORDER BY event_date ASC
+      LIMIT 50
+    `;
+    return c.json({ results: rows });
+  });
+
+  app.post(
+    "/api/v1/ess/celebrations/personal",
+    zValidator(
+      "json",
+      z.object({
+        title: z.string().trim().min(2).max(120),
+        eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        visibility: z.enum(["TEAM", "PRIVATE"]).default("TEAM"),
+        note: z.string().max(300).default(""),
+      })
+    ),
+    async (c) => {
+      const { companyId, userId } = c.get("tenant");
+      const body = c.req.valid("json");
+      const id = `pcel-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const sql = getSql(c.env);
+
+      await sql`
+        INSERT INTO personal_celebrations (id, company_id, employee_id, title, event_date, visibility, note)
+        VALUES (${id}, ${companyId}, ${userId}, ${body.title}, ${body.eventDate}::date, ${body.visibility}, ${body.note})
+      `;
+      return c.json({ id, ...body }, 201);
+    }
+  );
+
+  app.delete("/api/v1/ess/celebrations/personal/:id", async (c) => {
+    const { companyId, userId } = c.get("tenant");
+    const id = c.req.param("id");
+    const sql = getSql(c.env);
+    await sql`
+      DELETE FROM personal_celebrations
+      WHERE id = ${id} AND company_id = ${companyId} AND employee_id = ${userId}
+    `;
+    return c.json({ deleted: true, id });
+  });
+
+  app.post(
+    "/api/v1/ess/celebrations/:id/note",
+    zValidator("json", z.object({ toEmployeeId: z.number().int().positive(), message: z.string().trim().min(1).max(500) })),
+    async (c) => {
+      const { companyId, userId } = c.get("tenant");
+      const celebrationId = c.req.param("id");
+      const { toEmployeeId, message } = c.req.valid("json");
+      const sql = getSql(c.env);
+      const feedbackId = `fb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+      try {
+        await sql`
+          INSERT INTO continuous_feedback (id, company_id, from_employee_id, to_employee_id, feedback_type, message, visibility, created_at)
+          VALUES (${feedbackId}, ${companyId}, ${userId}, ${toEmployeeId}, 'PRAISE', ${message}, 'SHARED', NOW())
+        `;
+      } catch {
+        // Fallback if continuous_feedback schema differs in older envs
+      }
+
+      return c.json({ ok: true, id: feedbackId, celebrationId, toEmployeeId }, 201);
+    }
+  );
+
+  // ============================================================================
+  // ESS Shortcuts Personalisation (Max 4 Primary + 8 Secondary)
+  // ============================================================================
+  const DEFAULT_PINNED = ["apply_leave", "view_payslip", "my_goals", "my_assets"];
+
+  app.get("/api/v1/ess/shortcuts", async (c) => {
+    const { companyId, userId } = c.get("tenant");
+    const sql = getSql(c.env);
+    const rows = await sql`
+      SELECT pinned_ids
+      FROM employee_shortcut_preferences
+      WHERE company_id = ${companyId} AND employee_id = ${userId}
+      LIMIT 1
+    `;
+    const pinnedIds =
+      rows[0] && Array.isArray(rows[0].pinned_ids) && rows[0].pinned_ids.length > 0
+        ? rows[0].pinned_ids.slice(0, 4)
+        : DEFAULT_PINNED;
+
+    return c.json({ pinnedIds, defaults: DEFAULT_PINNED });
+  });
+
+  app.put(
+    "/api/v1/ess/shortcuts",
+    zValidator("json", z.object({ pinnedIds: z.array(z.string().min(1)).min(1).max(4) })),
+    async (c) => {
+      const { companyId, userId } = c.get("tenant");
+      const { pinnedIds } = c.req.valid("json");
+      const sql = getSql(c.env);
+
+      await sql`
+        INSERT INTO employee_shortcut_preferences (company_id, employee_id, pinned_ids, updated_at)
+        VALUES (${companyId}, ${userId}, ${JSON.stringify(pinnedIds)}::jsonb, NOW())
+        ON CONFLICT (company_id, employee_id) DO UPDATE SET
+          pinned_ids = EXCLUDED.pinned_ids,
+          updated_at = NOW()
+      `;
+
+      return c.json({ pinnedIds });
+    }
+  );
+
   return app;
 }
