@@ -1551,7 +1551,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
           <p style={{ margin: "0 0 1.25rem 0", fontSize: typography.sizes.xs, color: colors.textMuted, maxWidth: "480px", marginInline: "auto" }}>
             {activeTab === "schedules"
               ? "Department rotas, on-call schedules, and hybrid desk allocations are synchronized with biometric gate access in Accra and London."
-              : "Every employee contract change, role promotion, and banking update is signed and logged with SOC2 / ISO 27001 cryptographic tamper-proof hashes."}
+              : "Every employee contract change, role promotion, and banking update is logged with who made it and when."}
           </p>
           <Button variant="primary" size="sm" onClick={() => setFeedback("Schedule synchronization confirmed.")}>
             Synchronize Biometrics

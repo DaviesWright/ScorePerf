@@ -104,7 +104,7 @@ export function generateAppraisalPdf(data: AppraisalReportData): Blob {
 
   lines.push("BT /F1 8.5 Tf 0.3 0.3 0.3 rg 45 290 Td (Countersigning Officer: Paa Kwesi Barnes (Managing Principal / Super Admin)) Tj ET");
   lines.push("BT /F1 8.5 Tf 0.3 0.3 0.3 rg 45 275 Td (Digital Seal: [VERIFIED-SEC-ENCRYPTED-ARC-094182]) Tj ET");
-  lines.push("BT /F1 8.5 Tf 0.3 0.3 0.3 rg 45 260 Td (Cryptographic SHA-256 Digest: 8f4b23a9d701ce583e091b42df586e921350a) Tj ET");
+  lines.push("BT /F1 8.5 Tf 0.3 0.3 0.3 rg 45 260 Td (Sample document. Not digitally signed.) Tj ET");
   lines.push("BT /F1 8.5 Tf 0.3 0.3 0.3 rg 45 245 Td (Storage Location: Cloudflare Distributed Key-Value Audit Vault) Tj ET");
   lines.push("BT /F2 8.5 Tf 0.05 0.4 0.2 rg 45 230 Td (STATUS: FULLY FINALIZED, AUDITED AND COUNTERSIGNED) Tj ET");
 

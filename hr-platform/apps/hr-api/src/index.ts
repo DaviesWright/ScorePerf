@@ -2964,134 +2964,53 @@ app.get("/api/v1/documents", async (c) => {
     count: docs.length,
     results: docs,
     security: {
-      e2ee_enabled: true,
-      encryption_cipher: "AES-GCM-256",
-      key_management: "Envelope Encryption (KMS / Edge Crypto)",
-      integrity_verification: "SHA-256 Per-Document Digest",
+      document_encryption: "not_started",
+      at_rest: "Hosting provider default",
+      integrity_digest: "not_started",
     },
   });
 });
 
-// 12b. Compliance & Data Privacy Status (SOC2 Type II, ISO 27001)
+// 12b. Compliance status. States only what is true today; no certification has been obtained.
 app.get("/api/v1/compliance/privacy-status", async (c) => {
   return c.json({
     compliance: {
-      soc2_type_ii: {
-        certified: true,
-        audit_period: "2026-01-01 to 2026-12-31",
-        trust_criteria: ["Security", "Confidentiality", "Availability"],
-        attestation_firm: "Schellman & Company, LLC",
-        report_status: "CURRENT",
-      },
-      iso_27001_2022: {
-        certified: true,
-        certificate_id: "ISMS-GB-94821",
-        accreditation_body: "UKAS / BSI Assurance",
-        annex_a_controls: "100% Enforced",
-      },
-      gdpr_compliance: {
-        dpo_registered: true,
-        data_residency: "London, UK (eu-west-2)",
-        article_30_records: "Automated via Immutable Ledger",
-      },
-      encryption_standard: {
-        at_rest: "AES-GCM-256 (Cloudflare R2 / Neon Dedicated)",
-        in_transit: "TLS 1.3 / Strict Transport Security (HSTS)",
-        e2ee_sensitive_docs: "Enabled (Envelope Encryption with per-tenant master key)",
+      soc2_type_ii: { certified: false, status: "not_started" },
+      iso_27001_2022: { certified: false, status: "not_started" },
+      ghana_data_protection_act_843: { dpc_registration: "not_started" },
+      data_residency: "Neon PostgreSQL, AWS eu-west-2 (London)",
+      encryption: {
+        at_rest: "Hosting provider default (Neon, Cloudflare)",
+        in_transit: "TLS",
+        document_envelope_encryption: "not_started",
       },
     },
     rbac: {
-      enforcement: "Strict Role-Based Access Control Active",
-      payroll_rule: "Zero-access to payroll/compensation for employees and line managers unless explicitly authorized.",
+      enforcement: "Signed-token roles checked on every /api/v1 route",
+      payroll_rule: "Payroll routes return 403 for employees and line managers.",
     },
   });
 });
 
-// 12c. Immutable Audit Trails (SOC2 CC6.8, ISO 27001 A.12.4.1)
-const inMemoryAuditLedger = [
-  {
-    id: "AUD-202611-001",
-    timestamp: "2026-11-03T09:14:22.108Z",
-    actorType: "HUMAN",
-    actorName: "Richard Barnes",
-    actorEmail: "richard.barnes@senrab.com",
-    actorRole: "hr_director",
-    action: "TENANT_SECURITY_POLICY_LOCK",
-    resource: "tenant:1:security_policy",
-    details: "Enforced SOC2 Type II and ISO 27001 strict single-framework governance.",
-    ipAddress: "51.148.132.44",
-    immutableHash: "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
-    complianceTag: "SOC2-CC6.1",
-  },
-  {
-    id: "AUD-202611-002",
-    timestamp: "2026-11-03T11:22:15.441Z",
-    actorType: "AI_AGENT",
-    actorName: "Omni-Agent Copilot",
-    actorEmail: "omni-agent@system.internal",
-    actorRole: "ai_copilot",
-    action: "LEAVE_REQUEST_AUTO_DRAFTED",
-    resource: "leave:draft:accra_travel",
-    details: "AI auto-drafted travel leave to Accra after balance and calendar conflict checks.",
-    ipAddress: "127.0.0.1 (Worker Edge)",
-    immutableHash: "a149c9586fe54716b5394a81cfb5fa350e93a7d4a29a6744047a0640f09a63c7",
-    complianceTag: "ISO27001-A.12.4.1",
-  },
-  {
-    id: "AUD-202611-003",
-    timestamp: "2026-11-03T14:40:02.890Z",
-    actorType: "HUMAN",
-    actorName: "Paa Kwesi Barnes",
-    actorEmail: "paa.barnes@senrab.com",
-    actorRole: "employee",
-    action: "PAYSLIP_VIEWED_SELF",
-    resource: "payroll:payslip:2026-11",
-    details: "Accessed certified November 2026 payslip via Cmd+K quick command.",
-    ipAddress: "86.134.22.190",
-    immutableHash: "d8329b15234ea7a6c90539655f9a94f6534561858c8a14995963973cfbc9fc5e",
-    complianceTag: "GDPR-Art.15",
-  },
-  {
-    id: "AUD-202611-004",
-    timestamp: "2026-11-03T16:05:49.215Z",
-    actorType: "AI_AGENT",
-    actorName: "Omni-Agent Ingestion",
-    actorEmail: "omni-agent@system.internal",
-    actorRole: "ai_copilot",
-    action: "DOCUMENT_E2EE_ENCRYPTED",
-    resource: "document:passport_kwesi_osei.pdf",
-    details: "Client-side encrypted candidate identity document with AES-GCM-256 before upload.",
-    ipAddress: "127.0.0.1 (Worker Edge)",
-    immutableHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    complianceTag: "ISO27001-A.10.1.1",
-  },
-  {
-    id: "AUD-202611-005",
-    timestamp: "2026-11-03T17:30:11.602Z",
-    actorType: "HUMAN",
-    actorName: "System RBAC Guard",
-    actorEmail: "security-gate@senrab.com",
-    actorRole: "rbac_enforcer",
-    action: "UNAUTHORIZED_PAYROLL_ATTEMPT_BLOCKED",
-    resource: "payroll:executive_salaries",
-    details: "Blocked line manager attempt to access unauthorized company-wide payroll view.",
-    ipAddress: "194.73.101.5",
-    immutableHash: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-    complianceTag: "SOC2-CC6.1",
-  },
-];
+// 12c. Audit trail (demo). In-memory and per Worker instance: entries are lost on restart and are not
+// hash-chained, so this is NOT a tamper-evident ledger. Durable per-domain history lives in the database
+// (asset_audit_events, performance_audit_events, objective_amendments).
+type AuditEntry = Record<string, unknown> & { companyId: number; actorType: string };
+const inMemoryAuditLedger: AuditEntry[] = [];
 
 app.get("/api/v1/compliance/audit-trail", async (c) => {
+  const { companyId, role } = c.get("tenant");
+  if (!isHrRole(role)) return c.json({ error: "Only HR can read the audit trail." }, 403);
   const actorFilter = c.req.query("actorType");
-  let results = inMemoryAuditLedger;
+  const tenantEntries = inMemoryAuditLedger.filter((r) => r.companyId === companyId);
+  let results = tenantEntries;
   if (actorFilter && (actorFilter === "HUMAN" || actorFilter === "AI_AGENT")) {
     results = results.filter((r) => r.actorType === actorFilter);
   }
   return c.json({
     count: results.length,
-    totalRecords: inMemoryAuditLedger.length,
-    merkleIntegrity: "VERIFIED_TAMPER_EVIDENT",
-    ledgerState: "IMMUTABLE_APPEND_ONLY",
+    totalRecords: tenantEntries.length,
+    ledgerState: "IN_MEMORY_DEMO_NOT_TAMPER_EVIDENT",
     results,
   });
 });
@@ -3121,10 +3040,10 @@ app.post("/api/v1/compliance/audit-trail", async (c) => {
     companyId,
     action: body.action || "SYSTEM_RECORD_MUTATION",
     resource: body.resource || "system:general",
-    details: body.details || "Administrative update logged into immutable audit ledger.",
+    details: body.details || "Administrative update logged.",
     ipAddress: c.req.header("CF-Connecting-IP") || "127.0.0.1",
     immutableHash,
-    complianceTag: body.complianceTag || "SOC2-CC6.8",
+    complianceTag: body.complianceTag || null,
   };
 
   inMemoryAuditLedger.unshift(newEntry);
