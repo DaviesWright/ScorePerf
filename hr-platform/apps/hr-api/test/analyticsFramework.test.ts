@@ -49,7 +49,7 @@ test("TC-AN-12: wrong scope returns 403 ANALYTICS_FORBIDDEN", async () => {
   const { app } = makeAnalyticsApp("employee", 1);
   const res = await app.request("/api/v1/analytics/leave/heatmap?scope=company");
   assert.equal(res.status, 403);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.error, "ANALYTICS_FORBIDDEN");
 });
 
@@ -62,7 +62,7 @@ test("TC-AN-03 & TC-AN-13: small-group suppression masks cells with < 5 cohort",
   const { app } = makeAnalyticsApp("hr_manager", 2);
   const res = await app.request("/api/v1/analytics/leave/heatmap?groupBy=department");
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body: any = await res.json();
   const legal = body.rows.find((r: any) => r.rowLabel === "Legal");
   assert.equal(legal.cells[0].suppressed, true);
   assert.equal(legal.cells[0].displayValue, "—");
@@ -74,7 +74,7 @@ test("TC-AN-06: leave trend by job role preserves null gaps without interpolatio
   const { app } = makeAnalyticsApp("hr_manager", 2);
   const res = await app.request("/api/v1/analytics/leave/trend?groupBy=role");
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.groupBy, "role");
   assert.equal(body.series[0].name, "Senior Analyst");
   assert.equal(body.series[0].points[0], 10);

@@ -74,7 +74,7 @@ test("GET /api/v1/leave/mini-dashboard rejects unauthorized variant with 403", a
   const app = makeApp("employee", 10);
   const res = await app.request("/api/v1/leave/mini-dashboard?mode=hr");
   assert.equal(res.status, 403);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.error, "MINI_DASHBOARD_VARIANT_FORBIDDEN");
 });
 
@@ -82,7 +82,7 @@ test("GET /api/v1/leave/mini-dashboard rejects cross-employee ESS scope with 403
   const app = makeApp("employee", 10);
   const res = await app.request("/api/v1/leave/mini-dashboard?mode=ess&employee_id=999");
   assert.equal(res.status, 403);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.error, "ESS_SELF_SCOPE_VIOLATION");
 });
 
@@ -90,7 +90,7 @@ test("Executive variant returns aggregates only with zero individual names", asy
   const app = makeApp("executive", 20);
   const res = await app.request("/api/v1/leave/mini-dashboard?mode=executive");
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.variant, "executive");
   assert.equal(body.metrics.length, 3);
   const serialized = JSON.stringify(body);
@@ -103,7 +103,7 @@ test("HR variant caps list at 5 items and reports overflow_count", async () => {
   const app = makeApp("hr_manager", 30);
   const res = await app.request("/api/v1/leave/mini-dashboard?mode=hr");
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.variant, "hr");
   assert.equal(body.list.length, 5);
   assert.equal(body.overflow_count, 1);
@@ -116,6 +116,6 @@ test("POST /api/v1/leave/mini-dashboard/refresh enforces 30s rate limit", async 
   assert.equal(first.status, 200);
   const second = await app.request("/api/v1/leave/mini-dashboard/refresh", { method: "POST" });
   assert.equal(second.status, 429);
-  const body = await second.json();
+  const body: any = await second.json();
   assert.equal(body.error, "MINI_DASHBOARD_RATE_LIMITED");
 });

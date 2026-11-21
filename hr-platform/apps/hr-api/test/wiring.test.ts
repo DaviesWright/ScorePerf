@@ -1,10 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Hono runs handlers in registration order, so a route registered above the `authenticate` middleware
 // is public. src/index.ts imports Cloudflare-only modules, so these checks read it as text.
-const src = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const src = readFileSync(fileURLToPath(new URL("../src/index.ts", import.meta.url).href), "utf8");
 
 test("authenticate is mounted above every /api/v1 route", () => {
   const auth = src.indexOf('app.use("/api/v1/*", authenticate)');

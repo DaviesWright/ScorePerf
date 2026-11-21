@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   acknowledgmentError,
   canDecideProfileChange,
@@ -75,7 +76,7 @@ test("weighted progress rounds across weights and is empty when nothing is weigh
 });
 
 // Route rules (src/index.ts). index.ts imports Cloudflare-only modules, so these checks read it as text.
-const src = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const src = readFileSync(fileURLToPath(new URL("../src/index.ts", import.meta.url).href), "utf8");
 // The text from the route's registration to the end of its handler. The closing "});" sits at column 0.
 const routeBody = (path: string, method = "get") => {
   const start = src.indexOf(`app.${method}("${path}"`);

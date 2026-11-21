@@ -97,7 +97,7 @@ test("TC-CELEB-03 & TC-CELEB-05: MSS scopes to direct reports and recognize writ
 
   const mssRes = await app.request("/api/v1/mss/celebrations");
   assert.equal(mssRes.status, 200);
-  const mssBody = await mssRes.json();
+  const mssBody: any = await mssRes.json();
   assert.equal(mssBody.context, "mss");
 
   const recRes = await app.request("/api/v1/mss/celebrations/anniv-12/recognize", {
@@ -106,7 +106,7 @@ test("TC-CELEB-03 & TC-CELEB-05: MSS scopes to direct reports and recognize writ
     body: JSON.stringify({ message: "Happy 5-year anniversary Kofi!" }),
   });
   assert.equal(recRes.status, 201);
-  const recBody = await recRes.json();
+  const recBody: any = await recRes.json();
   assert.equal(recBody.feedback_type, "PRAISE");
   assert.equal(recBody.to_employee_id, 12);
   assert.equal(insertedFeedback.length, 1);
