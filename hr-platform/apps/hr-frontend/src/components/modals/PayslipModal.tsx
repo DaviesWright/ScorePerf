@@ -144,7 +144,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
                 </span>
               </div>
               <p style={{ margin: "2px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                Senrab ConsulTech Ltd (UK PAYE: 948/SZ4021) · Pay Date: 28 Nov 2026 · Ref: SEN-PAY-202611-001
+                Senrab ConsulTech Ltd (sample data) · Pay Date: 28 Nov 2026 · Ref: SEN-PAY-202611-001
               </p>
             </div>
           </div>
@@ -394,7 +394,7 @@ export const PayslipModal: React.FC<PayslipModalProps> = ({
                 Payslip PDF downloaded to your machine!
               </span>
             ) : (
-              <span>Certified HMRC Real Time Information (RTI) compliant</span>
+              <span>Sample payslip. Not a statutory record.</span>
             )}
           </div>
 

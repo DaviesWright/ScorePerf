@@ -522,7 +522,7 @@ const ALL_60_REPORTS: ReportItem[] = [
     type: "Operational Export",
     description: "Jurisdiction-specific tax liabilities: UK HMRC Real Time Information (RTI) and Ghana SSNIT Tier 1 & 2 remittances.",
     kpis: ["HMRC PAYE Due: GH₵74,200", "SSNIT Remittance: GH₵48,500", "RTI Compliance: 100%"],
-    sampleAiInsight: "HMRC Real Time Information submission for November 2026 was certified clean with zero reconciliation variances. Ghana SSNIT pensions fully remitted on schedule.",
+    sampleAiInsight: "Sample insight: GRA PAYE and SSNIT schedules for November 2026 reconcile with zero variances.",
     metrics: [
       { label: "HMRC PAYE", value: "GH₵74,200", trend: "neutral" },
       { label: "Ghana SSNIT", value: "GH₵48.5k", trend: "neutral" },
@@ -2390,7 +2390,7 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
                 { label: "Contract Review Volume", value: "38 Active", delta: "100% On-Time", trend: "up", sub: "Pan-African SaaS Master Agreements" },
                 { label: "Average SLA Processing Time", value: "1.8 Days", delta: "Under 48h limit", trend: "up", sub: "Standard Target: 3.0 Days" },
                 { label: "Statutory Regulatory Clearance", value: "100%", delta: "Zero Non-compliance", trend: "up", sub: "SSNIT, GRA, CRA, and GDPR verified" },
-                { label: "SOC2 & ISO 27001 Audit Status", value: "Certified", delta: "Zero Deficiencies", trend: "up", sub: "Immutable Audit Log Active" },
+                { label: "SOC 2 & ISO 27001 Audit Status", value: "Not started", delta: "No audit engaged", trend: "neutral", sub: "Per-domain change history only" },
               ].map((card, idx) => (
                 <div key={idx} style={{ padding: "1.25rem", borderRadius: radii.md, backgroundColor: colors.surface, border: `1px solid ${colors.border}`, boxShadow: shadows.xs }}>
                   <span style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>{card.label}</span>
@@ -2566,7 +2566,7 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
               }}
             >
               <span style={{ fontSize: "11px", color: colors.textMuted }}>
-                Certified SOC2 Type II & ISO 27001 export pipeline
+                Audit log export (no certification)
               </span>
 
               <div style={{ display: "flex", gap: "0.6rem" }}>

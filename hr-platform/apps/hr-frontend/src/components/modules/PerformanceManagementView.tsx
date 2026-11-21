@@ -4737,7 +4737,7 @@ export const PerformanceManagementView: React.FC<PerformanceManagementViewProps>
                             Cryptographic Digital Stamp &amp; Hash
                           </div>
                           <div style={{ fontSize: "11px", color: colors.textMuted }}>
-                            Embeds SHA-256 digital signature seal on approved appraisal dossiers.
+                            Planned: digital signature seal on approved appraisal dossiers (not built yet).
                           </div>
                         </div>
                       </label>

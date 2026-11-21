@@ -37,7 +37,7 @@ export const RbacGuard: React.FC<RbacGuardProps> = ({
   const getReason = () => {
     if (targetView === "admin_nerve_center") {
       return currentPersona === "line_manager"
-        ? "Line managers have scope for 'team:read' and 'team:approve'. Company payroll details, equity pools, and executive compensation are strictly restricted under SOC2 CC6.1 and ISO 27001 A.9.4.2."
+        ? "Line managers have scope for 'team:read' and 'team:approve'. Company payroll details, equity pools, and executive compensation are restricted to roles with 'payroll:read'."
         : "Employees have scope for personal self-service only ('self:read'). Total rewards wallets and administrative automation builders require 'payroll:read' or 'executive:admin' elevation.";
     }
     if (targetView === "command_centre") {
@@ -104,7 +104,7 @@ export const RbacGuard: React.FC<RbacGuardProps> = ({
             marginBottom: "0.85rem",
           }}
         >
-          SOC2 CC6.1 · ISO 27001 A.9.4.2 RBAC Policy
+          Role-Based Access Policy
         </span>
 
         <h2
@@ -165,7 +165,7 @@ export const RbacGuard: React.FC<RbacGuardProps> = ({
           </div>
           <div style={{ gridColumn: "span 2", borderTop: `1px dashed ${colors.border}`, paddingTop: "0.5rem" }}>
             <span style={{ color: colors.textMuted, fontSize: "11px" }}>
-              Audit Status: Immutable access attempt logged with SHA-256 audit digest.
+              Access denied by role policy.
             </span>
           </div>
         </div>

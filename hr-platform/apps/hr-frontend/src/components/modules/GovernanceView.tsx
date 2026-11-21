@@ -59,7 +59,7 @@ export const GovernanceView: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
 
-  // 1. Immutable Audit Ledger (SOC2 Type II & ISO 27001 Certified)
+  // 1. Audit ledger (sample data; not tamper-evident, no certification)
   const auditLogs: AuditEntry[] = [
     {
       id: "AUD-202611-001",
@@ -70,7 +70,7 @@ export const GovernanceView: React.FC = () => {
       actorRole: "HR Director",
       action: "TENANT_SECURITY_POLICY_LOCK",
       resource: "tenant:1:security_policy",
-      details: "Enforced SOC2 Type II and ISO 27001 compliance and governance controls.",
+      details: "Locked the tenant security policy.",
       ipAddress: "51.148.132.44",
       immutableHash: "7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
       complianceTag: "SOC2-CC6.1",
@@ -98,7 +98,7 @@ export const GovernanceView: React.FC = () => {
       actorRole: "Employee (ESS)",
       action: "PAYSLIP_VIEWED_SELF",
       resource: "payroll:payslip:2026-11",
-      details: "Accessed certified November 2026 payslip via Cmd+K quick command.",
+      details: "Viewed the sample November 2026 payslip via Cmd+K quick command.",
       ipAddress: "86.134.22.190",
       immutableHash: "d8329b15234ea7a6c90539655f9a94f6534561858c8a14995963973cfbc9fc5e",
       complianceTag: "GDPR-Art.15",
@@ -110,9 +110,9 @@ export const GovernanceView: React.FC = () => {
       actorName: "Dede AI Ingestion",
       actorEmail: "dede@bscscoreview.com",
       actorRole: "AI Ingestion Engine",
-      action: "DOCUMENT_E2EE_ENCRYPTED",
+      action: "DOCUMENT_UPLOADED",
       resource: "document:passport_kwesi_osei.pdf",
-      details: "Client-side encrypted candidate identity document with AES-GCM-256 before storage.",
+      details: "Uploaded a candidate identity document.",
       ipAddress: "",
       immutableHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       complianceTag: "ISO27001-A.10.1.1",
@@ -168,8 +168,8 @@ export const GovernanceView: React.FC = () => {
       name: "Kwesi_Osei_Passport_Scan.pdf.enc",
       employee: "Kwesi Osei (DevOps Lead)",
       category: "Identity & Right to Work",
-      cipher: "AES-GCM-256 (Envelope)",
-      kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",
+      cipher: "None (envelope encryption planned)",
+      kmsKeyId: "n/a",
       sha256Digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       updatedAt: "2026-11-03 16:05 UTC",
       status: "ENCRYPTED_VERIFIED",
@@ -179,8 +179,8 @@ export const GovernanceView: React.FC = () => {
       name: "Executive_Service_Agreement_PaaBarnes.pdf.enc",
       employee: "Paa Kwesi Barnes (Managing Principal)",
       category: "Executive Employment Contract",
-      cipher: "AES-GCM-256 (Envelope)",
-      kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",
+      cipher: "None (envelope encryption planned)",
+      kmsKeyId: "n/a",
       sha256Digest: "9823fba176d29901bce43881fa6623091bbff17894236a9b448821045dfcb829",
       updatedAt: "2026-10-15 08:30 UTC",
       status: "ENCRYPTED_VERIFIED",
@@ -190,8 +190,8 @@ export const GovernanceView: React.FC = () => {
       name: "HMRC_P60_End_Of_Year_2025_2026.pdf.enc",
       employee: "All 54 Active Personnel",
       category: "Statutory Tax Filings",
-      cipher: "AES-GCM-256 (Envelope)",
-      kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",
+      cipher: "None (envelope encryption planned)",
+      kmsKeyId: "n/a",
       sha256Digest: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
       updatedAt: "2026-04-06 12:00 UTC",
       status: "ENCRYPTED_VERIFIED",
@@ -201,8 +201,8 @@ export const GovernanceView: React.FC = () => {
       name: "Medical_Certificate_Confidential_DrMensah.pdf.enc",
       employee: "Confidential (Ghana Practice)",
       category: "Protected Health Information",
-      cipher: "AES-GCM-256 (Envelope)",
-      kmsKeyId: "arn:aws:kms:eu-west-2:948201:key/senrab-hcm-e2ee-master",
+      cipher: "None (envelope encryption planned)",
+      kmsKeyId: "n/a",
       sha256Digest: "c5d24b6113824f995874de388b17b2b73b22cfc857731737e58fc20fb14dfa49",
       updatedAt: "2026-11-03 18:15 UTC",
       status: "ENCRYPTED_VERIFIED",
@@ -306,10 +306,9 @@ export const GovernanceView: React.FC = () => {
 
   const handleDownloadAuditReport = () => {
     const report = {
-      title: "Senrab ConsulTech Ltd - SOC2 Type II & ISO 27001 Cryptographic Audit Report",
+      title: "Senrab ConsulTech Ltd - Audit Log Export (sample data, not tamper-evident)",
       exportedAt: new Date().toISOString(),
-      merkleRoot: "0x892a7fe9941b2c4887df92a104",
-      integrityStatus: "VERIFIED_TAMPER_EVIDENT",
+      integrityStatus: "NOT_VERIFIED_SAMPLE_DATA",
       totalLedgerRecords: auditLogs.length,
       records: auditLogs,
     };
@@ -381,22 +380,22 @@ export const GovernanceView: React.FC = () => {
             Audit Ledger State
           </div>
           <div style={{ fontSize: "1.5rem", fontWeight: 800, color: colors.emeraldDark, marginTop: "2px" }}>
-            100% Immutable
+            Sample data
           </div>
           <div style={{ fontSize: "11px", color: colors.textSecondary, marginTop: "4px" }}>
-            Cryptographic SHA-256 Merkle chain verified · 0 breaches
+            Tamper-evident ledger not built yet
           </div>
         </div>
 
-        <div {...drillProps(() => setActiveTab("data_privacy"), "Open Sensitive Document E2EE")} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, padding: "1.1rem", cursor: "pointer" }}>
+        <div {...drillProps(() => setActiveTab("data_privacy"), "Open Document Encryption Status")} style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, padding: "1.1rem", cursor: "pointer" }}>
           <div style={{ fontSize: "11px", fontWeight: 700, color: colors.textMuted, textTransform: "uppercase" }}>
-            Sensitive Document E2EE
+            Document Encryption
           </div>
           <div style={{ fontSize: "1.5rem", fontWeight: 800, color: colors.indigoPrimary, marginTop: "2px" }}>
-            AES-GCM-256
+            Not started
           </div>
           <div style={{ fontSize: "11px", color: colors.textSecondary, marginTop: "4px" }}>
-            Zero-knowledge envelope encryption with KMS key isolation
+            Hosting provider encryption at rest only; envelope encryption planned
           </div>
         </div>
 
@@ -436,7 +435,7 @@ export const GovernanceView: React.FC = () => {
       >
         {[
           { key: "audit_trail" as const, label: "Immutable Audit Trail (Human & AI Ledger)", icon: Icons.ShieldCheck },
-          { key: "data_privacy" as const, label: "Data Privacy & E2EE Documents", icon: Icons.FileText },
+          { key: "data_privacy" as const, label: "Data Privacy & Documents", icon: Icons.FileText },
           { key: "rbac_matrix" as const, label: "Role-Based Access Control (RBAC)", icon: Icons.Users },
           { key: "master_data" as const, label: "Suppressed Modules & CSV Import", icon: Icons.Database },
         ].map((tab) => {
@@ -534,7 +533,7 @@ export const GovernanceView: React.FC = () => {
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Actor Type & Identity</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Action Performed</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Resource & Context</th>
-                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Immutable SHA-256 Hash</th>
+                  <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Sample Hash</th>
                   <th style={{ padding: "0.75rem 1rem", color: colors.textMuted, fontWeight: 700, textTransform: "uppercase", fontSize: "10px" }}>Compliance Standard</th>
                 </tr>
               </thead>
@@ -659,26 +658,26 @@ export const GovernanceView: React.FC = () => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary }}>
-                    SOC2 Type II Attestation
+                    SOC 2 Type II
                   </h3>
                   <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                    Independent Service Auditor’s Report on Controls Relevant to Security, Availability, and Confidentiality.
+                    Not started. No auditor engaged and no report issued.
                   </p>
                 </div>
-                <Badge variant="success" size="sm">Active (Clean Opinion)</Badge>
+                <Badge variant="warning" size="sm">Not started</Badge>
               </div>
               <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: typography.sizes.xs }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Auditor:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>Schellman & Company, LLC</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>Not engaged</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Audit Period:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>01 Jan – 31 Dec 2026</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>None</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Trust Services Criteria:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>CC6.1, CC6.8, CC7.1, CC8.1</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>Not assessed</span>
                 </div>
               </div>
             </div>
@@ -690,23 +689,23 @@ export const GovernanceView: React.FC = () => {
                     ISO/IEC 27001:2022 ISMS
                   </h3>
                   <p style={{ margin: "4px 0 0 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-                    Information Security Management System covering SaaS Edge Infrastructure and Human Capital Data.
+                    Not started. No certification body engaged and no certificate issued.
                   </p>
                 </div>
-                <Badge variant="info" size="sm">Certified</Badge>
+                <Badge variant="warning" size="sm">Not started</Badge>
               </div>
               <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: typography.sizes.xs }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Certificate ID:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary, fontFamily: typography.fontMono }}>ISMS-GB-94821</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary, fontFamily: typography.fontMono }}>None</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Accreditation:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>UKAS / BSI Assurance UK Ltd</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>None</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: colors.textMuted }}>Annex A Controls:</span>
-                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>93 of 93 Controls Implemented</span>
+                  <span style={{ fontWeight: 600, color: colors.textPrimary }}>Not assessed</span>
                 </div>
               </div>
             </div>
@@ -715,10 +714,10 @@ export const GovernanceView: React.FC = () => {
           {/* E2EE Sensitive Documents Registry */}
           <div>
             <h3 style={{ fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary, margin: "0.5rem 0 0.5rem 0" }}>
-              End-to-End Encrypted Documents Registry (AES-GCM-256)
+              Sensitive Documents Registry (sample data)
             </h3>
             <p style={{ margin: "0 0 1rem 0", fontSize: typography.sizes.xs, color: colors.textMuted }}>
-              Passports, confidential contracts, doctor notes, and P60s are encrypted client-side before transport and stored as zero-knowledge encrypted files.
+              Sample records. Document encryption is not built yet; files rely on the hosting provider's encryption at rest.
             </p>
 
             <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, overflow: "hidden" }}>
@@ -767,7 +766,7 @@ export const GovernanceView: React.FC = () => {
                             border: `1px solid ${colors.emeraldBorder}`,
                           }}
                         >
-                          ✓ E2EE Verified
+                          Not encrypted (sample)
                         </span>
                       </td>
                     </tr>

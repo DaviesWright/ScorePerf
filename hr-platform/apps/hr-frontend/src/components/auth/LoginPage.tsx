@@ -440,7 +440,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <span>•</span>
           <span style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <Icons.ShieldCheck size={13} color={colors.emeraldDark} />
-            <span>SOC2 Type II &amp; ISO 27001 Certified</span>
+            <span>Role-based access control</span>
           </span>
           <span>•</span>
           <span>256-Bit TLS Encryption</span>

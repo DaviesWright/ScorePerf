@@ -38,7 +38,7 @@ All major architectural and operational decisions were directed and approved by 
 | **Hyperdrive Configuration** | **Complete (100%)** | Hyperdrive ID `d1468c75b19f437b994c969eb1fa2b41` (`hr-db`) bound to Workers. Local dev connection verified via real Neon connection string. |
 | **Edge API Gateway (`apps/hr-api`)** | **Complete (100%)** | Hono server running on `http://127.0.0.1:8787`. Verified endpoints for employees, cycles, leaves, assets, tickets, projects, and documents. |
 | **Jobs & Workflows Worker (`apps/hr-jobs`)** | **Complete (100%)** | Worker running on `http://127.0.0.1:8788`. Queue consumer and `PerformanceReviewWorkflow` entrypoint verified. |
-| **Frontend Enterprise Shell (`apps/hr-frontend`)** | **Complete (100%)** | Next.js 15 App Router running on `http://localhost:3000`. Linear/Stripe design tokens, collapsible navigation shell, slide-over HCM profile drawer, 8 interactive modules, 0 TypeScript errors, OpenNext edge worker build verified (`.open-next/worker.js`). |
+| **Frontend Enterprise Shell (`apps/hr-frontend`)** | **Complete (100%)** | Next.js 15 App Router running on `http://localhost:3000`. Linear/Stripe design tokens, collapsible navigation shell, slide-over HCM profile drawer, 8 interactive modules. As of 2026-11-21: 116 TypeScript errors after the TypeScript 7 upgrade; production build not re-verified. |
 | **Workforce Seeding** | **Complete (100%)** | 45 employees with `@senrab.com` emails across 7 departments seeded (including Benedicta Asante & Philip Mensah) and verified via `GET /api/v1/employees` (Count: 45). |
 | **Asset Coverage** | **Complete (100%)** | 54 enterprise hardware assets allocated across 100% of the 45-member workforce; verified via `GET /api/v1/assets` (Count: 54). |
 | **Module Suppression** | **Complete (100%)** | Recruitment, Onboarding, Offboarding, and Payroll suppressed from UI matrix and API directory; API returns `{ suppressed: true }`. |
@@ -58,7 +58,7 @@ All major architectural and operational decisions were directed and approved by 
 3. **Session Authentication & IdP**: Decided: magic link backed by KV (built in `apps/hr-api`, see BUILD.md §16.2). Still open: the mail provider that sends the links, and whether a client later wants Google Workspace / Microsoft Entra SSO instead.
 4. **Document Binary Storage**: Will employee contracts remain as metadata pointers in PostgreSQL, or should Cloudflare R2 bucket bindings be provisioned for PDF storage?
 5. **Suppressed Modules Roadmap**: When are the executive stakeholders planning to un-suppress Payroll and Recruitment—are they awaiting third-party PSP/payroll provider selection?
-6. **Legacy Django Codebase Lifecycle**: Should the legacy Django files in the root directory (`horilla/`, `pms/`, `venv/`) be archived into a `/legacy` folder or deleted from git tracking to prevent developer confusion?
+6. **Legacy Django Codebase Lifecycle**: Decided 2026-11-21: frozen as read-only reference now (no CI, no Docker publishing, no new changes), removed from the branch by 2026-11-30.
 
 ---
 

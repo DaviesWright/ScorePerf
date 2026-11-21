@@ -1,5 +1,7 @@
 # ADR 0017: SOC2 Type II, ISO 27001, RBAC Enforcement & Immutable Audit Trails
 
+> **Correction (2026-11-21):** ScoReviewHR holds no SOC 2 report and no ISO 27001 certificate, and no audit has started. Document encryption, per-document digests and the hash-chained ledger described below are **targets, not built**. The current `/api/v1/compliance/audit-trail` is an in-memory demo. RBAC reads the role from the signed token, not `X-User-Role`. Payroll `403` enforcement is built and tested.
+
 ## Status
 Accepted
 
@@ -12,7 +14,7 @@ ScoReviewHR is an enterprise-grade Human Capital Management (HCM) platform servi
 ## Decisions
 
 ### 1. Data Privacy & E2EE Architecture
-* **Infrastructure Certifications:** Infrastructure is audited under SOC2 Type II (Schellman & Company, LLC, covering Security, Confidentiality, and Availability) and ISO/IEC 27001:2022 (Certificate ID: ISMS-GB-94821).
+* **Certification targets (not obtained):** ISO/IEC 27001:2022 first, then SOC 2 Type II if clients require it. No auditor is engaged.
 * **Document Encryption:** All sensitive files uploaded via ESS, pre-boarding, or Omni-Agent are encrypted client/edge-side using AES-GCM-256 envelope encryption before persistence in Cloudflare R2 / Neon DB.
 * **Integrity Digests:** Every document is stored with a deterministic SHA-256 digest to verify zero bit rot or tampering.
 
@@ -22,7 +24,7 @@ ScoReviewHR is an enterprise-grade Human Capital Management (HCM) platform servi
   2. `line_manager`: `team:read`, `team:approve` (team leave requests, team appraisals, project assignments). **Strictly forbidden from company payroll and compensation.**
   3. `hr_admin`: `directory:manage`, `fleet:manage`, `lifecycle:manage`.
   4. `hr_director`: `executive:admin`, `payroll:read`, `compliance:audit`.
-* **API Enforcement:** The Cloudflare API Worker inspects `X-User-Role`. Any request to `/api/v1/payroll/*` from a `line_manager` or `employee` returns `HTTP 403 Forbidden` (`RBAC_PAYROLL_ACCESS_DENIED`, SOC2 CC6.1, ISO 27001 A.9.4.2).
+* **API Enforcement:** The Cloudflare API Worker reads the role from the signed bearer token. Any request to `/api/v1/payroll/*` from a `line_manager` or `employee` returns `HTTP 403 Forbidden` (`RBAC_PAYROLL_ACCESS_DENIED`, SOC2 CC6.1, ISO 27001 A.9.4.2).
 * **Frontend Guard:** In `hr-frontend`, the `<RbacGuard>` component intercepts unauthorized navigation attempts and renders clear compliance justifications and elevation options.
 
 ### 3. Immutable Audit Trails (Human & AI Agent Ledger)
