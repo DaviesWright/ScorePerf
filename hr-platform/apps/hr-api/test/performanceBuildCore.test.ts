@@ -85,12 +85,12 @@ test("ADR-PM-08 & Unified /performance/items + Explain permission check", async 
 
   const presetsRes = await empApp.request("/api/v1/performance/settings/presets");
   assert.equal(presetsRes.status, 200);
-  const presetsBody = await presetsRes.json();
+  const presetsBody: any = await presetsRes.json();
   assert.equal(presetsBody.presets.length, SEEDED_FRAMEWORK_PRESETS.length);
 
   const itemsRes = await empApp.request("/api/v1/performance/items?framework=OKR");
   assert.equal(itemsRes.status, 200);
-  const itemsBody = await itemsRes.json();
+  const itemsBody: any = await itemsRes.json();
   assert.equal(itemsBody.items[0].framework, "OKR");
   assert.equal(itemsBody.items[0].extensions.okr.confidenceValue, 0.7);
 

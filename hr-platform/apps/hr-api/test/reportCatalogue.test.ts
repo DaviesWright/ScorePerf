@@ -82,7 +82,7 @@ test("Part 7 RBAC blocks employee from compensation, audit, and company-wide sco
 
   const compRes = await app.request("/api/v1/reports/hris/HR-018");
   assert.equal(compRes.status, 403);
-  assert.equal((await compRes.json()).error, "REPORT_FORBIDDEN");
+  assert.equal(((await compRes.json()) as { error?: string }).error, "REPORT_FORBIDDEN");
 
   const auditRes = await app.request("/api/v1/reports/hris/HR-020");
   assert.equal(auditRes.status, 403);
@@ -95,7 +95,7 @@ test("Part 6 small-group suppression suppresses HR-007 when cohort < 5", async (
   const { app, auditActions } = makeReportApp("hr_manager", 2);
   const res = await app.request("/api/v1/reports/hris/HR-007");
   assert.equal(res.status, 200);
-  const body = await res.json();
+  const body: any = await res.json();
   assert.equal(body.suppressed, true);
   assert.equal(body.rows.length, 0);
   assert.ok(body.suppressionReason.includes("5"));

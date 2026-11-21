@@ -1,0 +1,53 @@
+# Checks for the Cloudflare edge platform (hr-platform/): clean install from the
+# lockfile, typecheck of every workspace, and the API test suite.
+
+name: hr-platform CI
+
+on:
+  push:
+    branches: [main-custom]
+    paths:
+      - "hr-platform/**"
+      - ".github/workflows/hr-platform-ci.yml"
+  pull_request:
+    paths:
+      - "hr-platform/**"
+      - ".github/workflows/hr-platform-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hr-platform-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: hr-platform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hr-platform/package-lock.json
+
+      # npm ci fails if package.json and package-lock.json disagree, which is
+      # the drift this job exists to catch.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (all workspaces)
+        run: npm run typecheck
+
+      - name: API tests
+        run: npm test --workspace=apps/hr-api

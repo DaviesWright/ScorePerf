@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   canDecideWriteOff,
   csvCell,
@@ -133,7 +134,7 @@ test("CSV: the register file has a header row and CRLF line endings", () => {
 });
 
 // Mounting and offboarding wiring. index.ts imports Cloudflare-only modules, so these checks read it as text.
-const indexSrc = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+const indexSrc = readFileSync(fileURLToPath(new URL("../src/index.ts", import.meta.url).href), "utf8");
 
 test("assets part B routes are mounted after authenticate", () => {
   const auth = indexSrc.indexOf('app.use("/api/v1/*", authenticate)');

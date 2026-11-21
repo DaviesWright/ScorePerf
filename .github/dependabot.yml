@@ -27,8 +27,8 @@ updates:
       prefix: "[UPDT]"
       include: scope
 
-  # ScoReview HR platform (npm workspace). zod stays on 3.x because
-  # @hono/zod-validator 0.4.x requires zod 3; zod major bumps are ignored.
+  # ScoReview HR platform (npm workspace). zod is on 4.x with
+  # @hono/zod-validator 0.9.x; zod major bumps are ignored until reviewed by hand.
   - package-ecosystem: npm
     directory: "/hr-platform"
     target-branch: main-custom

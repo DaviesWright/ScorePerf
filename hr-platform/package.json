@@ -17,7 +17,8 @@
     "deploy:jobs": "npm run deploy --workspace=apps/hr-jobs",
     "deploy:frontend": "npm run deploy --workspace=apps/hr-frontend",
     "deploy:staging": "npm run deploy:staging --workspace=apps/hr-frontend",
-    "typecheck": "tsc -b"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspace=apps/hr-api"
   },
   "devDependencies": {
     "concurrently": "^10.0.6",
