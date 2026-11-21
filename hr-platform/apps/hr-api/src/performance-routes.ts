@@ -85,12 +85,6 @@ const AlignBody = z.object({
   parentLevel: z.number().int().optional(),
 });
 
-const CalibrationDecisionBody = z.object({
-  sessionId: z.string().min(1),
-  assessmentId: z.string().min(1),
-  postRating: z.number().min(1).max(5),
-  rationale: z.string().trim().min(5).max(1000),
-});
 
 export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
   const routes = new Hono<{ Bindings: Env; Variables: { tenant: TenantContext } }>();
@@ -466,7 +460,7 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
     },
   );
 
-  // GET /api/v1/performance/assessments & POST /api/v1/performance/calibration/decide
+  // GET /api/v1/performance/assessments (calibration lives in performance-calibration-routes.ts)
   routes.get("/api/v1/performance/assessments", async (c) => {
     const { companyId, userId, role } = c.get("tenant");
     const tenantId = String(companyId);
@@ -476,64 +470,6 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
       : await sql`SELECT * FROM performance_assessments WHERE tenant_id = ${tenantId} AND employee_id = ${String(userId)}`;
     return c.json({ results: rows });
   });
-
-  routes.post(
-    "/api/v1/performance/calibration/decide",
-    zValidator("json", CalibrationDecisionBody),
-    async (c) => {
-      const { companyId, userId, role } = c.get("tenant");
-      if (role !== "hr_admin" && role !== "hr_director") {
-        return c.json({ error: "Forbidden: HR calibration permission required" }, 403);
-      }
-      const tenantId = String(companyId);
-      const body = c.req.valid("json");
-      const sql = getSql(c.env);
-
-      const [assessment] = await sql`
-        SELECT * FROM performance_assessments WHERE id = ${body.assessmentId} AND tenant_id = ${tenantId}
-      `;
-      if (!assessment) return c.json({ error: "Assessment not found" }, 404);
-      if (assessment.is_locked) {
-        return c.json({ error: { code: "PM-010", message: "Assessment is locked post-finalization." } }, 409);
-      }
-
-      const preRating = Number(assessment.calibrated_rating ?? assessment.manager_rating ?? assessment.self_rating ?? 3);
-      const decisionId = `CALD-${crypto.randomUUID()}`;
-
-      await sql.begin(async (tx) => {
-        const t = tx as unknown as Sql;
-        await t`
-          INSERT INTO performance_calibration_decisions (
-            id, session_id, assessment_id, pre_rating, post_rating, rationale, approver_employee_id
-          ) VALUES (
-            ${decisionId}, ${body.sessionId}, ${body.assessmentId},
-            ${preRating}, ${body.postRating}, ${body.rationale}, ${String(userId)}
-          )
-        `;
-        await t`
-          UPDATE performance_assessments
-          SET calibrated_rating = ${body.postRating},
-              stage = 'CALIBRATION_COMPLETE',
-              updated_at = NOW()
-          WHERE id = ${body.assessmentId}
-        `;
-        await t`
-          INSERT INTO performance_audit_events (
-            id, tenant_id, actor_employee_id, context, entity_type, entity_id,
-            action, before_json, after_json, reason
-          ) VALUES (
-            ${`AUD-${crypto.randomUUID()}`}, ${tenantId}, ${String(userId)}, 'HRMS',
-            'performance_assessment', ${body.assessmentId}, 'CALIBRATE_RATING',
-            ${JSON.stringify({ rating: preRating })},
-            ${JSON.stringify({ rating: body.postRating })},
-            ${body.rationale}
-          )
-        `;
-      });
-
-      return c.json({ decisionId, preRating, postRating: body.postRating });
-    },
-  );
 
   return routes;
 }
