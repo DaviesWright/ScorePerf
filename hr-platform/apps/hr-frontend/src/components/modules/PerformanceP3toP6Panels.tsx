@@ -5,6 +5,7 @@ import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { colors, radii, shadows, typography } from "../../design-system/tokens";
 import { SEEDED_EMPLOYEES } from "../../data/enterpriseSeedData";
+import { useLoad } from "./selfServiceUi";
 
 // ============================================================================
 // P3.1, P3.6, P3.7: RBAC Permission Matrix, Explainers & Data Provenance
@@ -221,8 +222,45 @@ const TALENT_CELLS: TalentCell[] = [
   },
 ];
 
-export const TalentMatrixGrid: React.FC = () => {
+/** Response of GET /api/v1/performance/talent-matrix (certified results × committee-confirmed potential). */
+interface TalentMatrixResponse {
+  cycleId: string;
+  cells: { cellId: string; employees: { assessmentId: string; employeeId: string; finalRating: number }[] }[];
+  excluded: { assessmentId: string; employeeId: string; reason: string }[];
+}
+
+const EXCLUSION_LABELS: Record<string, string> = {
+  POTENTIAL_NOT_CONFIRMED: "potential not confirmed",
+  APPEAL_OPEN: "appeal open",
+  NOT_CERTIFIED: "not certified",
+};
+
+/**
+ * Live data comes only from certified results. Without a session or HR access the grid
+ * shows the illustrative demo placement and says so.
+ */
+export const TalentMatrixGrid: React.FC<{ cycleId?: string }> = ({ cycleId = "CYC-2026-H2" }) => {
   const [selectedCell, setSelectedCell] = useState<TalentCell | null>(null);
+  const live = useLoad<TalentMatrixResponse>(`/api/hr/performance/talent-matrix?cycleId=${encodeURIComponent(cycleId)}`);
+  const isLive = live.data !== null && Array.isArray(live.data.cells);
+  const cellsToShow: TalentCell[] = isLive
+    ? TALENT_CELLS.map((cell) => ({
+        ...cell,
+        staff: (live.data!.cells.find((c) => c.cellId === cell.id)?.employees ?? []).map(
+          (e) => `Employee ${e.employeeId} (${e.finalRating.toFixed(1)})`,
+        ),
+      }))
+    : TALENT_CELLS;
+  const excludedSummary = isLive
+    ? Object.entries(
+        live.data!.excluded.reduce<Record<string, number>>((acc, e) => {
+          acc[e.reason] = (acc[e.reason] ?? 0) + 1;
+          return acc;
+        }, {}),
+      )
+        .map(([reason, n]) => `${n} ${EXCLUSION_LABELS[reason] ?? reason}`)
+        .join(", ")
+    : "";
 
   return (
     <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, padding: "1.25rem", boxShadow: shadows.xs }}>
@@ -235,11 +273,23 @@ export const TalentMatrixGrid: React.FC = () => {
             Hover any cell for definition &amp; typical actions; click a cell to inspect staff and development plan.
           </p>
         </div>
-        <Badge variant="info" size="sm">P4 Talent Matrix</Badge>
+        <Badge variant={isLive ? "success" : "warning"} size="sm">
+          {live.loading ? "Loading…" : isLive ? `Certified results · ${cycleId}` : "Demo data"}
+        </Badge>
       </div>
+      {!live.loading && !isLive && (
+        <p style={{ margin: "0 0 0.75rem", fontSize: 11, color: colors.textMuted }}>
+          Showing illustrative placements. {live.error || "Live placements appear once results are certified."}
+        </p>
+      )}
+      {isLive && excludedSummary && (
+        <p style={{ margin: "0 0 0.75rem", fontSize: 11, color: colors.textMuted }}>
+          Not placed: {excludedSummary}.
+        </p>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.85rem" }}>
-        {TALENT_CELLS.map((cell) => {
+        {cellsToShow.map((cell) => {
           const bg = cell.tone === "green" ? "#f0fdf4" : cell.tone === "red" ? "#fef2f2" : cell.tone === "amber" ? "#fffbeb" : "#f8fafc";
           const border = cell.tone === "green" ? "#86efac" : cell.tone === "red" ? "#fecaca" : cell.tone === "amber" ? "#fde68a" : colors.border;
           return (
