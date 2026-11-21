@@ -56,6 +56,8 @@ const DecisionBody = z.object({
   postRating: z.number().min(1).max(5),
   rationale: z.string().trim().min(5).max(1000),
   dissentNotes: z.string().trim().max(2000).optional(),
+  // Confirms (or changes) the manager's proposed potential for the 9-box.
+  potential: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 });
 
 async function audit(
@@ -166,7 +168,8 @@ export function createPerformanceCalibrationRoutes(getSql: (env: Env) => Sql) {
     const items = await sql`
       SELECT a.id AS assessment_id, a.employee_id, a.manager_employee_id, a.stage,
              a.self_rating, a.computed_rating, a.computed_achievement_pct, a.manager_rating,
-             a.manager_divergence_reason, a.calibrated_rating
+             a.manager_divergence_reason, a.calibrated_rating,
+             a.potential_proposed, a.potential_rationale, a.potential_confirmed
       FROM performance_calibration_items i
       JOIN performance_assessments a ON a.id = i.assessment_id
       WHERE i.session_id = ${session.id}
@@ -302,16 +305,19 @@ export function createPerformanceCalibrationRoutes(getSql: (env: Env) => Sql) {
       await t`
         INSERT INTO performance_calibration_decisions (
           id, session_id, assessment_id, pre_rating, post_rating, rationale, approver_employee_id,
-          computed_rating, manager_rating, dissent_notes
+          computed_rating, manager_rating, dissent_notes, potential
         ) VALUES (
           ${decisionId}, ${session.id}, ${body.assessmentId}, ${preRating}, ${body.postRating}, ${body.rationale},
-          ${actor}, ${computedRating}, ${managerRating}, ${body.dissentNotes ?? null}
+          ${actor}, ${computedRating}, ${managerRating}, ${body.dissentNotes ?? null}, ${body.potential ?? null}
         )
       `;
       // Manager and computed ratings stay untouched; the calibrated rating is its own field.
       await t`
         UPDATE performance_assessments
-        SET calibrated_rating = ${body.postRating}, stage = 'CALIBRATION_COMPLETE', updated_at = NOW()
+        SET calibrated_rating = ${body.postRating}, stage = 'CALIBRATION_COMPLETE',
+            potential_confirmed = COALESCE(${body.potential ?? null}, potential_confirmed),
+            potential_confirmed_by = CASE WHEN ${body.potential ?? null}::text IS NULL THEN potential_confirmed_by ELSE ${actor} END,
+            updated_at = NOW()
         WHERE id = ${body.assessmentId} AND tenant_id = ${tenantId}
       `;
       await audit(
@@ -321,7 +327,7 @@ export function createPerformanceCalibrationRoutes(getSql: (env: Env) => Sql) {
         "performance_assessment",
         body.assessmentId,
         "CALIBRATE_RATING",
-        { rating: body.postRating, sessionId: session.id, decisionId },
+        { rating: body.postRating, potential: body.potential ?? null, sessionId: session.id, decisionId },
         body.rationale,
         { rating: preRating, computedRating, managerRating },
       );

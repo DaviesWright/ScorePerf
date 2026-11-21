@@ -46,6 +46,7 @@ import { createPerformanceV12Routes } from "./performance-v12-routes";
 import { createPerformanceMboRoutes } from "./performance-mbo-routes";
 import { createPerformanceCalibrationRoutes } from "./performance-calibration-routes";
 import { createPerformanceCertificationRoutes } from "./performance-certification-routes";
+import { createPerformanceTalentRoutes } from "./performance-talent-routes";
 import { createPerformanceOrgRoutes } from "./performance-org-routes";
 import { createAssetsP13Routes } from "./assets-p13-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
@@ -2925,6 +2926,8 @@ app.route("/", createPerformanceMboRoutes(getSql));
 app.route("/", createPerformanceCalibrationRoutes(getSql));
 // Certification (versioned, locked results), acknowledgement and appeals with independent reviewers. See performance-certification-routes.ts.
 app.route("/", createPerformanceCertificationRoutes(getSql));
+// Potential, 9-box Talent Matrix and PIPs driven by certified results only. See performance-talent-routes.ts.
+app.route("/", createPerformanceTalentRoutes(getSql));
 // Performance BUILD.md v1.3: First-Class Effective-Dated Organogram, Multi-Manager Edges, Contextual Drawer & Org Sync.
 app.route("/", createPerformanceOrgRoutes(getSql));
 
