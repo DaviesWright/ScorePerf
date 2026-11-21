@@ -1,5 +1,7 @@
 # ScoReview Performance
 
+> **Frozen legacy stack (2026-11-21).** The Django/Horilla code at the root of this repository is a read-only reference. Do not add features or fixes here. Its CI and Docker publishing are switched off, and it will be removed from this branch by **30 November 2026**. The product is the ScoReview HR platform in [`hr-platform/`](hr-platform/) (decision ADR-0015; roadmap D-06). Port behaviour you need into `hr-platform/`; do not copy code (Horilla is LGPL-2.1).
+
 [![License: LGPL v2.1](https://img.shields.io/badge/License-LGPL%20v2.1-blue.svg)](https://www.gnu.org/licenses/lgpl-2.1)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Django](https://img.shields.io/badge/django-5.2-green.svg)](https://www.djangoproject.com/)

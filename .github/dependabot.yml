@@ -1,31 +1,8 @@
-# Keep Horilla HR dependencies and Actions current (open-source supply chain).
+# Dependency updates for the ScoReview HR platform (hr-platform/).
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: "/"
-    target-branch: dev/v2.0
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "[UPDT]"
-      include: scope
-
-  - package-ecosystem: github-actions
-    directory: "/"
-    target-branch: dev/v2.0
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    labels:
-      - dependencies
-    commit-message:
-      prefix: "[UPDT]"
-      include: scope
+  # Django/Horilla pip and its GitHub Actions updates removed 2026-11-21: that stack is frozen
+  # and scheduled for removal by 2026-11-30.
 
   # ScoReview HR platform (npm workspace). zod stays on 3.x because
   # @hono/zod-validator 0.4.x requires zod 3; zod major bumps are ignored.
