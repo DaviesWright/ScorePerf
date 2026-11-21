@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { API_BASE, DEMO_LOGIN, SESSION_COOKIE } from "../../../lib/session";
 
 // Dede, the ScoReview assistant. Server-side only: the Anthropic key stays in the environment (ANTHROPIC_API_KEY)
 // and is never sent to the browser. Requests must come from this site.
@@ -24,21 +25,47 @@ When responding:
 - Respond in the same language the user writes in.
 If a request falls outside your scope as ScoReview's assistant, politely explain your limitations and redirect the user to appropriate resources.`;
 
+// Requests must carry an Origin header naming this exact host. A missing Origin is refused (scripts and
+// curl send none), and other *.workers.dev sites are not trusted.
 function isSameOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
-  if (!origin) return true;
+  if (!origin) return false;
   try {
-    const originHost = new URL(origin).host;
-    const reqHost = req.headers.get("host");
-    return (
-      originHost === reqHost ||
-      originHost.endsWith("bscscoreview.com") ||
-      originHost.endsWith("workers.dev") ||
-      originHost.startsWith("localhost")
-    );
+    return new URL(origin).host === req.headers.get("host");
   } catch {
     return false;
   }
+}
+
+// The caller must hold a session the API accepts. The token stays in its httpOnly cookie; the API verifies it.
+async function hasValidSession(req: NextRequest): Promise<string | null> {
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.ok ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+// Best-effort limit per session, per server instance: 20 model calls a minute.
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+const usage = new Map<string, { count: number; resetAt: number }>();
+function withinRateLimit(sessionKey: string): boolean {
+  const now = Date.now();
+  const entry = usage.get(sessionKey);
+  if (!entry || entry.resetAt <= now) {
+    if (usage.size > 5000) usage.clear();
+    usage.set(sessionKey, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= RATE_LIMIT;
 }
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -93,6 +120,16 @@ export async function POST(req: NextRequest) {
   if (!turns) return NextResponse.json({ error: "Bad request" }, { status: 400 });
 
   const lastUserTurn = turns[turns.length - 1];
+
+  // Only signed-in staff reach the model. Demo mode (no real sign-in) gets the built-in answers only.
+  const session = await hasValidSession(req);
+  if (!session) {
+    if (DEMO_LOGIN) return NextResponse.json({ reply: getLocalDedeAnswer(lastUserTurn.content) });
+    return NextResponse.json({ error: "Please sign in to use Dede." }, { status: 401 });
+  }
+  if (!withinRateLimit(session)) {
+    return NextResponse.json({ error: "Dede is getting a lot of questions. Try again in a minute." }, { status: 429 });
+  }
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
