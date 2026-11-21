@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Icons } from "../../design-system/Icons";
 
@@ -116,7 +117,7 @@ const SETTINGS_TABS: TabDefinition[] = [
 ];
 
 export const EmployeeSettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTabKey>("employee_code_tab");
+  const [activeTab, setActiveTab] = useViewState<SettingsTabKey>("EmployeeSettingsView:activeTab", "employee_code_tab");
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
   // 1. Employee ID Auto-generation State

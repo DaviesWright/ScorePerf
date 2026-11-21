@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useRealSession } from "../../lib/sessionMode";
+import { call } from "./assetApi";
+import { useViewState } from "../../lib/useViewState";
 import jsPDF from "jspdf";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
@@ -1173,7 +1176,7 @@ import type { UserPersona } from "../shell/AppSidebar";
 
 export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ persona }) => {
   const isEmployeeEss = persona === "employee";
-  const [activeMainSection, setActiveMainSection] = useState<"catalog" | "workforce_planning" | "role_dashboards">("catalog");
+  const [activeMainSection, setActiveMainSection] = useViewState<"catalog" | "workforce_planning" | "role_dashboards">("ReportsAnalyticsView:activeMainSection", "catalog");
   const [reportLocale, setReportLocale] = useState<"en" | "fr">("en");
   const [selectedRoleDashboard, setSelectedRoleDashboard] = useState<"sales" | "it" | "legal">("sales");
 
@@ -1181,9 +1184,9 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
   const [growthTargetPct, setGrowthTargetPct] = useState<number>(20);
   const [projectedAttritionPct, setProjectedAttritionPct] = useState<number>(8);
 
-  const [selectedPack, setSelectedPack] = useState<string>("ALL");
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedPack, setSelectedPack] = useViewState<string>("ReportsAnalyticsView:selectedPack", "ALL");
+  const [selectedCategory, setSelectedCategory] = useViewState<string>("ReportsAnalyticsView:selectedCategory", "ALL");
+  const [searchQuery, setSearchQuery] = useViewState<string>("ReportsAnalyticsView:searchQuery", "");
   const [activeReportModal, setActiveReportModal] = useState<ReportItem | null>(null);
   const [showAiInsight, setShowAiInsight] = useState<boolean>(true);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
@@ -1231,9 +1234,84 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
   }, [selectedPack, selectedCategory, searchQuery]);
 
   // Execute Natural Language AI Query
+  // Signed in: the request goes to the API, which matches it against the governed report catalogue, checks the
+  // role's access, returns real rows, and logs every request it cannot answer. The keyword matching below is
+  // the demo path only.
+  const realSession = useRealSession();
+  const [catalogueResult, setCatalogueResult] = useState<{
+    reportKey: string;
+    module: string;
+    name: string;
+    purpose: string;
+    columns: { key: string; label: string }[];
+    rows: Record<string, unknown>[];
+    rowCount: number;
+    suppressionReason: string | null;
+  } | null>(null);
+  const [serverFailures, setServerFailures] = useState<
+    Array<{ id: number; prompt: string; errorCode: string; response: string; createdAt: string; requestedBy: string | null }>
+  >([]);
+  const loadServerFailures = () => {
+    if (!realSession) return;
+    // HR only; anyone else gets 403 and simply sees no log.
+    call<{ results: typeof serverFailures }>("GET", "report-requests/failures?limit=20").then((r) => {
+      if (r.ok) setServerFailures(r.data.results ?? []);
+    });
+  };
+  useEffect(loadServerFailures, [realSession]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runServerPrompt = async (queryText: string) => {
+    setIsGenerating(true);
+    setPromptQuery(queryText);
+    setAiPromptError(null);
+    setGeneratedReport(null);
+    setCatalogueResult(null);
+    type Summary = { reportKey: string; module: string; name: string; purpose: string };
+    const r = await call<{ status: string; report?: Summary; reason?: string; alternatives?: Summary[] }>("POST", "report-requests", {
+      prompt: queryText,
+    });
+    if (!r.ok) {
+      setIsGenerating(false);
+      setAiPromptError({ reason: r.data.error ?? "The request could not be processed. Try again.", suggestions: [] });
+      return;
+    }
+    if (r.data.status === "matched" && r.data.report) {
+      const rep = r.data.report;
+      const data = await call<{
+        columns: { key: string; label: string }[];
+        rows: Record<string, unknown>[];
+        totals: { rowCount: number };
+        suppressionReason?: string | null;
+      }>("GET", `reports/${rep.module}/${rep.reportKey}?pageSize=10`);
+      setIsGenerating(false);
+      if (!data.ok) {
+        setAiPromptError({ reason: (data.data as { message?: string }).message ?? data.data.error ?? "The report could not be run.", suggestions: [] });
+        return;
+      }
+      setCatalogueResult({
+        ...rep,
+        columns: data.data.columns ?? [],
+        rows: data.data.rows ?? [],
+        rowCount: data.data.totals?.rowCount ?? 0,
+        suppressionReason: data.data.suppressionReason ?? null,
+      });
+      return;
+    }
+    setIsGenerating(false);
+    setAiPromptError({
+      reason: r.data.reason ?? "No report matches this request.",
+      suggestions: (r.data.alternatives ?? []).map((a) => a.name),
+    });
+    loadServerFailures();
+  };
+
   const handleExecuteAiPrompt = (queryText: string) => {
     const q = queryText.trim().toLowerCase();
     if (!q) return;
+    if (realSession) {
+      void runServerPrompt(queryText.trim());
+      return;
+    }
 
     setIsGenerating(true);
     setPromptQuery(queryText);
@@ -1720,7 +1798,65 @@ export const ReportsAnalyticsView: React.FC<{ persona?: UserPersona }> = ({ pers
           </div>
         )}
 
-        {failedAiLogs.length > 0 && (
+        {realSession && serverFailures.length > 0 && (
+          <details style={{ marginTop: "0.65rem", fontSize: 11, color: colors.textMuted }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+              Unanswered report requests, saved for HR review ({serverFailures.length} most recent)
+            </summary>
+            <div style={{ marginTop: "0.4rem", display: "grid", gap: "0.35rem" }}>
+              {serverFailures.map((log) => (
+                <div key={log.id} style={{ padding: "0.4rem 0.6rem", backgroundColor: "#f8fafc", borderRadius: radii.sm, border: `1px solid ${colors.border}` }}>
+                  <strong>{new Date(log.createdAt).toLocaleString()}</strong>
+                  {log.requestedBy ? ` · ${log.requestedBy}` : ""} · Prompt: &ldquo;{log.prompt}&rdquo; · Error: <code>{log.errorCode}</code> · Response: {log.response}
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {catalogueResult && (
+          <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: radii.lg, border: `1px solid ${colors.border}`, backgroundColor: colors.surface }}>
+            <div style={{ fontWeight: 700, color: colors.indigoPrimary }}>
+              {catalogueResult.name} <span style={{ color: colors.textMuted, fontWeight: 500 }}>({catalogueResult.reportKey})</span>
+            </div>
+            <div style={{ fontSize: 12, color: colors.textSecondary, margin: "0.2rem 0 0.6rem" }}>{catalogueResult.purpose}</div>
+            {catalogueResult.suppressionReason ? (
+              <div style={{ fontSize: 12, color: colors.textMuted }}>{catalogueResult.suppressionReason}</div>
+            ) : catalogueResult.rows.length === 0 ? (
+              <div style={{ fontSize: 12, color: colors.textMuted }}>The report ran but returned no rows for your access scope.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr>
+                      {catalogueResult.columns.map((col) => (
+                        <th key={col.key} style={{ textAlign: "left", padding: "0.35rem 0.5rem", borderBottom: `1px solid ${colors.border}`, color: colors.textMuted }}>
+                          {col.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {catalogueResult.rows.map((row, idx) => (
+                      <tr key={idx}>
+                        {catalogueResult.columns.map((col) => (
+                          <td key={col.key} style={{ padding: "0.35rem 0.5rem", borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                            {String(row[col.key] ?? "")}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ fontSize: 11, color: colors.textMuted, marginTop: "0.35rem" }}>
+                  Showing {catalogueResult.rows.length} of {catalogueResult.rowCount} rows. Open the full report in the catalogue below to filter and export.
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!realSession && failedAiLogs.length > 0 && (
           <details style={{ marginTop: "0.65rem", fontSize: 11, color: colors.textMuted }}>
             <summary style={{ cursor: "pointer", fontWeight: 600 }}>
               Failed Report Request Log ({failedAiLogs.length})

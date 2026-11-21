@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useRealSession } from "../../lib/sessionMode";
+import { call } from "./assetApi";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Icons } from "../../design-system/Icons";
 import { Badge } from "../../design-system/Badge";
@@ -164,6 +166,17 @@ export const PerformanceConfigurationStudio: React.FC = () => {
   const [showAddScaleModal, setShowAddScaleModal] = useState(false);
   const [newScaleName, setNewScaleName] = useState("");
   const [newScaleScope, setNewScaleScope] = useState("Company-wide");
+  const DEFAULT_LEVELS = [
+    { score: "4", label: "Exceeds Expectations", description: "" },
+    { score: "3", label: "Meets Expectations", description: "" },
+    { score: "2", label: "Developing", description: "" },
+    { score: "1", label: "Below Standard", description: "" },
+  ];
+  const [newScaleLevels, setNewScaleLevels] = useState(DEFAULT_LEVELS);
+  const [scaleError, setScaleError] = useState<string | null>(null);
+  const [scaleSaving, setScaleSaving] = useState(false);
+  const realSession = useRealSession();
+  const LEVEL_COLORS = ["#10b981", "#0284c7", "#6366f1", "#f59e0b", "#f97316", "#ef4444", "#64748b", "#a855f7", "#14b8a6", "#e11d48"];
   const [ratingScales, setRatingScales] = useState<CustomRatingScaleConfig[]>([
     {
       id: "ops_5pt",
@@ -203,6 +216,68 @@ export const PerformanceConfigurationStudio: React.FC = () => {
       ],
     },
   ]);
+
+  // Signed in: scales HR has saved are loaded from the API and listed after the samples.
+  useEffect(() => {
+    if (!realSession) return;
+    let cancelled = false;
+    call<{ results: { id: number; name: string; scope: string; levels: { score: number; label: string; description: string }[] }[] }>(
+      "GET",
+      "performance/rating-scales",
+    ).then((r) => {
+      if (cancelled || !r.ok) return;
+      const saved: CustomRatingScaleConfig[] = (r.data.results ?? []).map((x) => ({
+        id: `saved_${x.id}`,
+        name: x.name,
+        type: "numeric",
+        departmentScope: x.scope || "Company-wide",
+        anchors: x.levels.map((l, idx) => ({ score: l.score, label: l.label, description: l.description, color: LEVEL_COLORS[idx % LEVEL_COLORS.length] })),
+      }));
+      setRatingScales((prev) => [...prev.filter((p) => !p.id.startsWith("saved_")), ...saved]);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realSession]);
+
+  const saveCustomScale = async () => {
+    const levels = newScaleLevels
+      .map((l) => ({ score: Number(l.score), label: l.label.trim(), description: l.description.trim() }))
+      .sort((a, b) => b.score - a.score);
+    if (levels.length < 2) return setScaleError("A scale needs at least 2 levels.");
+    if (levels.some((l) => !Number.isFinite(l.score) || l.label === "")) return setScaleError("Every level needs a number score and a label.");
+    if (new Set(levels.map((l) => l.score)).size !== levels.length) return setScaleError("Each level needs a different score.");
+    if (realSession) {
+      setScaleSaving(true);
+      const r = await call<{ scale: { id: number } }>("POST", "performance/rating-scales", {
+        name: newScaleName.trim(),
+        scope: newScaleScope.trim(),
+        levels,
+      });
+      setScaleSaving(false);
+      if (!r.ok) {
+        const errs = (r.data as { errors?: string[] }).errors;
+        return setScaleError(errs?.join(" ") ?? r.data.error ?? "The scale could not be saved.");
+      }
+    }
+    setRatingScales((prev) => [
+      ...prev,
+      {
+        id: realSession ? `saved_new_${Date.now()}` : `custom_${Date.now()}`,
+        name: newScaleName.trim(),
+        type: "numeric",
+        departmentScope: newScaleScope.trim() || "Company-wide",
+        anchors: levels.map((l, idx) => ({ ...l, color: LEVEL_COLORS[idx % LEVEL_COLORS.length] })),
+      },
+    ]);
+    setScaleError(null);
+    setNewScaleName("");
+    setNewScaleScope("");
+    setNewScaleLevels(DEFAULT_LEVELS);
+    setShowAddScaleModal(false);
+    setToastMessage(realSession ? "Custom rating scale saved." : "Custom rating scale added (demo: not saved).");
+  };
 
   // 3. Settings Cascade Hierarchy
   const [hierarchyNodes, setHierarchyNodes] = useState<SettingsHierarchyNode[]>([
@@ -760,34 +835,63 @@ export const PerformanceConfigurationStudio: React.FC = () => {
                   onChange={(e) => setNewScaleScope(e.target.value)}
                   style={{ padding: "0.45rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
                 />
+                <div style={{ fontSize: 12, fontWeight: 700, color: colors.indigoPrimary }}>Levels (highest score first)</div>
+                {newScaleLevels.map((lvl, idx) => (
+                  <div key={idx} style={{ display: "grid", gridTemplateColumns: "70px 1fr 1.4fr auto", gap: "0.4rem", alignItems: "center" }}>
+                    <input
+                      type="number"
+                      aria-label={`Level ${idx + 1} score`}
+                      value={lvl.score}
+                      onChange={(e) => setNewScaleLevels((prev) => prev.map((l, i) => (i === idx ? { ...l, score: e.target.value } : l)))}
+                      style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                    />
+                    <input
+                      type="text"
+                      aria-label={`Level ${idx + 1} label`}
+                      placeholder="Label"
+                      value={lvl.label}
+                      onChange={(e) => setNewScaleLevels((prev) => prev.map((l, i) => (i === idx ? { ...l, label: e.target.value } : l)))}
+                      style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                    />
+                    <input
+                      type="text"
+                      aria-label={`Level ${idx + 1} description`}
+                      placeholder="What this level means (optional)"
+                      value={lvl.description}
+                      onChange={(e) => setNewScaleLevels((prev) => prev.map((l, i) => (i === idx ? { ...l, description: e.target.value } : l)))}
+                      style={{ padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={newScaleLevels.length <= 2}
+                      aria-label={`Remove level ${idx + 1}`}
+                      onClick={() => setNewScaleLevels((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={newScaleLevels.length >= 10}
+                    onClick={() => setNewScaleLevels((prev) => [...prev, { score: "", label: "", description: "" }])}
+                  >
+                    + Add level
+                  </Button>
+                </div>
+                {scaleError && <div role="alert" style={{ fontSize: 12, color: "#991b1b" }}>{scaleError}</div>}
                 <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
                   <Button variant="outline" size="sm" onClick={() => setShowAddScaleModal(false)}>Cancel</Button>
                   <Button
                     variant="primary"
                     size="sm"
-                    disabled={!newScaleName.trim()}
-                    onClick={() => {
-                      setRatingScales((prev) => [
-                        ...prev,
-                        {
-                          id: `custom_${Date.now()}`,
-                          name: newScaleName.trim(),
-                          type: "numeric",
-                          departmentScope: newScaleScope.trim() || "Company-wide",
-                          anchors: [
-                            { score: 4, label: "Exceeds Expectations", color: "#10b981", description: "Consistently surpasses role benchmarks" },
-                            { score: 3, label: "Meets Expectations", color: "#6366f1", description: "Delivers expected outcomes reliably" },
-                            { score: 2, label: "Developing", color: "#f59e0b", description: "Requires targeted coaching" },
-                            { score: 1, label: "Below Standard", color: "#ef4444", description: "Performance remediation required" },
-                          ],
-                        },
-                      ]);
-                      setNewScaleName("");
-                      setNewScaleScope("");
-                      setShowAddScaleModal(false);
-                    }}
+                    disabled={!newScaleName.trim() || scaleSaving}
+                    onClick={() => void saveCustomScale()}
                   >
-                    Save Custom Scale
+                    {scaleSaving ? "Saving..." : "Save Custom Scale"}
                   </Button>
                 </div>
               </div>

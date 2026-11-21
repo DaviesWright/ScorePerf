@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ComingSoonTag, comingSoonProps } from "../../design-system/ComingSoon";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -475,8 +476,9 @@ export const AdminNerveCenterView: React.FC = () => {
                   Drag-and-drop or toggle multi-step approval automation across Line Managers and HR Directors without code.
                 </p>
               </div>
-              <Button variant="primary" size="sm" onClick={() => alert("New approval node added to pipeline.")}>
+              <Button variant="primary" size="sm" {...comingSoonProps}>
                 + Add Approval Node
+                <ComingSoonTag />
               </Button>
             </div>
 
@@ -526,8 +528,9 @@ export const AdminNerveCenterView: React.FC = () => {
 
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <Badge variant="success" size="sm" dot>Active</Badge>
-                  <Button variant="ghost" size="sm" onClick={() => alert(`Configuring node: ${node.title}`)}>
+                  <Button variant="ghost" size="sm" {...comingSoonProps}>
                     Configure
+                    <ComingSoonTag />
                   </Button>
                 </div>
               </div>
@@ -578,8 +581,9 @@ export const AdminNerveCenterView: React.FC = () => {
                     </span>
                   </div>
                   {a.flagged ? (
-                    <Button variant="primary" size="sm" onClick={() => alert("Auto-updating Maternity Leave Policy to 14 weeks statutory maternity leave.")}>
+                    <Button variant="primary" size="sm" {...comingSoonProps}>
                       Update Policy Automatically
+                      <ComingSoonTag />
                     </Button>
                   ) : (
                     <Badge variant="success" size="sm" dot>Compliant</Badge>

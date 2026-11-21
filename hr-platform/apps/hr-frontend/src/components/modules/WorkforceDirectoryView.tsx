@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useRealSession } from "../../lib/sessionMode";
+import { call } from "./assetApi";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -85,8 +88,33 @@ export interface RedeploymentRecord {
   newRole: string;
   effectiveDate: string;
   type: "PROMOTION_TRANSFER" | "GEOGRAPHIC_RELOCATION" | "CROSS_PRACTICE_ROTATION";
-  status: "IN_PROGRESS" | "COMPLETED";
+  status: "IN_PROGRESS" | "COMPLETED" | "PENDING" | "APPROVED" | "REJECTED" | "APPLIED";
   approver: string;
+  reason?: string;
+}
+
+interface ApiSquad {
+  id: number;
+  name: string;
+  leadEmployeeId: number | null;
+  leadName: string | null;
+  mission: string;
+  activeFocus: string;
+  members: { id: number; name: string; jobTitle: string; department: string | null }[];
+}
+
+interface ApiRedeployment {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  fromDepartment: string | null;
+  toDepartment: string | null;
+  fromJobTitle: string | null;
+  toJobTitle: string;
+  effectiveDate: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected" | "applied";
+  requestedBy: string | null;
 }
 
 interface WorkforceDirectoryViewProps {
@@ -107,7 +135,7 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   onNavigateToWorkflows,
 }) => {
   // Sub-Navigation Tabs matching HRIS Menu
-  const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTab] = useViewState<
     | "overview"
     | "employees"
     | "squads"
@@ -116,12 +144,12 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
     | "redeployment"
     | "schedules"
     | "audit"
-  >("overview");
+  >("WorkforceDirectoryView:activeTab", "overview");
 
   // Search & Filter state
-  const [search, setSearch] = useState("");
-  const [selectedDept, setSelectedDept] = useState("ALL");
-  const [selectedTeam, setSelectedTeam] = useState("ALL");
+  const [search, setSearch] = useViewState("WorkforceDirectoryView:search", "");
+  const [selectedDept, setSelectedDept] = useViewState("WorkforceDirectoryView:selectedDept", "ALL");
+  const [selectedTeam, setSelectedTeam] = useViewState("WorkforceDirectoryView:selectedTeam", "ALL");
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecord | null>(selectedInitialEmployee);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"overview" | "assets" | "performance" | "contracts">("overview");
@@ -153,6 +181,18 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   const [redeployToDept, setRedeployToDept] = useState("Cloud Engineering");
   const [redeployToRole, setRedeployToRole] = useState("Senior Consultant");
   const [redeployEffectiveDate, setRedeployEffectiveDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [redeployReason, setRedeployReason] = useState("");
+  const [redeployToDeptId, setRedeployToDeptId] = useState<number | "">("");
+
+  // Signed in: squads and redeployments are loaded from and saved to the API (with an audit trail).
+  // Demo persona picker: the sample data below is used and nothing is saved, which the screen says.
+  const realSession = useRealSession();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [apiDepartments, setApiDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [memberFilter, setMemberFilter] = useState("");
+  const [newSquadLeadId, setNewSquadLeadId] = useState<number | "">("");
 
   // Employee Groups & Squads State
   const [squads, setSquads] = useState<EmployeeGroupSquad[]>([
@@ -312,6 +352,167 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
   ]);
 
   // Map employee ID to asset
+  useEffect(() => {
+    if (!realSession) return;
+    let cancelled = false;
+    Promise.all([
+      call<{ results: ApiSquad[] }>("GET", "squads"),
+      call<{ results: ApiRedeployment[] }>("GET", "redeployments"),
+      call<{ results: { id: number; name: string }[] }>("GET", "departments"),
+    ]).then(([sq, rd, dp]) => {
+      if (cancelled) return;
+      if (!sq.ok || !rd.ok) setApiError(sq.data.error ?? rd.data.error ?? "Could not load squads and redeployments.");
+      if (sq.ok) {
+        const list = sq.data.results ?? [];
+        setSquads(
+          list.map((x) => ({
+            id: x.id,
+            name: x.name,
+            type: "CROSS_FUNCTIONAL" as const,
+            leadName: x.leadName ?? "No lead set",
+            memberCount: x.members.length,
+            currentMission: x.mission,
+            activeSprint: x.activeFocus,
+          })),
+        );
+        setSquadMembersMap(Object.fromEntries(list.map((x) => [x.id, x.members.map((m) => m.name)])));
+      }
+      if (rd.ok) {
+        setRedeployments(
+          (rd.data.results ?? []).map((r) => ({
+            id: r.id,
+            employeeName: r.employeeName,
+            staffId: `ID ${r.employeeId}`,
+            currentDepartment: r.fromDepartment ?? "Unassigned",
+            newDepartment: r.toDepartment ?? "Unassigned",
+            currentRole: r.fromJobTitle ?? "",
+            newRole: r.toJobTitle,
+            effectiveDate: r.effectiveDate,
+            type: "CROSS_PRACTICE_ROTATION" as const,
+            status: r.status.toUpperCase() as RedeploymentRecord["status"],
+            approver: r.requestedBy ? `Requested by ${r.requestedBy}` : "",
+            reason: r.reason,
+          })),
+        );
+      }
+      if (dp.ok) setApiDepartments(dp.data.results ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realSession, reloadKey]);
+
+  const createSquad = async () => {
+    const memberIds = newSquadMemberIds;
+    if (!realSession) {
+      const nextId = Math.max(0, ...squads.map((s) => s.id)) + 1;
+      const pickedNames = employees.filter((e) => memberIds.includes(e.id)).map((e) => `${e.first_name} ${e.last_name}`);
+      const leadEmp = employees.find((e) => e.id === newSquadLeadId);
+      const lead = leadEmp ? `${leadEmp.first_name} ${leadEmp.last_name}` : newSquadLead.trim() || pickedNames[0] || "No lead set";
+      setSquads((prev) => [
+        ...prev,
+        {
+          id: nextId,
+          name: newSquadName.trim(),
+          type: "CROSS_FUNCTIONAL",
+          leadName: lead,
+          memberCount: Math.max(1, pickedNames.length),
+          currentMission: newSquadMission.trim() || "Cross-functional delivery squad.",
+          activeSprint: newSquadSprint,
+        },
+      ]);
+      setSquadMembersMap((prev) => ({ ...prev, [nextId]: pickedNames.length > 0 ? pickedNames : [lead] }));
+      setExpandedSquadId(nextId);
+    } else {
+      setSaving(true);
+      const res = await call<{ squad: ApiSquad }>("POST", "squads", {
+        name: newSquadName.trim(),
+        leadEmployeeId: newSquadLeadId === "" ? null : newSquadLeadId,
+        mission: newSquadMission.trim(),
+        activeFocus: newSquadSprint.trim(),
+        memberIds,
+      });
+      setSaving(false);
+      if (!res.ok) {
+        setApiError(res.data.error ?? "The squad could not be saved.");
+        return;
+      }
+      setApiError(null);
+      setExpandedSquadId(res.data.squad?.id ?? null);
+      setReloadKey((k) => k + 1);
+    }
+    setNewSquadName("");
+    setNewSquadLead("");
+    setNewSquadLeadId("");
+    setNewSquadMission("");
+    setNewSquadMemberIds([]);
+    setMemberFilter("");
+    setShowFormSquadModal(false);
+  };
+
+  const submitRedeployment = async () => {
+    const emp = employees[redeployEmpIdx] ?? employees[0];
+    if (!emp) return;
+    if (!realSession) {
+      const nextId = Math.max(0, ...redeployments.map((r) => r.id)) + 1;
+      setRedeployments((prev) => [
+        {
+          id: nextId,
+          employeeName: `${emp.first_name} ${emp.last_name}`,
+          staffId: `SEN/${String(emp.id).padStart(3, "0")}`,
+          currentDepartment: emp.department_name || "General",
+          newDepartment: redeployToDept.trim() || "Strategic Advisory",
+          currentRole: emp.role || "Consultant",
+          newRole: redeployToRole.trim() || "Senior Consultant",
+          effectiveDate: redeployEffectiveDate,
+          type: "CROSS_PRACTICE_ROTATION",
+          status: "PENDING",
+          approver: "Awaiting HR approval",
+          reason: redeployReason.trim(),
+        },
+        ...prev,
+      ]);
+    } else {
+      if (redeployToDeptId === "") {
+        setApiError("Choose the department the employee is moving to.");
+        return;
+      }
+      setSaving(true);
+      const res = await call<{ id: number }>("POST", "redeployments", {
+        employeeId: emp.id,
+        toDepartmentId: redeployToDeptId,
+        toJobTitle: redeployToRole.trim(),
+        effectiveDate: redeployEffectiveDate,
+        reason: redeployReason.trim(),
+      });
+      setSaving(false);
+      if (!res.ok) {
+        setApiError(res.data.error ?? "The redeployment could not be saved.");
+        return;
+      }
+      setApiError(null);
+      setReloadKey((k) => k + 1);
+    }
+    setRedeployReason("");
+    setShowRedeployModal(false);
+  };
+
+  const decideRedeployment = async (id: number, decision: "approve" | "reject") => {
+    if (!realSession) {
+      setRedeployments((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: decision === "approve" ? "APPLIED" : "REJECTED" } : r)),
+      );
+      return;
+    }
+    const res = await call<{ status: string }>("POST", `redeployments/${id}/decision`, { decision });
+    if (!res.ok) {
+      setApiError(res.data.error ?? "The decision could not be saved.");
+      return;
+    }
+    setApiError(null);
+    setReloadKey((k) => k + 1);
+  };
+
   const employeeAssetMap = useMemo(() => {
     const map = new Map<number, AssetRecord>();
     assets.forEach((a) => {
@@ -1020,6 +1221,23 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
       {/* ========================================================================= */}
       {/* TAB 3: EMPLOYEE GROUPS / SQUADS (Screenshot item 2b)                      */}
       {/* ========================================================================= */}
+      {(activeTab === "squads" || activeTab === "redeployment") && (apiError || !realSession) && (
+        <div
+          role={apiError ? "alert" : "note"}
+          style={{
+            marginBottom: "1rem",
+            padding: "0.6rem 0.85rem",
+            borderRadius: radii.md,
+            border: `1px solid ${apiError ? "#fecaca" : colors.border}`,
+            backgroundColor: apiError ? "#fef2f2" : colors.surfaceSubtle,
+            color: apiError ? "#991b1b" : colors.textSecondary,
+            fontSize: typography.sizes.xs,
+          }}
+        >
+          {apiError ?? "Demo data: changes here are not saved. Sign in to save squads and redeployments."}
+        </div>
+      )}
+
       {activeTab === "squads" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
@@ -1142,13 +1360,19 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     onChange={(e) => setNewSquadName(e.target.value)}
                     style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
                   />
-                  <input
-                    type="text"
-                    placeholder="Squad lead name"
-                    value={newSquadLead}
-                    onChange={(e) => setNewSquadLead(e.target.value)}
+                  <select
+                    aria-label="Squad lead"
+                    value={newSquadLeadId}
+                    onChange={(e) => setNewSquadLeadId(e.target.value === "" ? "" : Number(e.target.value))}
                     style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
-                  />
+                  >
+                    <option value="">{realSession ? "Squad lead (you, if you are a manager)" : "Squad lead"}</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.first_name} {emp.last_name}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="text"
                     placeholder="Mission / objective"
@@ -1157,8 +1381,19 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
                   />
                   <div style={{ maxHeight: 140, overflowY: "auto", border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "0.5rem" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, marginBottom: 4 }}>Select Members:</div>
-                    {employees.slice(0, 15).map((emp) => (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMuted, marginBottom: 4 }}>
+                      Select Members ({newSquadMemberIds.length} selected):
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Filter people"
+                      value={memberFilter}
+                      onChange={(e) => setMemberFilter(e.target.value)}
+                      style={{ width: "100%", padding: "0.3rem 0.45rem", marginBottom: 4, borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 }}
+                    />
+                    {employees
+                      .filter((emp) => `${emp.first_name} ${emp.last_name} ${emp.department_name ?? ""}`.toLowerCase().includes(memberFilter.trim().toLowerCase()))
+                      .map((emp) => (
                       <label key={emp.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "2px 0", cursor: "pointer" }}>
                         <input
                           type="checkbox"
@@ -1179,35 +1414,10 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                   <Button
                     variant="primary"
                     size="sm"
-                    disabled={!newSquadName.trim()}
-                    onClick={() => {
-                      const nextId = Math.max(0, ...squads.map((s) => s.id)) + 1;
-                      const pickedNames = employees
-                        .filter((e) => newSquadMemberIds.includes(e.id))
-                        .map((e) => `${e.first_name} ${e.last_name}`);
-                      const lead = newSquadLead.trim() || pickedNames[0] || "Assigned Lead";
-                      setSquads((prev) => [
-                        ...prev,
-                        {
-                          id: nextId,
-                          name: newSquadName.trim(),
-                          type: "CROSS_FUNCTIONAL",
-                          leadName: lead,
-                          memberCount: Math.max(1, pickedNames.length),
-                          currentMission: newSquadMission.trim() || "Cross-functional delivery squad.",
-                          activeSprint: newSquadSprint,
-                        },
-                      ]);
-                      setSquadMembersMap((prev) => ({ ...prev, [nextId]: pickedNames.length > 0 ? pickedNames : [lead] }));
-                      setExpandedSquadId(nextId);
-                      setNewSquadName("");
-                      setNewSquadLead("");
-                      setNewSquadMission("");
-                      setNewSquadMemberIds([]);
-                      setShowFormSquadModal(false);
-                    }}
+                    disabled={!newSquadName.trim() || saving}
+                    onClick={() => void createSquad()}
                   >
-                    Create Squad
+                    {saving ? "Saving..." : "Create Squad"}
                   </Button>
                 </div>
               </div>
@@ -1427,13 +1637,29 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="text"
-                    placeholder="New Practice / Department"
-                    value={redeployToDept}
-                    onChange={(e) => setRedeployToDept(e.target.value)}
-                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
-                  />
+                  {realSession ? (
+                    <select
+                      aria-label="New department"
+                      value={redeployToDeptId}
+                      onChange={(e) => setRedeployToDeptId(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                    >
+                      <option value="">New department</option>
+                      {apiDepartments.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="New Practice / Department"
+                      value={redeployToDept}
+                      onChange={(e) => setRedeployToDept(e.target.value)}
+                      style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
+                    />
+                  )}
                   <input
                     type="text"
                     placeholder="New Role Title"
@@ -1447,36 +1673,26 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                     onChange={(e) => setRedeployEffectiveDate(e.target.value)}
                     style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}` }}
                   />
+                  <textarea
+                    placeholder="Reason (required, at least 5 characters)"
+                    value={redeployReason}
+                    onChange={(e) => setRedeployReason(e.target.value)}
+                    rows={2}
+                    style={{ padding: "0.5rem", borderRadius: radii.md, border: `1px solid ${colors.border}`, fontFamily: "inherit" }}
+                  />
+                  <div style={{ fontSize: 11, color: colors.textMuted }}>
+                    HR approves the request. The employee&apos;s department and job title change on the effective date, and every step is recorded in the audit trail.
+                  </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", marginTop: "1rem" }}>
                   <Button variant="outline" size="sm" onClick={() => setShowRedeployModal(false)}>Cancel</Button>
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => {
-                      const emp = employees[redeployEmpIdx] ?? employees[0];
-                      if (!emp) return;
-                      const nextId = Math.max(0, ...redeployments.map((r) => r.id)) + 1;
-                      setRedeployments((prev) => [
-                        {
-                          id: nextId,
-                          employeeName: `${emp.first_name} ${emp.last_name}`,
-                          staffId: `SEN/${String(emp.id).padStart(3, "0")}`,
-                          currentDepartment: emp.department_name || "General",
-                          newDepartment: redeployToDept.trim() || "Strategic Advisory",
-                          currentRole: emp.role || "Consultant",
-                          newRole: redeployToRole.trim() || "Senior Consultant",
-                          effectiveDate: redeployEffectiveDate,
-                          type: "CROSS_PRACTICE_ROTATION",
-                          status: "IN_PROGRESS",
-                          approver: "HR Governance",
-                        },
-                        ...prev,
-                      ]);
-                      setShowRedeployModal(false);
-                    }}
+                    disabled={saving || redeployReason.trim().length < 5 || !redeployToRole.trim()}
+                    onClick={() => void submitRedeployment()}
                   >
-                    Submit Redeployment
+                    {saving ? "Saving..." : "Submit for HR approval"}
                   </Button>
                 </div>
               </div>
@@ -1519,9 +1735,18 @@ export const WorkforceDirectoryView: React.FC<WorkforceDirectoryViewProps> = ({
                       {formatDate(r.effectiveDate)}
                     </td>
                     <td style={{ padding: "0.85rem 1rem" }}>
-                      <Badge variant={r.status === "COMPLETED" ? "success" : "warning"} size="sm">
+                      <Badge
+                        variant={r.status === "COMPLETED" || r.status === "APPLIED" ? "success" : r.status === "REJECTED" ? "error" : "warning"}
+                        size="sm"
+                      >
                         {r.status.replace("_", " ")}
                       </Badge>
+                      {r.status === "PENDING" && (
+                        <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
+                          <Button variant="primary" size="sm" onClick={() => void decideRedeployment(r.id, "approve")}>Approve</Button>
+                          <Button variant="outline" size="sm" onClick={() => void decideRedeployment(r.id, "reject")}>Reject</Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
