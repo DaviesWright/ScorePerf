@@ -49,6 +49,7 @@ import { createPerformanceCertificationRoutes } from "./performance-certificatio
 import { createPerformanceTalentRoutes } from "./performance-talent-routes";
 import { createPerformanceOrgRoutes } from "./performance-org-routes";
 import { createAssetsP13Routes } from "./assets-p13-routes";
+import { createNotificationEngineRoutes } from "./notification-engine-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
 import type { MagicLinkDeps } from "./magic-link";
 import { z } from "zod";
@@ -1244,6 +1245,9 @@ app.post("/api/v1/objectives/decision", zValidator("json", ObjectiveDecisionBody
   if (updated.length === 0) return c.json({ error: "Nothing is waiting for a decision." }, 409);
   return c.json({ decided: updated.length, status: decision === "approve" ? "approved" : "returned" });
 });
+
+// Notification Handling Mechanism v1.0: context-aware inbox, PII filter, preferences & admin rules.
+app.route("/", createNotificationEngineRoutes(getSql));
 
 // My notifications: newest first, with the unread count. Each user only ever sees and marks their own.
 app.get("/api/v1/notifications", async (c) => {
