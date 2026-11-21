@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration 0034: MBO scoring adapter inputs & computed assessment rating
+-- Migration 0036: MBO scoring adapter inputs & computed assessment rating
 -- Implements BUILD.md §7.4 (MBO measurement and scoring) and §9.5 (keep the
 -- calculated result separate from manager and calibrated ratings).
 -- Additive only: new nullable columns, no data rewritten.

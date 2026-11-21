@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration 0035: Calibration sessions as a controlled workflow (BUILD.md §9.5, §9.6)
+-- Migration 0037: Calibration sessions as a controlled workflow (BUILD.md §9.5, §9.6)
 --   - Named committee per session
 --   - Explicit list of assessments under calibration in each session
 --   - Decisions keep computed, manager, pre and post ratings side by side,

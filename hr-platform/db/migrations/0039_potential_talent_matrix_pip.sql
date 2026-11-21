@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration 0037: Potential rating, 9-box inputs and Performance Improvement Plans
+-- Migration 0039: Potential rating, 9-box inputs and Performance Improvement Plans
 --   - Potential: manager proposes LOW / MEDIUM / HIGH with a rationale; the
 --     calibration committee confirms it in the decision (audited, appealable)
 --   - PIPs follow the five stages already shown in the UI:
