@@ -48,6 +48,14 @@ const CreateGoalBody = z.object({
         actual: z.number().default(0),
         unit: z.string().default("%"),
         weightPct: z.number().min(0).max(100).default(100),
+        // MBO (BUILD.md §7.4): declared direction and its parameters.
+        direction: z
+          .enum(["HIGHER_IS_BETTER", "LOWER_IS_BETTER", "WITHIN_RANGE", "EXACT", "MILESTONE", "QUALITATIVE"])
+          .optional(),
+        rangeMin: z.number().optional(),
+        rangeMax: z.number().optional(),
+        tolerancePct: z.number().min(0).optional(),
+        totalMilestones: z.number().int().positive().optional(),
       }),
     )
     .default([]),
@@ -60,7 +68,14 @@ const CheckinBody = z.object({
   blockers: z.string().max(1000).optional(),
   nextSteps: z.string().max(1000).optional(),
   measureActuals: z
-    .array(z.object({ measureId: z.string(), actual: z.number() }))
+    .array(
+      z.object({
+        measureId: z.string(),
+        actual: z.number().optional(),
+        completedMilestones: z.number().int().min(0).optional(),
+        qualitativeRating: z.number().int().min(1).max(5).optional(),
+      }),
+    )
     .optional(),
 });
 
@@ -180,10 +195,13 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
           await t`
             INSERT INTO performance_goal_measures (
               id, goal_id, title, measure_type, scoring_rule,
-              baseline, target, actual, unit, weight_pct
+              baseline, target, actual, unit, weight_pct,
+              direction, range_min, range_max, tolerance_pct, total_milestones
             ) VALUES (
               ${`MSR-${crypto.randomUUID()}`}, ${goalId}, ${m.title}, ${m.measureType},
-              ${m.scoringRule}, ${m.baseline}, ${m.target}, ${m.actual}, ${m.unit}, ${m.weightPct}
+              ${m.scoringRule}, ${m.baseline}, ${m.target}, ${m.actual}, ${m.unit}, ${m.weightPct},
+              ${m.direction ?? null}, ${m.rangeMin ?? null}, ${m.rangeMax ?? null},
+              ${m.tolerancePct ?? null}, ${m.totalMilestones ?? null}
             )
           `;
         }
@@ -311,7 +329,10 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
         for (const ma of body.measureActuals) {
           await sql`
             UPDATE performance_goal_measures
-            SET actual = ${ma.actual}
+            SET actual = COALESCE(${ma.actual ?? null}, actual),
+                completed_milestones = COALESCE(${ma.completedMilestones ?? null}, completed_milestones),
+                qualitative_rating = COALESCE(${ma.qualitativeRating ?? null}, qualitative_rating),
+                actual_recorded_at = NOW()
             WHERE id = ${ma.measureId} AND goal_id = ${goalId}
           `;
         }

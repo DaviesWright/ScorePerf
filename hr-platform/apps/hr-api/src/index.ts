@@ -43,6 +43,7 @@ import { createCelebrationsRoutes } from "./celebrations-routes";
 import { createAnalyticsRoutes } from "./analytics-routes";
 import { createPerformanceCoreRoutes } from "./performance-core-routes";
 import { createPerformanceV12Routes } from "./performance-v12-routes";
+import { createPerformanceMboRoutes } from "./performance-mbo-routes";
 import { createPerformanceOrgRoutes } from "./performance-org-routes";
 import { createAssetsP13Routes } from "./assets-p13-routes";
 import { isSerialViolation, normaliseSerial, recoveryTaskTitle } from "@hr-platform/shared";
@@ -2916,6 +2917,8 @@ app.route("/", createAnalyticsRoutes(getSql));
 app.route("/", createPerformanceCoreRoutes(getSql));
 // Performance BUILD.md v1.1 & v1.2: Objective Volume Policy (8-10), Demo Appraisal Workspace, Manager Appraisal Queue & Delegation.
 app.route("/", createPerformanceV12Routes(getSql));
+// MBO review cycle close: computed MBO rating from goal scores (BUILD.md §7.4). See performance-mbo-routes.ts.
+app.route("/", createPerformanceMboRoutes(getSql));
 // Performance BUILD.md v1.3: First-Class Effective-Dated Organogram, Multi-Manager Edges, Contextual Drawer & Org Sync.
 app.route("/", createPerformanceOrgRoutes(getSql));
 

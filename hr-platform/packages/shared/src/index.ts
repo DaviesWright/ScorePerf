@@ -13,3 +13,4 @@ export * from "./offices";
 export * from "./integrations";
 export * from "./assets";
 export * from "./performanceEngine";
+export * from "./mboScoring";
