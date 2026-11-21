@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration 0038: Report request log (to-do P1)
+-- Migration 0040: Report request log (to-do P1)
 -- Every free-text report request that does not produce a report is recorded with
 -- the prompt, the error code and the response the user saw, so HR can see what
 -- people ask for and what the catalogue is missing. Append-only.

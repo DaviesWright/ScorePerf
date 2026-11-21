@@ -5,7 +5,7 @@ import type { TenantContext } from "./auth";
 import type { Env } from "./index";
 
 // Squads, redeployments and custom rating scales (to-do P1). Each write records who, when, what changed and
-// from where in workforce_audit_events (append-only, see migration 0039).
+// from where in workforce_audit_events (append-only, see migration 0041).
 
 const isHr = (role: string) => role === "hr_admin" || role === "hr_director";
 

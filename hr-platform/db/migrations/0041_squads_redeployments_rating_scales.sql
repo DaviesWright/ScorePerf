@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Migration 0039: Squads, redeployments, custom rating scales (to-do P1)
+-- Migration 0041: Squads, redeployments, custom rating scales (to-do P1)
 -- These screens existed in the UI with browser-only state, so anything created
 -- was lost on refresh and invisible to colleagues. This gives them storage and
 -- an append-only audit trail (who, when, what changed, from which screen).
