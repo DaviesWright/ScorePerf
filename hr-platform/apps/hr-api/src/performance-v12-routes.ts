@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import type { TenantContext } from "./auth";
 import type { Env } from "./index";
+import { requiresDivergenceReason } from "@hr-platform/shared";
 
 export const DEMO_DISCLAIMER = "DEMO — NOT A LIVE APPRAISAL";
 
@@ -263,6 +264,8 @@ const managerAssessmentPayloadSchema = z.object({
   strengths: z.string().max(4000).optional(),
   developmentAreas: z.string().max(4000).optional(),
   recommendedActions: z.string().max(4000).optional(),
+  // Required when the manager's rating is more than one band from the computed MBO rating.
+  divergenceReason: z.string().trim().min(10).max(2000).optional(),
   items: z
     .array(
       z.object({
@@ -640,6 +643,9 @@ export function createPerformanceV12Routes(getSql: (env: Env) => any) {
         managerSubStatus: assessment.manager_sub_status ?? "MANAGER_NOT_STARTED",
         revisionRound: Number(assessment.revision_round ?? 0),
         maxRevisionRounds: Number(assessment.max_revision_rounds ?? 2),
+        computedRating: assessment.computed_rating != null ? Number(assessment.computed_rating) : null,
+        computedAchievementPct:
+          assessment.computed_achievement_pct != null ? Number(assessment.computed_achievement_pct) : null,
       },
       selfAssessment: {
         readOnly: true,
@@ -775,6 +781,20 @@ export function createPerformanceV12Routes(getSql: (env: Env) => any) {
       }
 
       const body = c.req.valid("json");
+      const computedRating =
+        assessment.computed_rating != null ? Number(assessment.computed_rating) : null;
+      if (requiresDivergenceReason(computedRating, body.overallRating ?? null) && !body.divergenceReason) {
+        return c.json(
+          {
+            error:
+              "Your rating is more than one band from the computed rating. Give a reason of at least 10 characters.",
+            code: "PERF_DIVERGENCE_REASON_REQUIRED",
+            computedRating,
+            managerRating: body.overallRating ?? null,
+          },
+          400
+        );
+      }
       const del = scope.delegatedMap.get(String(assessment.employee_id));
       const managerOwnerId = del ? del.onBehalfOf : String(userId);
       const recId = `mgr-${assessmentId}`;
@@ -807,6 +827,7 @@ export function createPerformanceV12Routes(getSql: (env: Env) => any) {
             stage = 'MANAGER_COMPLETE',
             manager_sub_status = 'MANAGER_COMPLETE',
             manager_rating = ${body.overallRating ?? null},
+            manager_divergence_reason = ${body.divergenceReason ?? null},
             manager_employee_id = ${managerOwnerId},
             manager_submitted_at = COALESCE(manager_submitted_at, NOW()),
             updated_at = NOW()

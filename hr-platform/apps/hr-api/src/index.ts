@@ -43,6 +43,10 @@ import { createCelebrationsRoutes } from "./celebrations-routes";
 import { createAnalyticsRoutes } from "./analytics-routes";
 import { createPerformanceCoreRoutes } from "./performance-core-routes";
 import { createPerformanceV12Routes } from "./performance-v12-routes";
+import { createPerformanceMboRoutes } from "./performance-mbo-routes";
+import { createPerformanceCalibrationRoutes } from "./performance-calibration-routes";
+import { createPerformanceCertificationRoutes } from "./performance-certification-routes";
+import { createPerformanceTalentRoutes } from "./performance-talent-routes";
 import { createPerformanceOrgRoutes } from "./performance-org-routes";
 import { createAssetsP13Routes } from "./assets-p13-routes";
 import { createNotificationEngineRoutes } from "./notification-engine-routes";
@@ -2920,6 +2924,14 @@ app.route("/", createAnalyticsRoutes(getSql));
 app.route("/", createPerformanceCoreRoutes(getSql));
 // Performance BUILD.md v1.1 & v1.2: Objective Volume Policy (8-10), Demo Appraisal Workspace, Manager Appraisal Queue & Delegation.
 app.route("/", createPerformanceV12Routes(getSql));
+// MBO review cycle close: computed MBO rating from goal scores (BUILD.md §7.4). See performance-mbo-routes.ts.
+app.route("/", createPerformanceMboRoutes(getSql));
+// Calibration sessions, committee, decisions with separation of duties (BUILD.md §9.5–9.6). See performance-calibration-routes.ts.
+app.route("/", createPerformanceCalibrationRoutes(getSql));
+// Certification (versioned, locked results), acknowledgement and appeals with independent reviewers. See performance-certification-routes.ts.
+app.route("/", createPerformanceCertificationRoutes(getSql));
+// Potential, 9-box Talent Matrix and PIPs driven by certified results only. See performance-talent-routes.ts.
+app.route("/", createPerformanceTalentRoutes(getSql));
 // Performance BUILD.md v1.3: First-Class Effective-Dated Organogram, Multi-Manager Edges, Contextual Drawer & Org Sync.
 app.route("/", createPerformanceOrgRoutes(getSql));
 

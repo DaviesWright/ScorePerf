@@ -48,6 +48,14 @@ const CreateGoalBody = z.object({
         actual: z.number().default(0),
         unit: z.string().default("%"),
         weightPct: z.number().min(0).max(100).default(100),
+        // MBO (BUILD.md §7.4): declared direction and its parameters.
+        direction: z
+          .enum(["HIGHER_IS_BETTER", "LOWER_IS_BETTER", "WITHIN_RANGE", "EXACT", "MILESTONE", "QUALITATIVE"])
+          .optional(),
+        rangeMin: z.number().optional(),
+        rangeMax: z.number().optional(),
+        tolerancePct: z.number().min(0).optional(),
+        totalMilestones: z.number().int().positive().optional(),
       }),
     )
     .default([]),
@@ -60,7 +68,14 @@ const CheckinBody = z.object({
   blockers: z.string().max(1000).optional(),
   nextSteps: z.string().max(1000).optional(),
   measureActuals: z
-    .array(z.object({ measureId: z.string(), actual: z.number() }))
+    .array(
+      z.object({
+        measureId: z.string(),
+        actual: z.number().optional(),
+        completedMilestones: z.number().int().min(0).optional(),
+        qualitativeRating: z.number().int().min(1).max(5).optional(),
+      }),
+    )
     .optional(),
 });
 
@@ -70,12 +85,29 @@ const AlignBody = z.object({
   parentLevel: z.number().int().optional(),
 });
 
-const CalibrationDecisionBody = z.object({
-  sessionId: z.string().min(1),
-  assessmentId: z.string().min(1),
-  postRating: z.number().min(1).max(5),
-  rationale: z.string().trim().min(5).max(1000),
-});
+
+/**
+ * Who may record a check-in on a goal: the owner, their line manager, or HR.
+ * A qualitative (rubric) rating is a judgement, so only the manager or HR may
+ * set it, never the goal owner. Pure, exported for tests.
+ */
+export function canRecordCheckin(p: {
+  actorId: string;
+  ownerId: string;
+  role: string;
+  isOwnersManager: boolean;
+  setsQualitativeRating: boolean;
+}): { allowed: boolean; code: string; message: string } {
+  const isOwner = p.actorId === p.ownerId;
+  const isHr = p.role === "hr_admin" || p.role === "hr_director";
+  if (!isOwner && !isHr && !p.isOwnersManager) {
+    return { allowed: false, code: "PERF_CHECKIN_FORBIDDEN", message: "Only the goal owner, their manager or HR can record a check-in." };
+  }
+  if (p.setsQualitativeRating && (isOwner || (!isHr && !p.isOwnersManager))) {
+    return { allowed: false, code: "PERF_QUALITATIVE_RATING_FORBIDDEN", message: "Only the manager or HR can set a qualitative rating." };
+  }
+  return { allowed: true, code: "OK", message: "Permitted." };
+}
 
 export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
   const routes = new Hono<{ Bindings: Env; Variables: { tenant: TenantContext } }>();
@@ -180,10 +212,13 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
           await t`
             INSERT INTO performance_goal_measures (
               id, goal_id, title, measure_type, scoring_rule,
-              baseline, target, actual, unit, weight_pct
+              baseline, target, actual, unit, weight_pct,
+              direction, range_min, range_max, tolerance_pct, total_milestones
             ) VALUES (
               ${`MSR-${crypto.randomUUID()}`}, ${goalId}, ${m.title}, ${m.measureType},
-              ${m.scoringRule}, ${m.baseline}, ${m.target}, ${m.actual}, ${m.unit}, ${m.weightPct}
+              ${m.scoringRule}, ${m.baseline}, ${m.target}, ${m.actual}, ${m.unit}, ${m.weightPct},
+              ${m.direction ?? null}, ${m.rangeMin ?? null}, ${m.rangeMax ?? null},
+              ${m.tolerancePct ?? null}, ${m.totalMilestones ?? null}
             )
           `;
         }
@@ -296,7 +331,7 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
     "/api/v1/performance/goals/:id/checkin",
     zValidator("json", CheckinBody),
     async (c) => {
-      const { companyId, userId } = c.get("tenant");
+      const { companyId, userId, role } = c.get("tenant");
       const tenantId = String(companyId);
       const goalId = c.req.param("id");
       const body = c.req.valid("json");
@@ -307,11 +342,31 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
       `;
       if (!goal) return c.json({ error: "Not found" }, 404);
 
+      const ownerId = String(goal.owner_employee_id);
+      const managerRows =
+        ownerId === String(userId)
+          ? []
+          : await sql`
+              SELECT 1 FROM reporting_lines
+              WHERE company_id = ${companyId} AND employee_id::text = ${ownerId} AND manager_id::text = ${String(userId)}
+            `;
+      const access = canRecordCheckin({
+        actorId: String(userId),
+        ownerId,
+        role,
+        isOwnersManager: managerRows.length > 0,
+        setsQualitativeRating: (body.measureActuals ?? []).some((m) => m.qualitativeRating !== undefined),
+      });
+      if (!access.allowed) return c.json({ error: access.message, code: access.code }, 403);
+
       if (body.measureActuals) {
         for (const ma of body.measureActuals) {
           await sql`
             UPDATE performance_goal_measures
-            SET actual = ${ma.actual}
+            SET actual = COALESCE(${ma.actual ?? null}, actual),
+                completed_milestones = COALESCE(${ma.completedMilestones ?? null}, completed_milestones),
+                qualitative_rating = COALESCE(${ma.qualitativeRating ?? null}, qualitative_rating),
+                actual_recorded_at = NOW()
             WHERE id = ${ma.measureId} AND goal_id = ${goalId}
           `;
         }
@@ -445,7 +500,7 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
     },
   );
 
-  // GET /api/v1/performance/assessments & POST /api/v1/performance/calibration/decide
+  // GET /api/v1/performance/assessments (calibration lives in performance-calibration-routes.ts)
   routes.get("/api/v1/performance/assessments", async (c) => {
     const { companyId, userId, role } = c.get("tenant");
     const tenantId = String(companyId);
@@ -455,64 +510,6 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
       : await sql`SELECT * FROM performance_assessments WHERE tenant_id = ${tenantId} AND employee_id = ${String(userId)}`;
     return c.json({ results: rows });
   });
-
-  routes.post(
-    "/api/v1/performance/calibration/decide",
-    zValidator("json", CalibrationDecisionBody),
-    async (c) => {
-      const { companyId, userId, role } = c.get("tenant");
-      if (role !== "hr_admin" && role !== "hr_director") {
-        return c.json({ error: "Forbidden: HR calibration permission required" }, 403);
-      }
-      const tenantId = String(companyId);
-      const body = c.req.valid("json");
-      const sql = getSql(c.env);
-
-      const [assessment] = await sql`
-        SELECT * FROM performance_assessments WHERE id = ${body.assessmentId} AND tenant_id = ${tenantId}
-      `;
-      if (!assessment) return c.json({ error: "Assessment not found" }, 404);
-      if (assessment.is_locked) {
-        return c.json({ error: { code: "PM-010", message: "Assessment is locked post-finalization." } }, 409);
-      }
-
-      const preRating = Number(assessment.calibrated_rating ?? assessment.manager_rating ?? assessment.self_rating ?? 3);
-      const decisionId = `CALD-${crypto.randomUUID()}`;
-
-      await sql.begin(async (tx) => {
-        const t = tx as unknown as Sql;
-        await t`
-          INSERT INTO performance_calibration_decisions (
-            id, session_id, assessment_id, pre_rating, post_rating, rationale, approver_employee_id
-          ) VALUES (
-            ${decisionId}, ${body.sessionId}, ${body.assessmentId},
-            ${preRating}, ${body.postRating}, ${body.rationale}, ${String(userId)}
-          )
-        `;
-        await t`
-          UPDATE performance_assessments
-          SET calibrated_rating = ${body.postRating},
-              stage = 'CALIBRATION_COMPLETE',
-              updated_at = NOW()
-          WHERE id = ${body.assessmentId}
-        `;
-        await t`
-          INSERT INTO performance_audit_events (
-            id, tenant_id, actor_employee_id, context, entity_type, entity_id,
-            action, before_json, after_json, reason
-          ) VALUES (
-            ${`AUD-${crypto.randomUUID()}`}, ${tenantId}, ${String(userId)}, 'HRMS',
-            'performance_assessment', ${body.assessmentId}, 'CALIBRATE_RATING',
-            ${JSON.stringify({ rating: preRating })},
-            ${JSON.stringify({ rating: body.postRating })},
-            ${body.rationale}
-          )
-        `;
-      });
-
-      return c.json({ decisionId, preRating, postRating: body.postRating });
-    },
-  );
 
   return routes;
 }
