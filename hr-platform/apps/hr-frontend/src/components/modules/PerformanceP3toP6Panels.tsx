@@ -5,7 +5,7 @@ import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { colors, radii, shadows, typography } from "../../design-system/tokens";
 import { SEEDED_EMPLOYEES } from "../../data/enterpriseSeedData";
-import { useLoad } from "./selfServiceUi";
+import { readJson, useLoad } from "./selfServiceUi";
 
 // ============================================================================
 // P3.1, P3.6, P3.7: RBAC Permission Matrix, Explainers & Data Provenance
@@ -370,7 +370,7 @@ interface PipPlan {
   outcomeReason?: string;
 }
 
-export const PipWorkflowPanel: React.FC = () => {
+const DemoPipWorkflowPanel: React.FC = () => {
   const [plans, setPlans] = useState<PipPlan[]>([
     {
       id: "PIP-2026-01",
@@ -404,6 +404,7 @@ export const PipWorkflowPanel: React.FC = () => {
           <h3 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary }}>
             Performance Improvement Plan (PIP) — 5-Stage Workflow (P5)
           </h3>
+          <Badge variant="warning" size="sm">Demo data</Badge>
           <p style={{ margin: "0.15rem 0 0", fontSize: 11, color: colors.textMuted }}>
             Stages: Initiation → Acceptance (Accept/Dispute) → Sign-off (HR) → Execution (Check-ins) → Closure (Met / Partially Met / Not Met).
           </p>
@@ -514,6 +515,210 @@ export const PipWorkflowPanel: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// Live PIPs from the API. HR opens a PIP only from a certified rating of 2 or below; the employee
+// accepts (and may record disagreement); an HR director other than the initiator signs off; the
+// manager or HR records check-ins; HR closes with an outcome. The API enforces every rule.
+interface ApiPip {
+  id: string;
+  employee_id: string;
+  manager_id: string | null;
+  stage: "INITIATION" | "ACCEPTANCE" | "SIGN_OFF" | "EXECUTION" | "CLOSURE";
+  trigger_rating: string | number;
+  improvement_areas_json: { area: string; expectedStandard: string; measure: string }[];
+  support_plan: string;
+  start_date: string;
+  end_date: string;
+  employee_comment: string | null;
+  outcome: string | null;
+  outcome_reason: string | null;
+}
+interface PipCandidate {
+  assessment_id: string;
+  employee_id: string;
+  final_rating: string | number;
+}
+
+const PIP_STAGE_LABEL: Record<ApiPip["stage"], string> = {
+  INITIATION: "Initiation",
+  ACCEPTANCE: "Awaiting employee acceptance",
+  SIGN_OFF: "Awaiting HR director sign-off",
+  EXECUTION: "In execution",
+  CLOSURE: "Closed",
+};
+
+const inputStyle: React.CSSProperties = { padding: "0.4rem", borderRadius: radii.sm, border: `1px solid ${colors.border}`, fontSize: 12 };
+
+async function postJson(path: string, body: unknown): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/hr/performance/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    });
+    if (res.ok) return null;
+    const data = await readJson<{ code?: string; error?: unknown }>(res);
+    return typeof data.error === "string" ? data.error : "The request was refused.";
+  } catch {
+    return "The server could not be reached. Try again.";
+  }
+}
+
+const LivePipPanel: React.FC<{ cycleId: string; pips: ApiPip[]; reload: () => void }> = ({ cycleId, pips, reload }) => {
+  const candidates = useLoad<{ results: PipCandidate[] }>(`/api/hr/performance/pips/candidates?cycleId=${encodeURIComponent(cycleId)}`);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ assessmentId: "", area: "", expectedStandard: "", measure: "", supportPlan: "", startDate: "", endDate: "" });
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [outcome, setOutcome] = useState<Record<string, string>>({});
+
+  const run = async (path: string, body: unknown) => {
+    setBusy(true);
+    const err = await postJson(path, body);
+    setBusy(false);
+    setMessage(err);
+    if (!err) {
+      reload();
+      candidates.reload();
+    }
+    return err;
+  };
+
+  const canInitiate = candidates.data !== null && Array.isArray(candidates.data.results);
+
+  return (
+    <div style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}`, borderRadius: radii.lg, padding: "1.25rem", boxShadow: shadows.xs }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.9rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: typography.sizes.base, fontWeight: 700, color: colors.indigoPrimary }}>Performance Improvement Plans</h3>
+          <p style={{ margin: "0.15rem 0 0", fontSize: 11, color: colors.textMuted }}>
+            Opened by HR from a certified rating of 2 or below, never automatically. Employee acceptance, HR director sign-off, check-ins, closure.
+          </p>
+        </div>
+        <Badge variant="success" size="sm">Live · {cycleId}</Badge>
+      </div>
+
+      {message && (
+        <p role="alert" style={{ margin: "0 0 0.75rem", fontSize: 12, color: colors.error }}>{message}</p>
+      )}
+
+      {canInitiate && (
+        <div style={{ display: "grid", gap: "0.5rem", marginBottom: "1rem", padding: "0.75rem", backgroundColor: "#f8fafc", borderRadius: radii.md, border: `1px solid ${colors.border}` }}>
+          <strong style={{ fontSize: 12 }}>Open a PIP ({candidates.data!.results.length} eligible)</strong>
+          {candidates.data!.results.length === 0 ? (
+            <span style={{ fontSize: 12, color: colors.textMuted }}>No certified results of 2 or below without an open PIP or appeal.</span>
+          ) : (
+            <>
+              <select aria-label="Employee" value={form.assessmentId} onChange={(e) => setForm({ ...form, assessmentId: e.target.value })} style={inputStyle}>
+                <option value="">Choose an employee…</option>
+                {candidates.data!.results.map((c) => (
+                  <option key={c.assessment_id} value={c.assessment_id}>
+                    Employee {c.employee_id} · certified {Number(c.final_rating).toFixed(1)}
+                  </option>
+                ))}
+              </select>
+              <input aria-label="Improvement area" placeholder="Improvement area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} style={inputStyle} />
+              <input aria-label="Expected standard" placeholder="Expected standard" value={form.expectedStandard} onChange={(e) => setForm({ ...form, expectedStandard: e.target.value })} style={inputStyle} />
+              <input aria-label="How it is measured" placeholder="How it is measured" value={form.measure} onChange={(e) => setForm({ ...form, measure: e.target.value })} style={inputStyle} />
+              <textarea aria-label="Support plan" placeholder="Support the organisation will give (at least 20 characters)" value={form.supportPlan} onChange={(e) => setForm({ ...form, supportPlan: e.target.value })} style={{ ...inputStyle, minHeight: 60 }} />
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center", fontSize: 12 }}>
+                <label>Start <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={inputStyle} /></label>
+                <label>End <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} style={inputStyle} /></label>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={busy || !form.assessmentId || !form.area.trim() || !form.supportPlan.trim() || !form.startDate || !form.endDate}
+                  onClick={async () => {
+                    const err = await run("pips", {
+                      assessmentId: form.assessmentId,
+                      improvementAreas: [{ area: form.area, expectedStandard: form.expectedStandard, measure: form.measure }],
+                      supportPlan: form.supportPlan,
+                      startDate: form.startDate,
+                      endDate: form.endDate,
+                    });
+                    if (!err) setForm({ assessmentId: "", area: "", expectedStandard: "", measure: "", supportPlan: "", startDate: "", endDate: "" });
+                  }}
+                >
+                  Open PIP
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {pips.length === 0 && <p style={{ fontSize: 12, color: colors.textMuted }}>No PIPs to show.</p>}
+      <div style={{ display: "grid", gap: "1rem" }}>
+        {pips.map((p) => (
+          <div key={p.id} style={{ border: `1px solid ${colors.border}`, borderRadius: radii.md, padding: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: 6 }}>
+              <div style={{ fontSize: 13 }}>
+                <strong>Employee {p.employee_id}</strong> · certified {Number(p.trigger_rating).toFixed(1)} · {String(p.start_date).slice(0, 10)} to {String(p.end_date).slice(0, 10)}
+              </div>
+              <Badge variant={p.stage === "CLOSURE" ? "success" : "warning"} size="sm">{PIP_STAGE_LABEL[p.stage]}</Badge>
+            </div>
+            <ul style={{ margin: "0 0 0.5rem", paddingLeft: "1.25rem", fontSize: 12, color: colors.textSecondary }}>
+              {(p.improvement_areas_json ?? []).map((a, i) => (
+                <li key={i}>{a.area}: {a.expectedStandard} ({a.measure})</li>
+              ))}
+            </ul>
+            <p style={{ margin: "0 0 0.5rem", fontSize: 12 }}><strong>Support:</strong> {p.support_plan}</p>
+            {p.employee_comment && <p style={{ margin: "0 0 0.5rem", fontSize: 12 }}><strong>Employee comment:</strong> {p.employee_comment}</p>}
+            {p.outcome && <p style={{ margin: "0 0 0.5rem", fontSize: 12 }}><strong>Outcome:</strong> {p.outcome.replace("_", " ").toLowerCase()} — {p.outcome_reason}</p>}
+
+            {p.stage !== "CLOSURE" && (
+              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
+                <input
+                  aria-label="Notes"
+                  placeholder={p.stage === "ACCEPTANCE" ? "Optional comment (e.g. points you disagree with)" : "Notes or reason"}
+                  value={notes[p.id] ?? ""}
+                  onChange={(e) => setNotes({ ...notes, [p.id]: e.target.value })}
+                  style={{ ...inputStyle, flex: 1, minWidth: 200 }}
+                />
+                {p.stage === "ACCEPTANCE" && (
+                  <Button variant="primary" size="sm" disabled={busy} onClick={() => run(`pips/${p.id}/accept`, { comment: notes[p.id] || undefined })}>Accept plan</Button>
+                )}
+                {p.stage === "SIGN_OFF" && (
+                  <Button variant="primary" size="sm" disabled={busy} onClick={() => run(`pips/${p.id}/sign-off`, {})}>HR director sign-off</Button>
+                )}
+                {p.stage === "EXECUTION" && (
+                  <>
+                    {(["ON_TRACK", "AT_RISK", "OFF_TRACK"] as const).map((st) => (
+                      <Button key={st} variant="outline" size="sm" disabled={busy || (notes[p.id] ?? "").trim().length < 10} onClick={() => run(`pips/${p.id}/check-ins`, { status: st, notes: notes[p.id] })}>
+                        Check-in: {st.replace("_", " ").toLowerCase()}
+                      </Button>
+                    ))}
+                    <select aria-label="Outcome" value={outcome[p.id] ?? "MET"} onChange={(e) => setOutcome({ ...outcome, [p.id]: e.target.value })} style={inputStyle}>
+                      <option value="MET">Met</option>
+                      <option value="PARTIALLY_MET">Partially met</option>
+                      <option value="NOT_MET">Not met</option>
+                    </select>
+                    <Button variant="primary" size="sm" disabled={busy || (notes[p.id] ?? "").trim().length < 20} onClick={() => run(`pips/${p.id}/close`, { outcome: outcome[p.id] ?? "MET", reason: notes[p.id] })}>
+                      Close PIP
+                    </Button>
+                  </>
+                )}
+                <Button variant="outline" size="sm" disabled={busy || (notes[p.id] ?? "").trim().length < 20} onClick={() => run(`pips/${p.id}/close`, { outcome: "WITHDRAWN", reason: notes[p.id] })}>
+                  Withdraw
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** Shows live PIPs when the API answers; otherwise the illustrative demo, labelled as such. */
+export const PipWorkflowPanel: React.FC<{ cycleId?: string }> = ({ cycleId = "CYC-2026-H2" }) => {
+  const live = useLoad<{ results: ApiPip[] }>("/api/hr/performance/pips");
+  if (live.loading) return <p style={{ fontSize: 12, color: colors.textMuted }}>Loading improvement plans…</p>;
+  if (live.data && Array.isArray(live.data.results)) {
+    return <LivePipPanel cycleId={cycleId} pips={live.data.results} reload={live.reload} />;
+  }
+  return <DemoPipWorkflowPanel />;
 };
 
 // ============================================================================
