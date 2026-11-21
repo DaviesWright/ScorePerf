@@ -340,3 +340,40 @@ describe("Manager submit: divergence from computed MBO rating", () => {
     assert.equal(withReason.status, 200);
   });
 });
+
+describe("Check-in authorisation", () => {
+  it("owner, their manager or HR may check in; only manager or HR set a rubric rating", async () => {
+    const { canRecordCheckin } = await import("../src/performance-routes.ts");
+    const base = { actorId: "21", ownerId: "21", role: "employee", isOwnersManager: false, setsQualitativeRating: false };
+    assert.equal(canRecordCheckin(base).allowed, true);
+    assert.equal(canRecordCheckin({ ...base, actorId: "22" }).code, "PERF_CHECKIN_FORBIDDEN");
+    assert.equal(canRecordCheckin({ ...base, actorId: "30", role: "line_manager" }).code, "PERF_CHECKIN_FORBIDDEN");
+    assert.equal(canRecordCheckin({ ...base, actorId: "20", role: "line_manager", isOwnersManager: true }).allowed, true);
+    assert.equal(canRecordCheckin({ ...base, setsQualitativeRating: true }).code, "PERF_QUALITATIVE_RATING_FORBIDDEN");
+    assert.equal(canRecordCheckin({ ...base, role: "hr_admin", setsQualitativeRating: true }).code, "PERF_QUALITATIVE_RATING_FORBIDDEN");
+    assert.equal(canRecordCheckin({ ...base, actorId: "20", isOwnersManager: true, setsQualitativeRating: true }).allowed, true);
+    assert.equal(canRecordCheckin({ ...base, actorId: "1", role: "hr_admin", setsQualitativeRating: true }).allowed, true);
+  });
+
+  it("the check-in route refuses a colleague", async () => {
+    const { createPerformanceRoutes } = await import("../src/performance-routes.ts");
+    const sql: any = (strings: TemplateStringsArray) => {
+      const q = strings.join(" ");
+      if (q.includes("FROM performance_goals WHERE id =")) return Promise.resolve([{ id: "G1", owner_employee_id: "21", framework: "MBO" }]);
+      return Promise.resolve([]);
+    };
+    const app = new Hono<any>();
+    app.use("*", async (c, next) => {
+      c.set("tenant", { companyId: 1, userId: 22, role: "employee" });
+      await next();
+    });
+    app.route("/", createPerformanceRoutes(() => sql));
+    const res = await app.request("/api/v1/performance/goals/G1/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progressPct: 50, measureActuals: [{ measureId: "M1", actual: 999 }] }),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(((await res.json()) as any).code, "PERF_CHECKIN_FORBIDDEN");
+  });
+});

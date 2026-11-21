@@ -86,6 +86,29 @@ const AlignBody = z.object({
 });
 
 
+/**
+ * Who may record a check-in on a goal: the owner, their line manager, or HR.
+ * A qualitative (rubric) rating is a judgement, so only the manager or HR may
+ * set it, never the goal owner. Pure, exported for tests.
+ */
+export function canRecordCheckin(p: {
+  actorId: string;
+  ownerId: string;
+  role: string;
+  isOwnersManager: boolean;
+  setsQualitativeRating: boolean;
+}): { allowed: boolean; code: string; message: string } {
+  const isOwner = p.actorId === p.ownerId;
+  const isHr = p.role === "hr_admin" || p.role === "hr_director";
+  if (!isOwner && !isHr && !p.isOwnersManager) {
+    return { allowed: false, code: "PERF_CHECKIN_FORBIDDEN", message: "Only the goal owner, their manager or HR can record a check-in." };
+  }
+  if (p.setsQualitativeRating && (isOwner || (!isHr && !p.isOwnersManager))) {
+    return { allowed: false, code: "PERF_QUALITATIVE_RATING_FORBIDDEN", message: "Only the manager or HR can set a qualitative rating." };
+  }
+  return { allowed: true, code: "OK", message: "Permitted." };
+}
+
 export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
   const routes = new Hono<{ Bindings: Env; Variables: { tenant: TenantContext } }>();
 
@@ -308,7 +331,7 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
     "/api/v1/performance/goals/:id/checkin",
     zValidator("json", CheckinBody),
     async (c) => {
-      const { companyId, userId } = c.get("tenant");
+      const { companyId, userId, role } = c.get("tenant");
       const tenantId = String(companyId);
       const goalId = c.req.param("id");
       const body = c.req.valid("json");
@@ -318,6 +341,23 @@ export function createPerformanceRoutes(getSql: (env: Env) => Sql) {
         SELECT * FROM performance_goals WHERE id = ${goalId} AND tenant_id = ${tenantId}
       `;
       if (!goal) return c.json({ error: "Not found" }, 404);
+
+      const ownerId = String(goal.owner_employee_id);
+      const managerRows =
+        ownerId === String(userId)
+          ? []
+          : await sql`
+              SELECT 1 FROM reporting_lines
+              WHERE company_id = ${companyId} AND employee_id::text = ${ownerId} AND manager_id::text = ${String(userId)}
+            `;
+      const access = canRecordCheckin({
+        actorId: String(userId),
+        ownerId,
+        role,
+        isOwnersManager: managerRows.length > 0,
+        setsQualitativeRating: (body.measureActuals ?? []).some((m) => m.qualitativeRating !== undefined),
+      });
+      if (!access.allowed) return c.json({ error: access.message, code: access.code }, 403);
 
       if (body.measureActuals) {
         for (const ma of body.measureActuals) {
