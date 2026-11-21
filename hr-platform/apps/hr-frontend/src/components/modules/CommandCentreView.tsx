@@ -1,4 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { ComingSoonTag, comingSoonProps } from "../../design-system/ComingSoon";
+import { isViewEnabled } from "../../config/modules";
+import { presetViewState } from "../../lib/useViewState";
 import { SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 import { LeaveAnalyticsPanel } from "../analytics/AnalyticsPrimitives";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
@@ -177,6 +180,22 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
 
   const allocatedAssetsCount = assets.filter((a) => a.employee_id).length;
   const coveragePct = Math.min(100, Math.round((allocatedAssetsCount / (stats.totalAssets || assets.length || 1)) * 100));
+
+  // A tile or button either opens a screen (already filtered where that helps) or shows as disabled.
+  // A module switched off for this deployment never gives a click that silently does nothing.
+  const OFF_TITLE = "This module is not switched on for your organisation";
+  const navTo = (view: ModuleViewKey, presets?: Record<string, unknown>) =>
+    isViewEnabled(view)
+      ? () => {
+          if (presets) presetViewState(presets);
+          onNavigate(view);
+        }
+      : undefined;
+  const navButton = (view: ModuleViewKey, presets?: Record<string, unknown>) => ({
+    onClick: navTo(view, presets),
+    disabled: !isViewEnabled(view),
+    title: isViewEnabled(view) ? undefined : OFF_TITLE,
+  });
 
   const [centerTab, setCenterTab] = useState<"command" | "dashboard">("command");
   const [viewMode, setViewMode] = useState<"donut" | "bars">("donut");
@@ -374,7 +393,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           {/* Dynamic Contextual Action Chips */}
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
             <button
-              onClick={() => onNavigate("time_and_leave")}
+              {...navButton("time_and_leave")}
               style={{
                 padding: "0.25rem 0.65rem",
                 borderRadius: radii.full,
@@ -389,7 +408,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               Review Pending Leaves ({stats.pendingLeaves}) →
             </button>
             <button
-              onClick={() => onNavigate("performance_pms")}
+              {...navButton("performance_pms")}
               style={{
                 padding: "0.25rem 0.65rem",
                 borderRadius: radii.full,
@@ -404,7 +423,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               Progress Check-ins & OKRs →
             </button>
             <button
-              onClick={() => onNavigate("asset_management")}
+              {...navButton("asset_management")}
               style={{
                 padding: "0.25rem 0.65rem",
                 borderRadius: radii.full,
@@ -439,7 +458,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               Team Vibe Check
             </span>
             <span style={{ fontSize: "10px", color: colors.peachDark, fontWeight: 600, backgroundColor: colors.peachSubtle, padding: "0.1rem 0.4rem", borderRadius: radii.full }}>
-              Anonymous Pulse
+              Anonymous Pulse · Coming soon
             </span>
           </div>
 
@@ -447,7 +466,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
             {["🚀 Thriving", "😊 Focused", "😐 Neutral", "😓 Stressed"].map((vibe) => (
               <button
                 key={vibe}
-                onClick={() => alert(`Anonymous sentiment recorded: ${vibe}`)}
+                {...comingSoonProps}
                 style={{
                   flex: 1,
                   padding: "0.25rem 0.2rem",
@@ -455,7 +474,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   borderRadius: radii.sm,
                   border: `1px solid rgba(249, 115, 22, 0.2)`,
                   backgroundColor: "#ffffff",
-                  cursor: "pointer",
+                  cursor: "not-allowed",
+                  opacity: 0.6,
                   textAlign: "center",
                   fontWeight: 500,
                 }}
@@ -466,7 +486,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           </div>
 
           <button
-            onClick={() => alert("Simulating 10-second voice note recording...\nDede AI Transcribing: 'Delivered client cloud migration sprint ahead of schedule.'\nSentiment: +0.89 (Highly Positive).")}
+            {...comingSoonProps}
             style={{
               width: "100%",
               padding: "0.4rem 0.5rem",
@@ -475,7 +495,8 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
               backgroundColor: "#ffffff",
               fontSize: "11px",
               color: colors.peachDark,
-              cursor: "pointer",
+              cursor: "not-allowed",
+              opacity: 0.6,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -485,6 +506,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           >
             <Icons.Mic size={13} color="#ea580c" />
             <span>Record 10s Voice Note (Transcribed by Dede)</span>
+            <ComingSoonTag />
           </button>
         </div>
       </div>
@@ -498,7 +520,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           variant="indigo"
           icon={<Icons.Users size={16} />}
           badge={<Badge variant="success" size="sm">100% Active</Badge>}
-          onClick={() => onNavigate("workforce_directory")}
+          onClick={navTo("workforce_directory", { "WorkforceDirectoryView:activeTab": "employees", "WorkforceDirectoryView:search": "", "WorkforceDirectoryView:selectedDept": "ALL", "WorkforceDirectoryView:selectedTeam": "ALL" })}
         />
         <MetricCard
           label="Appraisal Cycles"
@@ -507,7 +529,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           variant="purple"
           icon={<Icons.Target size={16} />}
           badge={<Badge variant="info" size="sm">Active</Badge>}
-          onClick={() => onNavigate("performance_pms")}
+          onClick={navTo("performance_pms")}
         />
         <MetricCard
           label="Pending Leaves"
@@ -516,7 +538,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           variant="peach"
           icon={<Icons.Calendar size={16} />}
           badge={stats.pendingLeaves > 0 ? <Badge variant="warning" size="sm">Action Due</Badge> : undefined}
-          onClick={() => onNavigate("time_and_leave")}
+          onClick={navTo("time_and_leave", { "TimeAndLeaveView:activeTab": "requests", "TimeAndLeaveView:requestFilter": "PENDING" })}
         />
         <MetricCard
           label="Currently On Leave"
@@ -537,7 +559,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           variant="cyan"
           icon={<Icons.Laptop size={16} />}
           badge={<Badge variant="info" size="sm">Equipped</Badge>}
-          onClick={() => onNavigate("asset_management")}
+          onClick={navTo("asset_management")}
         />
         <MetricCard
           label="Open IT Tickets"
@@ -545,7 +567,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           subtext="Helpdesk requests in triage"
           variant="rose"
           icon={<Icons.LifeBuoy size={16} />}
-          onClick={() => onNavigate("helpdesk")}
+          onClick={navTo("helpdesk")}
         />
         <MetricCard
           label="Client Engagements"
@@ -553,7 +575,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
           subtext="Pan-African consulting roadmaps"
           variant="emerald"
           icon={<Icons.Briefcase size={16} />}
-          onClick={() => onNavigate("projects")}
+          onClick={navTo("projects")}
         />
       </div>
 
@@ -703,7 +725,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                             }}
                             onMouseEnter={() => setHoveredIdx(idx)}
                             onMouseLeave={() => setHoveredIdx(null)}
-                            onClick={() => onNavigate("workforce_directory")}
+                            onClick={navTo("workforce_directory", { "WorkforceDirectoryView:activeTab": "employees", "WorkforceDirectoryView:search": "", "WorkforceDirectoryView:selectedTeam": "ALL", "WorkforceDirectoryView:selectedDept": slice.name === "General Consulting" ? "ALL" : slice.name })}
                           >
                             <title>{`${slice.name}: ${slice.headcount} staff (${slice.pct}%)`}</title>
                           </path>
@@ -780,7 +802,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                           key={slice.name}
                           onMouseEnter={() => setHoveredIdx(idx)}
                           onMouseLeave={() => setHoveredIdx(null)}
-                          onClick={() => onNavigate("workforce_directory")}
+                          onClick={navTo("workforce_directory", { "WorkforceDirectoryView:activeTab": "employees", "WorkforceDirectoryView:search": "", "WorkforceDirectoryView:selectedTeam": "ALL", "WorkforceDirectoryView:selectedDept": slice.name === "General Consulting" ? "ALL" : slice.name })}
                           style={{
                             padding: "0.35rem 0.5rem",
                             borderRadius: radii.sm,
@@ -883,7 +905,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                   {slices.map((slice) => (
                     <div
                       key={slice.name}
-                      onClick={() => onNavigate("workforce_directory")}
+                      onClick={navTo("workforce_directory", { "WorkforceDirectoryView:activeTab": "employees", "WorkforceDirectoryView:search": "", "WorkforceDirectoryView:selectedTeam": "ALL", "WorkforceDirectoryView:selectedDept": slice.name === "General Consulting" ? "ALL" : slice.name })}
                       style={{
                         cursor: "pointer",
                         padding: "0.4rem 0.5rem",
@@ -997,7 +1019,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                         {item.subtitle}
                       </div>
                     </div>
-                    <Button variant="secondary" size="sm" onClick={() => onNavigate(item.view)}>
+                    <Button variant="secondary" size="sm" {...navButton(item.view)}>
                       {item.actionText}
                     </Button>
                   </div>
@@ -1152,7 +1174,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       Average completion and approval health across consulting teams
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => onNavigate("performance_pms")}>
+                  <Button variant="outline" size="sm" {...navButton("performance_pms")}>
                     PMS Hub →
                   </Button>
                 </div>
@@ -1266,7 +1288,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                       Scheduled leave starting in next 14 days
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => onNavigate("time_and_leave")}>
+                  <Button variant="outline" size="sm" {...navButton("time_and_leave")}>
                     Leave Calendar →
                   </Button>
                 </div>
@@ -1326,7 +1348,7 @@ export const CommandCentreView: React.FC<CommandCentreViewProps> = ({
                     <button
                       key={hub.name}
                       type="button"
-                      onClick={() => onNavigate(hub.view)}
+                      {...navButton(hub.view)}
                       style={{
                         display: "flex",
                         alignItems: "center",

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -78,7 +79,7 @@ export interface BiometricGateEvent {
 
 export const DepartmentSchedulesRosterView: React.FC = () => {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<"rotas" | "on_call" | "desks" | "biometric_gate">("rotas");
+  const [activeTab, setActiveTab] = useViewState<"rotas" | "on_call" | "desks" | "biometric_gate">("DepartmentSchedulesRosterView:activeTab", "rotas");
   const [selectedHub, setSelectedHub] = useState<HubLocation>("ALL");
   const [selectedDept, setSelectedDept] = useState<DepartmentKey>("ALL");
   const [searchQuery, setSearchQuery] = useState("");

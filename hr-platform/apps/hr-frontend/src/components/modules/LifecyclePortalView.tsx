@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
+import { ComingSoonTag, comingSoonProps } from "../../design-system/ComingSoon";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 
 export const LifecyclePortalView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"preboarding" | "offboarding">("preboarding");
+  const [activeTab, setActiveTab] = useViewState<"preboarding" | "offboarding">("LifecyclePortalView:activeTab", "preboarding");
   // P9: Exit Initiation & Approvals State
   const [exitInitiator, setExitInitiator] = useState<"Self-Initiated" | "Manager-Initiated">("Self-Initiated");
   const [exitEmployee, setExitEmployee] = useState("Kwesi Osei (SEN/009)");
@@ -329,9 +331,10 @@ export const LifecyclePortalView: React.FC = () => {
             <Button
               variant="primary"
               size="sm"
-              onClick={() => alert("All offboarding checklist items verified. Final severance receipt generated and hardware return scheduled.")}
+              {...comingSoonProps}
             >
               Sign-Off & Complete Flight Plan
+              <ComingSoonTag />
             </Button>
           </div>
         </div>

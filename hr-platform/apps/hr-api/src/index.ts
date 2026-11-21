@@ -39,6 +39,8 @@ import { createPerformanceRoutes } from "./performance-routes";
 import { createLeaveConsoleRoutes } from "./leave-console-routes";
 import { createLeaveMiniDashboardRoutes } from "./leave-mini-dashboard-routes";
 import { createReportRoutes } from "./report-routes";
+import { createReportRequestRoutes } from "./report-request-routes";
+import { createWorkforceRoutes } from "./workforce-routes";
 import { createCelebrationsRoutes } from "./celebrations-routes";
 import { createAnalyticsRoutes } from "./analytics-routes";
 import { createPerformanceCoreRoutes } from "./performance-core-routes";
@@ -2916,6 +2918,10 @@ app.route("/", createLeaveConsoleRoutes(getSql));
 app.route("/", createLeaveMiniDashboardRoutes(getSql));
 // HRIS Reporting Catalogue v1.0: unified /api/v1/reports/{module}/{reportKey} with RBAC, suppression & audit.
 app.route("/", createReportRoutes(getSql));
+// Free-text report requests: matched to the catalogue, failures logged (to-do P1).
+app.route("/", createReportRequestRoutes(getSql));
+// Squads, redeployments and custom rating scales with an audit trail (to-do P1).
+app.route("/", createWorkforceRoutes(getSql));
 // Celebrations: ESS/MSS/HRMS birthdays, work anniversaries, opt-out privacy & PRAISE recognition.
 app.route("/", createCelebrationsRoutes(getSql));
 // Analytics, Heatmaps & Trends Framework v1.0: KPI, Heatmap (dept & job role), Trend, Drilldown, Snapshots.

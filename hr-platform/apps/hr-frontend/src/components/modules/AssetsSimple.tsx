@@ -110,7 +110,7 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
       }));
       setAssets(mappedAssets);
       const myRows: MyAsset[] = mappedAssets
-        .filter((a) => a.employee_id === 1 || a.employee_id === Number(user.id.replace(/\D/g, "")))
+        .filter((a) => a.employee_id === Number(user.id.replace(/\D/g, "")))
         .map((a) => ({
           id: a.id,
           assetCode: a.asset_code,
@@ -120,19 +120,9 @@ export const AssetsScreen: React.FC<{ user: { id: string; persona: string }; rea
           allocatedDate: a.purchase_date ?? "2025-01-15",
           status: a.status,
         }));
-      setMine(
-        myRows.length > 0
-          ? myRows
-          : mappedAssets.slice(0, 2).map((a) => ({
-              id: a.id,
-              assetCode: a.asset_code,
-              name: a.name,
-              serialNumber: a.serial_number,
-              categoryName: a.category_name ?? "IT Equipment",
-              allocatedDate: "2025-01-15",
-              status: "allocated",
-            }))
-      );
+      // Only this person's own assets. An empty list shows the "no assets assigned" state rather than
+      // borrowing someone else's equipment to fill the screen.
+      setMine(myRows);
       setPeople(DEFAULT_EMPLOYEES.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}` })));
       setLoading(false);
       return;

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
 import { colors, radii, shadows, typography } from "../../design-system/tokens";
 import { SEEDED_EMPLOYEES } from "../../data/enterpriseSeedData";
+import { useRealSession } from "../../lib/sessionMode";
+import { call } from "./assetApi";
 
 type DrillCategory = "blocked" | "accrual" | "liability";
 
@@ -103,21 +105,94 @@ const LIABILITY_RECORDS: DrillRecord[] = SEEDED_EMPLOYEES.slice(0, 8).map((emp) 
   };
 });
 
-export const LeaveAdminDrilldowns: React.FC = () => {
-  const [activeCat, setActiveCat] = useState<DrillCategory | null>(null);
-  const [selectedRecord, setSelectedRecord] = useState<DrillRecord | null>(null);
+type ReportPayload = { columns: { key: string; label: string }[]; rows: Record<string, unknown>[]; suppressionReason?: string | null };
 
-  const records =
-    activeCat === "blocked"
-      ? BLOCKED_RECORDS
-      : activeCat === "accrual"
-        ? ACCRUAL_RECORDS
-        : activeCat === "liability"
-          ? LIABILITY_RECORDS
-          : [];
+/** Turns governed report rows into drill-down records: first column is the title, the rest are shown as detail. */
+function reportToRecords(prefix: string, data: ReportPayload, status: string): DrillRecord[] {
+  const cols = data.columns ?? [];
+  return (data.rows ?? []).map((row, idx) => {
+    const cells = cols.map((c) => ({ label: c.label, value: String(row[c.key] ?? "") }));
+    const half = Math.ceil(Math.max(0, cells.length - 2) / 2) + 2;
+    return {
+      id: `${prefix}-${idx}`,
+      title: cells[0]?.value || `${prefix} ${idx + 1}`,
+      subtitle: cells[1] ? `${cells[1].label}: ${cells[1].value}` : "",
+      status,
+      inputs: cells.slice(2, half),
+      outputs: cells.slice(half),
+    };
+  });
+}
+
+export const LeaveAdminDrilldowns: React.FC<{ focus?: DrillCategory | null; focusNonce?: number }> = ({
+  focus = null,
+  focusNonce = 0,
+}) => {
+  const [activeCat, setActiveCat] = useState<DrillCategory | null>(focus);
+  const [selectedRecord, setSelectedRecord] = useState<DrillRecord | null>(null);
+  const sectionRef = useRef<HTMLElement | null>(null);
+
+  // Signed in: each list comes from live data (company holidays, and the governed leave reports LV-004,
+  // LV-005 and LV-020). The demo persona picker shows the sample records.
+  const realSession = useRealSession();
+  const [live, setLive] = useState<Record<DrillCategory, DrillRecord[]> | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!realSession) return;
+    let cancelled = false;
+    Promise.all([
+      call<{ results: { id: number; name: string; date: string }[] }>("GET", "holidays"),
+      call<ReportPayload>("GET", "reports/leave/LV-004?pageSize=50"),
+      call<ReportPayload>("GET", "reports/leave/LV-005?pageSize=50"),
+      call<ReportPayload>("GET", "reports/leave/LV-020?pageSize=50"),
+    ]).then(([hol, acc, cf, lia]) => {
+      if (cancelled) return;
+      if (!hol.ok && !acc.ok && !lia.ok) setLiveError("Could not load leave admin data.");
+      setLive({
+        blocked: hol.ok
+          ? (hol.data.results ?? []).map((h) => ({
+              id: `HOL-${h.id}`,
+              title: h.name,
+              subtitle: h.date,
+              status: "Company holiday",
+              inputs: [{ label: "Date", value: h.date }],
+              outputs: [{ label: "Rule", value: "Excluded from working-day deduction" }],
+            }))
+          : [],
+        accrual: [
+          ...(acc.ok ? reportToRecords("Accrual", acc.data, "Accrual posting") : []),
+          ...(cf.ok ? reportToRecords("Carry-forward", cf.data, "Carry-forward") : []),
+        ],
+        liability: lia.ok ? reportToRecords("Liability", lia.data, "Leave liability") : [],
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realSession]);
+
+  // Opened from a Leave Admin sidebar link: open that list and bring it into view.
+  useEffect(() => {
+    if (!focus) return;
+    setActiveCat(focus);
+    setSelectedRecord(null);
+    requestAnimationFrame(() => sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [focus, focusNonce]);
+
+  const records: DrillRecord[] = !activeCat
+    ? []
+    : live
+      ? live[activeCat]
+      : activeCat === "blocked"
+        ? BLOCKED_RECORDS
+        : activeCat === "accrual"
+          ? ACCRUAL_RECORDS
+          : LIABILITY_RECORDS;
 
   return (
     <section
+      ref={sectionRef}
+      id="leave-admin-drilldowns"
       style={{
         backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
@@ -138,9 +213,9 @@ export const LeaveAdminDrilldowns: React.FC = () => {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.85rem" }}>
         {[
-          { key: "blocked" as const, title: "Blocked Periods & Holidays", count: `${BLOCKED_RECORDS.length} active`, desc: "Blackout windows & statutory calendars" },
-          { key: "accrual" as const, title: "Accrual & Carry-Forward Runs", count: `${ACCRUAL_RECORDS.length} runs`, desc: "Monthly credit batches & cap runs" },
-          { key: "liability" as const, title: "Leave Liability & Allowances", count: `54 staff`, desc: "Unused day balances & financial exposure" },
+          { key: "blocked" as const, title: "Blocked Periods & Holidays", count: `${(live?.blocked ?? BLOCKED_RECORDS).length} active`, desc: "Blackout windows & statutory calendars" },
+          { key: "accrual" as const, title: "Accrual & Carry-Forward Runs", count: `${(live?.accrual ?? ACCRUAL_RECORDS).length} records`, desc: "Monthly credit batches & cap runs" },
+          { key: "liability" as const, title: "Leave Liability & Allowances", count: `${(live?.liability ?? LIABILITY_RECORDS).length} rows`, desc: "Unused day balances & financial exposure" },
         ].map((card) => {
           const isActive = activeCat === card.key;
           return (
@@ -174,6 +249,12 @@ export const LeaveAdminDrilldowns: React.FC = () => {
         <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: `1px solid ${colors.border}` }}>
           <div style={{ display: "grid", gridTemplateColumns: selectedRecord ? "1fr 1fr" : "1fr", gap: "1rem" }}>
             <div style={{ display: "grid", gap: "0.5rem" }}>
+              {liveError && <div role="alert" style={{ fontSize: 12, color: "#991b1b" }}>{liveError}</div>}
+              {records.length === 0 && !liveError && (
+                <div style={{ fontSize: 12, color: colors.textMuted }}>
+                  {realSession && !live ? "Loading…" : "No records yet for this area."}
+                </div>
+              )}
               {records.map((rec) => (
                 <button
                   key={rec.id}

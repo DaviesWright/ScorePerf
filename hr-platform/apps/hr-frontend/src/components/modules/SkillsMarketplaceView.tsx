@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows, space, text } from "../../design-system/tokens";
 import { Badge, frameworkVariant } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -40,9 +41,9 @@ interface DevelopmentGoalDraft {
 }
 
 export const SkillsMarketplaceView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTab] = useViewState<
     "gap_analysis" | "my_skills" | "gigs" | "framework" | "team_heatmap"
-  >("gap_analysis");
+  >("SkillsMarketplaceView:activeTab", "gap_analysis");
 
   // Shared 20-skill taxonomy state (descriptions & role required levels editable; structure immutable per VAL-SKILL-001)
   const [skills, setSkills] = useState<SkillRecord[]>(SKILLS_TAXONOMY);

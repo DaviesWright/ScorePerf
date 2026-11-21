@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -53,7 +54,7 @@ interface SuppressedModule {
 }
 
 export const GovernanceView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"audit_trail" | "data_privacy" | "rbac_matrix" | "master_data">("audit_trail");
+  const [activeTab, setActiveTab] = useViewState<"audit_trail" | "data_privacy" | "rbac_matrix" | "master_data">("GovernanceView:activeTab", "audit_trail");
   const [actorFilter, setActorFilter] = useState<"ALL" | "HUMAN" | "AI_AGENT">("ALL");
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
