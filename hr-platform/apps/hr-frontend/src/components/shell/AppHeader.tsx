@@ -4,6 +4,7 @@ import { Button } from "../../design-system/Button";
 import { Icons } from "../../design-system/Icons";
 import { ProfileMenu } from "../common/ProfileMenu";
 import { ContextSwitcher } from "../common/ContextSwitcher";
+import { NotificationBell } from "../modules/NotificationCenterBell";
 import { isFeatureEnabled, isViewEnabled } from "../../config/modules";
 import type { ModuleViewKey, UserPersona } from "./AppSidebar";
 import {
@@ -262,90 +263,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           />
           <span>{currentSandbox ? "Sandbox" : "Live"}</span>
         </button>
-        {/* Notifications Icon Button & Dropdown */}
-        <div style={{ position: "relative" }}>
-          <button
-            type="button"
-            title="Notifications"
-            aria-expanded={showNotifications}
-            onClick={() => setShowNotifications((v) => !v)}
-            style={{
-              position: "relative",
-              background: "transparent",
-              border: `1px solid ${colors.border}`,
-              borderRadius: radii.md,
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: colors.textSecondary,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.surfaceSubtle)}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-          >
-            <Icons.Bell size={15} />
-            <span
-              style={{
-                position: "absolute",
-                top: "6px",
-                right: "6px",
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                backgroundColor: colors.peachAction,
-              }}
-            />
-          </button>
-          {showNotifications && (
-            <div
-              role="menu"
-              style={{
-                position: "absolute",
-                top: "120%",
-                right: 0,
-                width: "290px",
-                backgroundColor: colors.surface,
-                border: `1px solid ${colors.border}`,
-                borderRadius: radii.md,
-                boxShadow: shadows.md,
-                zIndex: 40,
-                padding: "0.5rem 0",
-              }}
-            >
-              <div style={{ padding: "0.4rem 0.85rem", fontSize: "11px", fontWeight: 700, color: colors.textMuted, borderBottom: `1px solid ${colors.border}` }}>
-                Notifications (3)
-              </div>
-              {[
-                { label: "4 leave requests awaiting review", view: (persona === "employee" ? "my_leave" : "time_and_leave") as ModuleViewKey },
-                { label: "2026 Performance cycle check-in open", view: (persona === "employee" ? "my_performance" : "performance_pms") as ModuleViewKey },
-                { label: "Updated HR handbook ready for sign-off", view: "document_centre" as ModuleViewKey },
-              ].map((n) => (
-                <button
-                  key={n.label}
-                  type="button"
-                  onClick={() => {
-                    setShowNotifications(false);
-                    onNavigate?.(n.view);
-                  }}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "0.55rem 0.85rem",
-                    border: "none",
-                    background: "transparent",
-                    fontSize: typography.sizes.xs,
-                    color: colors.textPrimary,
-                    cursor: "pointer",
-                  }}
-                >
-                  {n.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Live Context-Aware Notification Centre */}
+        <NotificationBell
+          onSwitchContextAndNavigate={(ctx, deepLink) => {
+            const targetCtx = availableContexts.find((c) => c.experience === ctx);
+            if (targetCtx && onSelectContext && activeContext?.experience !== ctx) {
+              onSelectContext(targetCtx.contextId);
+            }
+            if (deepLink.includes("leave")) onNavigate?.(ctx === "ESS" ? "my_leave" : "time_and_leave");
+            else if (deepLink.includes("assets")) onNavigate?.("assets");
+            else if (deepLink.includes("celebrations")) onNavigate?.(ctx === "MSS" ? "team_celebrations" : "celebrations");
+            else if (deepLink.includes("organogram")) onNavigate?.("organogram");
+            else if (deepLink.includes("goals")) onNavigate?.("objectives");
+            else onNavigate?.(ctx === "ESS" ? "my_performance" : "performance_pms");
+          }}
+        />
 
         {/* Quick Action Button with dropdown */}
         <div style={{ position: "relative" }}>
