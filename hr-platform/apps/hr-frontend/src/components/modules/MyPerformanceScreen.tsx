@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -72,9 +73,9 @@ interface MyPerformanceScreenProps {
 }
 
 export const MyPerformanceScreen: React.FC<MyPerformanceScreenProps> = ({ realSession = false }) => {
-  const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTab] = useViewState<
     "self_review" | "my_skills" | "objectives" | "my_cascade" | "assigned_reviews" | "aligned_tasks" | "history"
-  >("self_review");
+  >("MyPerformanceScreen:activeTab", "self_review");
 
   // ESS My Skills & Gap Analysis State (§4, §5, §10)
   const [skillAssessments, setSkillAssessments] = useState<EmployeeSkillAssessmentRecord[]>(

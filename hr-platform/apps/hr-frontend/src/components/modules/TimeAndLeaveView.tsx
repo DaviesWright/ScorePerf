@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useViewState } from "../../lib/useViewState";
 import { colors, typography, radii, shadows } from "../../design-system/tokens";
 import { Badge } from "../../design-system/Badge";
 import { Button } from "../../design-system/Button";
@@ -88,6 +89,10 @@ interface TimeAndLeaveViewProps {
   showNewLeaveModal?: boolean;
   onCloseNewLeaveModal?: () => void;
   onNavigateToWorkflows?: () => void;
+  /** Tab to open, from a sidebar link: a tab key, or "drill:blocked" | "drill:accrual" | "drill:liability". */
+  initialTab?: string;
+  /** Changes on every sidebar click, so the same link re-opens its tab. */
+  navNonce?: number;
   userName?: string;
   userRole?: string;
 }
@@ -97,6 +102,8 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   showNewLeaveModal = false,
   onCloseNewLeaveModal,
   onNavigateToWorkflows,
+  initialTab,
+  navNonce = 0,
   userName = "Paa Kwesi Barnes",
   userRole = "HR Manager",
 }) => {
@@ -107,13 +114,13 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     }
     return "role";
   });
-  const [scopeDept, setScopeDept] = useState<string>("COMPANY");
+  const [scopeDept, setScopeDept] = useViewState<string>("TimeAndLeaveView:scopeDept", "COMPANY");
   const [asAtTime, setAsAtTime] = useState<string>(() =>
     new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
     ", " +
     new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
   );
-  const [onLeaveSearch, setOnLeaveSearch] = useState<string>("");
+  const [onLeaveSearch, setOnLeaveSearch] = useViewState<string>("TimeAndLeaveView:onLeaveSearch", "");
 
   const greetingPrefix = (() => {
     const h = new Date().getHours();
@@ -139,7 +146,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [showAllSubTabs, setShowAllSubTabs] = useState<boolean>(false);
 
   // Leave Navigation Tabs
-  const [activeTab, setActiveTab] = useState<
+  const [activeTab, setActiveTab] = useViewState<
     | "ess_portal"
     | "dashboard"
     | "predictive_intelligence"
@@ -157,7 +164,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
     | "blocked_days"
     | "allowances"
     | "settings"
-  >("dashboard");
+  >("TimeAndLeaveView:activeTab", "dashboard");
 
   // Relief Officer & Coverage Matrix State (Experience 2: Manager Workspace)
   const [reliefAssignments, setReliefAssignments] = useState([
@@ -438,7 +445,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
   const [showModal, setShowModal] = useState(showNewLeaveModal);
   const [selectedLeaveForDetail, setSelectedLeaveForDetail] = useState<LeaveRecord | null>(null);
   const [requestSearchQuery, setRequestSearchQuery] = useState("");
-  const [requestFilter, setRequestFilter] = useState<string>("ALL");
+  const [requestFilter, setRequestFilter] = useViewState<string>("TimeAndLeaveView:requestFilter", "ALL");
   const [feedback, setFeedback] = useState<string | null>(null);
 
   // New Leave Form State (Enhanced with Staging features)
@@ -461,6 +468,24 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
       })),
     [leaves]
   );
+
+  const [adminDrill, setAdminDrill] = useState<"blocked" | "accrual" | "liability" | null>(null);
+  React.useEffect(() => {
+    if (!initialTab) return;
+    if (initialTab.startsWith("drill:")) {
+      const cat = initialTab.slice(6);
+      if (cat === "blocked" || cat === "accrual" || cat === "liability") {
+        setConsoleMode("role");
+        setActiveTab("dashboard");
+        setAdminDrill(cat);
+      }
+      return;
+    }
+    setConsoleMode("role");
+    setAdminDrill(null);
+    setActiveTab(initialTab as typeof activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab, navNonce]);
 
   React.useEffect(() => {
     if (showNewLeaveModal) setShowModal(true);
@@ -1002,7 +1027,7 @@ export const TimeAndLeaveView: React.FC<TimeAndLeaveViewProps> = ({
 
           <LeaveAnalyticsPanel />
 
-          <LeaveAdminDrilldowns />
+          <LeaveAdminDrilldowns focus={adminDrill} focusNonce={navNonce} />
 
           {/* CON-001 & CON-002: Employees Currently on Leave (Department-wise & Company-wide) */}
           <div

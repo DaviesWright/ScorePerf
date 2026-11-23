@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ComingSoonTag, comingSoonProps } from "../../../design-system/ComingSoon";
 import { colors, typography, radii, shadows } from "../../../design-system/tokens";
 import { Badge } from "../../../design-system/Badge";
 import { Button } from "../../../design-system/Button";
@@ -828,12 +829,11 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                alert(`Opening certified copy of: ${item.title}`);
-                              }}
+                              {...comingSoonProps}
                             >
                               <Icons.FileCheck size={13} />
                               <span>View</span>
+                              <ComingSoonTag />
                             </Button>
                           </div>
                         </div>
@@ -994,10 +994,11 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                       <div style={{ fontSize: "11px", color: colors.textSecondary }}>● AWS Solutions Architect Professional (2025)</div>
                       <div style={{ fontSize: "11px", color: colors.textSecondary }}>● CFA Institute Charterholder Level 1</div>
                       <button
-                        onClick={() => alert("Document upload dialog launched. Select PDF/PNG certification.")}
-                        style={{ marginTop: "0.5rem", background: "none", border: "none", color: colors.indigoAccent, fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                        {...comingSoonProps}
+                        style={{ marginTop: "0.5rem", background: "none", border: "none", color: colors.textMuted, fontSize: "11px", fontWeight: 600, cursor: "not-allowed" }}
                       >
                         + Upload New Certificate
+                        <ComingSoonTag />
                       </button>
                     </div>
 
@@ -1008,10 +1009,11 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                       <div style={{ fontSize: "11px", color: colors.textSecondary }}>● Ama Barnes (Spouse - Bupa Gold)</div>
                       <div style={{ fontSize: "11px", color: colors.textSecondary }}>● Kweku Barnes (Child, Age 7)</div>
                       <button
-                        onClick={() => alert("Dependent declaration form opened. Update beneficiary roster.")}
-                        style={{ marginTop: "0.5rem", background: "none", border: "none", color: colors.indigoAccent, fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                        {...comingSoonProps}
+                        style={{ marginTop: "0.5rem", background: "none", border: "none", color: colors.textMuted, fontSize: "11px", fontWeight: 600, cursor: "not-allowed" }}
                       >
                         + Declare Dependent
+                        <ComingSoonTag />
                       </button>
                     </div>
                   </div>
@@ -1442,9 +1444,10 @@ export const EssShortcutsHub: React.FC<EssShortcutsHubProps> = ({
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => alert("Resuming Anti-Bribery 2026 module in interactive LMS player.")}
+                          {...comingSoonProps}
                         >
                           Resume (60%)
+                          <ComingSoonTag />
                         </Button>
                       </div>
 

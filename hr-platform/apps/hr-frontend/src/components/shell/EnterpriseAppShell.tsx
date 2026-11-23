@@ -38,6 +38,7 @@ import { ApprovalWorkflowsView } from "../modules/ApprovalWorkflowsView";
 import { DisciplinaryManagementView } from "../modules/DisciplinaryManagementView";
 import { PoliciesHandbookView } from "../modules/PoliciesHandbookView";
 import { OrganogramView } from "../modules/OrganogramView";
+import { MySquadCard } from "../modules/MySquadCard";
 import { DEFAULT_EMPLOYEES, DEMO_ASSETS, DEMO_PROJECTS } from "../../data/demoData";
 import { SEEDED_EMPLOYEES, SEEDED_EMPLOYMENT_EDGES, SEEDED_LEAVE_REQUESTS } from "../../data/enterpriseSeedData";
 import {
@@ -55,6 +56,7 @@ import { PlainShell } from "./PlainShell";
 import { clearHeadshot, loadHeadshot, processHeadshot, saveHeadshot } from "../../utils/headshot";
 import { PayslipModal } from "../modals/PayslipModal";
 import { RbacGuard } from "../common/RbacGuard";
+import { RealSessionProvider } from "../../lib/sessionMode";
 import { LoginPage, AuthenticatedUser, PRESET_USERS } from "../auth/LoginPage";
 import { LoginWelcomeModal } from "../auth/LoginWelcomeModal";
 
@@ -89,31 +91,105 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     initialUser?.persona === "employee" && isViewEnabled("self_service") ? "self_service" : firstEnabledView(),
   );
   const [viewHistory, setViewHistory] = useState<ModuleViewKey[]>([]);
+  // ?view= from the address bar at load (a refresh or a shared link), read once before anything rewrites the URL.
+  const [urlViewAtLoad] = useState<ModuleViewKey | null>(() =>
+    typeof window === "undefined" ? null : (new URL(window.location.href).searchParams.get("view") as ModuleViewKey | null),
+  );
   const scrollPositionsRef = React.useRef<Record<string, number>>({});
 
-  // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
-  const setCurrentView = (requested: ModuleViewKey) => {
-    if (!isViewEnabled(requested) || requested === currentView) return;
-    if (typeof window !== "undefined") {
-      scrollPositionsRef.current[currentView] = window.scrollY;
+  // The full frame scrolls an inner canvas; the plain frame scrolls the window. Save and restore whichever it is.
+  const scrollRoot = (): { get: () => number; set: (y: number) => void } => {
+    const el = typeof document !== "undefined" ? (document.querySelector("[data-scroll-root]") as HTMLElement | null) : null;
+    if (el && el.scrollHeight > el.clientHeight) {
+      return { get: () => el.scrollTop, set: (y) => el.scrollTo({ top: y, behavior: "instant" as ScrollBehavior }) };
     }
-    setViewHistory((prev) => [...prev.slice(-19), currentView]);
-    setCurrentViewRaw(requested);
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-    }
+    return {
+      get: () => (typeof window !== "undefined" ? window.scrollY : 0),
+      set: (y) => typeof window !== "undefined" && window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior }),
+    };
+  };
+  const restoreScroll = (view: ModuleViewKey) => {
+    const y = scrollPositionsRef.current[view] ?? 0;
+    // Twice: once after the view mounts, once after its data has laid out.
+    requestAnimationFrame(() => scrollRoot().set(y));
+    setTimeout(() => scrollRoot().set(y), 120);
   };
 
+  // Each view gets a browser history entry (?view=...), so the browser Back button, a refresh and a shared link
+  // all land on the same screen. Filters inside a view are kept by useViewState for the session.
+  const pushViewUrl = (view: ModuleViewKey, mode: "push" | "replace") => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", view);
+    const state = { scoreviewView: view };
+    if (mode === "push") window.history.pushState(state, "", url.toString());
+    else window.history.replaceState(state, "", url.toString());
+  };
+
+  // Only enabled modules can be opened, from anywhere (sidebar, palette, links, quick actions). See src/config/modules.ts.
+  // `sub` is a sub-tab from a sidebar link. Every other caller passes none, which clears any earlier one so a
+  // stale sidebar sub-tab never overrides where a tile or Back button is sending you.
+  const setCurrentView = (requested: ModuleViewKey, sub?: string) => {
+    if (!isViewEnabled(requested)) return;
+    setLeaveSubTab(sub);
+    setNavNonce((n) => n + 1);
+    if (requested === currentView) return;
+    scrollPositionsRef.current[currentView] = scrollRoot().get();
+    setViewHistory((prev) => [...prev.slice(-19), currentView]);
+    setCurrentViewRaw(requested);
+    pushViewUrl(requested, "push");
+    scrollRoot().set(0);
+  };
+
+  // In-app Back goes through the browser history so both Back buttons behave the same.
   const handleGoBack = () => {
     if (viewHistory.length === 0) return;
+    if (typeof window !== "undefined" && window.history.state?.scoreviewView) {
+      window.history.back();
+      return;
+    }
     const prevView = viewHistory[viewHistory.length - 1];
     setViewHistory((prev) => prev.slice(0, -1));
     setCurrentViewRaw(prevView);
-    const savedY = scrollPositionsRef.current[prevView] ?? 0;
-    if (typeof window !== "undefined") {
-      requestAnimationFrame(() => window.scrollTo({ top: savedY, behavior: "instant" as ScrollBehavior }));
-    }
+    restoreScroll(prevView);
   };
+
+  // Jump back several steps from a breadcrumb.
+  const goBackTo = (targetIdx: number) => {
+    const steps = viewHistory.length - targetIdx;
+    if (steps <= 0) return;
+    if (typeof window !== "undefined" && window.history.state?.scoreviewView) {
+      window.history.go(-steps);
+      return;
+    }
+    const target = viewHistory[targetIdx];
+    setViewHistory((prev) => prev.slice(0, targetIdx));
+    setCurrentViewRaw(target);
+    restoreScroll(target);
+  };
+
+
+  const currentViewRef = React.useRef(currentView);
+  currentViewRef.current = currentView;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onPop = (e: PopStateEvent) => {
+      const view = (e.state?.scoreviewView ?? new URL(window.location.href).searchParams.get("view")) as ModuleViewKey | null;
+      if (!view || !isViewEnabled(view)) return;
+      scrollPositionsRef.current[currentViewRef.current] = scrollRoot().get();
+      setViewHistory((prev) => {
+        const idx = prev.lastIndexOf(view);
+        // Browser Back: trim history to that entry. Browser Forward: remember where we came from.
+        return idx >= 0 ? prev.slice(0, idx) : [...prev.slice(-19), currentViewRef.current];
+      });
+      setLeaveSubTab(undefined);
+      setCurrentViewRaw(view);
+      restoreScroll(view);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [persona, setPersona] = useState<UserPersona>(initialUser?.persona ?? "hr_director");
 
   const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
@@ -161,6 +237,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [selectedDirectoryEmployee, setSelectedDirectoryEmployee] = useState<EmployeeRecord | null>(null);
   const [showLeaveModalDirectly, setShowLeaveModalDirectly] = useState(false);
   const [leaveSubTab, setLeaveSubTab] = useState<string | undefined>(undefined);
+  // Bumped on every sidebar click so a sub-tab link re-opens even when the view is already showing.
+  const [navNonce, setNavNonce] = useState(0);
   const [contextNotice, setContextNotice] = useState<string | null>(null);
   const [contextAuditLog, setContextAuditLog] = useState<ContextSwitchAuditEntry[]>([]);
   const [activeContextId, setActiveContextId] = useState<string | null>(() => {
@@ -176,6 +254,14 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(initialUser);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  // Views set without a click (sign-in landing, deep link, context switch) still get their URL.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasCheckedAuth) return;
+    if (window.history.state?.scoreviewView !== currentView) pushViewUrl(currentView, "replace");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, hasCheckedAuth]);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   // Restore the session. A real session comes from the server (initialUser); the localStorage path is demo mode only.
@@ -296,7 +382,10 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
     setActiveContextId(targetCtx.contextId);
     const nextPersona = contextToPersona(targetCtx.experience, targetCtx.role);
     setPersona(nextPersona);
-    if (initialDeepLinkView && isViewEnabled(initialDeepLinkView)) {
+    const urlView = urlViewAtLoad;
+    if (urlView && isViewEnabled(urlView)) {
+      setCurrentViewRaw(urlView);
+    } else if (initialDeepLinkView && isViewEnabled(initialDeepLinkView)) {
       setCurrentViewRaw(initialDeepLinkView);
     } else if (targetCtx.experience === "ESS") {
       setCurrentViewRaw("self_service");
@@ -578,7 +667,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
 
   // The module screen itself, shared by both frames.
   const viewContent = (
-    <>
+    <RealSessionProvider value={!!initialUser}>
       {viewHistory.length > 0 && (
         <nav
           aria-label="Breadcrumb"
@@ -616,12 +705,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
               <React.Fragment key={`${v}-${idx}`}>
                 <button
                   type="button"
-                  onClick={() => {
-                    const targetIdx = viewHistory.length - Math.min(3, viewHistory.length) + idx;
-                    const target = viewHistory[targetIdx];
-                    setViewHistory((prev) => prev.slice(0, targetIdx));
-                    setCurrentViewRaw(target);
-                  }}
+                  onClick={() => goBackTo(viewHistory.length - Math.min(3, viewHistory.length) + idx)}
                   style={{
                     background: "none",
                     border: "none",
@@ -647,6 +731,29 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         </div>
       )}
       {currentView === "self_service" && initialUser && <EmployeeHomeScreen onNavigate={setCurrentView} />}
+      {currentView === "self_service" && (
+        <MySquadCard
+          demoSquads={(() => {
+            if (initialUser) return [];
+            const me = employees.find(
+              (e) =>
+                e.email?.toLowerCase() === currentUser.email.toLowerCase() ||
+                `${e.first_name} ${e.last_name}`.toLowerCase() === currentUser.name.toLowerCase(),
+            );
+            if (!me?.team_name) return [];
+            const team = employees.filter((e) => e.team_name === me.team_name);
+            return [
+              {
+                id: 1,
+                name: me.team_name,
+                leadName: null,
+                mission: "",
+                members: team.map((e) => ({ id: e.id, name: `${e.first_name} ${e.last_name}`, jobTitle: e.role, department: e.department_name ?? null })),
+              },
+            ];
+          })()}
+        />
+      )}
       {currentView === "self_service" && !initialUser && (() => {
         const matchedSeed =
           SEEDED_EMPLOYEES.find(
@@ -896,6 +1003,8 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
             showNewLeaveModal={showLeaveModalDirectly}
             onCloseNewLeaveModal={() => setShowLeaveModalDirectly(false)}
             onNavigateToWorkflows={() => setCurrentView("approval_workflows")}
+            initialTab={leaveSubTab}
+            navNonce={navNonce}
             userName={currentUser.name}
             userRole={currentUser.role}
           />
@@ -970,7 +1079,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
         <PoliciesHandbookView isHr={persona === "hr_admin" || persona === "hr_director"} />
       )}
       {currentView === "organogram" && <OrganogramView />}
-    </>
+    </RealSessionProvider>
   );
 
   if (effectiveShellMode === "plain") {
@@ -988,10 +1097,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
           pendingApprovalsCount={leaves.filter((l) => l.status === "PENDING").length}
           showName={!!initialUser}
           currentView={currentView}
-          onNavigate={(v, sub) => {
-            setLeaveSubTab(sub);
-            setCurrentView(v);
-          }}
+          onNavigate={(v, sub) => setCurrentView(v, sub)}
           onSignOut={handleSignOut}
           onOpenDede={() => window.dispatchEvent(new Event("dede:open"))}
           onOpenSearch={() => setIsCommandPaletteOpen(true)}
@@ -1077,7 +1183,7 @@ export const EnterpriseAppShell: React.FC<EnterpriseAppShellProps> = ({
       />
 
       {/* Main App Canvas */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
+      <div data-scroll-root style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
         <AppHeader
           breadcrumb={getBreadcrumb()}
           apiOnline={apiOnline}
