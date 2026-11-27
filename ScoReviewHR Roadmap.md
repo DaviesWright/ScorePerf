@@ -57,7 +57,7 @@ Traditional enterprise HR tools are **pull-based** and administrative-friction-h
 | **D-03** | **RBAC Zero-Leak Payroll; SOC 2 / ISO 27001 as future targets (ADR-0017)** | `paa.barnes`<br>2026-11-03 | • Permissive role model.<br>• Client-side only hiding of payroll cards. | Executive compensation and payroll must never leak. Strict edge gateway 403 enforcement prevents data breaches. |
 | **D-04** | **Push-Based Agentic Workforce Architecture (ADR-0018)** | `paa.barnes`<br>2026-11-03 | • Traditional pull-based navigation.<br>• Passive LLM chatbot widgets. | Shifting cognitive load from the employee to the system saves hours of administrative overhead and eliminates annual review dread. |
 | **D-05** | **"Linear meets Notion" Design System** | `paa.barnes`<br>2026-11-03 | • Generic Bootstrap / Tailwind templates.<br>• Heavy enterprise ERP styling (SAP/Workday). | Modern, minimal, high-contrast aesthetic creates a consumer-grade experience that staff love using daily. |
-| **D-06** | **Freeze the legacy Django/Horilla stack; remove by 2026-11-30** | `paa.barnes`<br>2026-11-21 | • Keep both stacks live.<br>• Reverse ADR-0015. | One product to build, test and sell. Django is read-only reference until removal; features are ported by behaviour, not code (Horilla is LGPL-2.1). |
+| **D-06** | **Freeze the legacy Django/Horilla stack (2026-11-21); removed from `main-custom` 2026-11-27** | `paa.barnes`<br>2026-11-21 | • Keep both stacks live.<br>• Reverse ADR-0015. | One product to build, test and sell. Django is read-only reference until removal; features are ported by behaviour, not code (Horilla is LGPL-2.1). |
 
 ---
 
