@@ -2,7 +2,7 @@
 
 Senrab Technologies takes the security of ScoReview Performance seriously. This document explains how to report a vulnerability, what is in and out of scope, and how we handle it.
 
-This policy applies to **ScoReview Performance**, maintained by Senrab Technologies. ScoReview is built on the open-source Horilla HR codebase (see [README.md](README.md) and [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md)). Reports about this repository come to us first, not to the upstream project.
+This policy applies to **ScoReviewHR**, maintained by Senrab Technologies. The product is the platform in `hr-platform/`. Reports about this repository come to us.
 
 ## Supported versions
 
@@ -29,7 +29,7 @@ We will acknowledge valid reports and keep you informed as we triage and fix. A 
 ### What to include
 
 - The affected **version**, commit or deployment (use a commit hash or release name, not a hostname)
-- Environment notes (Docker Compose or other, reverse proxy, authentication mode). Use variable *names* and redacted examples only
+- Environment notes (Cloudflare account setup, database host, authentication mode). Use variable *names* and redacted examples only
 - Step-by-step reproduction (a minimal proof of concept is preferred)
 - Impact: who can exploit it and what they gain
 - Whether a fix or workaround is already known
@@ -44,9 +44,9 @@ Please wait for triage feedback before sending large batches of unverified findi
 
 ### In scope
 
-- Vulnerabilities in code shipped in this repository, including the `scoreview_*` apps, our customisations, and the Horilla code as shipped here
+- Vulnerabilities in code shipped in this repository, including everything under `hr-platform/`
 - Unsafe **default configuration** we ship (for example a known default secret that works in production)
-- Deployment files in this repository (`Dockerfile`, Compose files, nginx configuration)
+- Deployment files in this repository (`wrangler.jsonc`, OpenNext configuration, database migrations)
 - Spreadsheet export injection and similar issues in our export paths
 - Dependency vulnerabilities with a **reachable** path in ScoReview
 
@@ -57,7 +57,7 @@ We will normally not treat the following as ScoReview vulnerabilities. We may st
 | Class | Notes |
 |-------|-------|
 | Privilege escalation by users who already administer users and roles | Trusted-administrator capability by design |
-| Issues only on end-of-life Python or Django versions | Upgrade to a supported version |
+| Issues only on end-of-life Node.js versions | Upgrade to a supported version |
 | Pure deployment misconfiguration by the operator | For example `DEBUG=True`, weak secrets set by the operator, an exposed admin site. **Exception:** an insecure default that works out of the box |
 | Files served outside the documented secure media path | Follow the deployment documentation |
 | Dependency advisories with no reachable path | Tracked through Dependabot |
@@ -90,7 +90,6 @@ Performance records, appraisal ratings and personal data are treated as confiden
 5. **Disclose:** coordinate the timing of any public disclosure with the reporter.
 6. **Credit:** acknowledge the reporter unless they ask for anonymity.
 
-If a vulnerability also affects the unmodified upstream Horilla HR project, we may report it to that project through its own process (https://github.com/horilla/horilla-hr/security/advisories/new) after we have a fix, with the reporter's agreement.
 
 ## Known issues
 

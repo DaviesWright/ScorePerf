@@ -58,7 +58,7 @@ All major architectural and operational decisions were directed and approved by 
 3. **Session Authentication & IdP**: Decided: magic link backed by KV (built in `apps/hr-api`, see BUILD.md §16.2). Still open: the mail provider that sends the links, and whether a client later wants Google Workspace / Microsoft Entra SSO instead.
 4. **Document Binary Storage**: Will employee contracts remain as metadata pointers in PostgreSQL, or should Cloudflare R2 bucket bindings be provisioned for PDF storage?
 5. **Suppressed Modules Roadmap**: When are the executive stakeholders planning to un-suppress Payroll and Recruitment—are they awaiting third-party PSP/payroll provider selection?
-6. **Legacy Django Codebase Lifecycle**: Decided 2026-11-21: frozen as read-only reference now (no CI, no Docker publishing, no new changes), removed from the branch by 2026-11-30.
+6. **Legacy Django Codebase Lifecycle**: Decided 2026-11-21: frozen 2026-11-21 and removed from `main-custom` on 2026-11-27. It survives only in git history.
 
 ---
 
